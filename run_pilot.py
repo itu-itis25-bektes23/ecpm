@@ -279,7 +279,7 @@ def main():
     ap.add_argument("--base-url", default="https://api.openai.com/v1")
     ap.add_argument("--rendering", default="F2_shuffled")
     ap.add_argument("--budget", type=int, default=5)
-    ap.add_argument("--max-tokens", type=int, default=1024)
+    ap.add_argument("--max-tokens", type=int, default=4096)
     ap.add_argument("--mode", default="both",
                     choices=["both", "det", "sto"])
     ap.add_argument("--out", default="pilot_artifacts")
