@@ -22,38 +22,50 @@ own judgment.
 - `example_deterministic_silent_break.json`,
   `example_stochastic_silent_break.json`: the matched seed-7 showcase pair
 - `INTERFACE.md`: schema 2.1 and the frozen answer contract
+- `run_pilot.py`: pilot harness (outside the frozen tree; pins the
+  freeze SHA itself)
+- `runs/`: pilot artifacts, one directory per run
+- `exploratory/`: prompt-safe packets, evaluator-only oracle packets,
+  and the probability scorer
 
 ## Freeze
 
 Schema 2.1 is frozen at commit `5318c3e`. Pilot artifacts are valid only
-if produced on that commit; each artifact records `pinned_to_freeze`.
+if produced against that environment tree; each artifact records
+`frozen_sha`, `git_head`, and `pinned_to_freeze`.
+
+`run_pilot.py` and this README sit outside the frozen tree, so changes
+to them do not affect the freeze or invalidate existing artifacts.
 
 ## Quickstart
 
     git clone https://github.com/itu-itis25-bektes23/ecpm
     cd ecpm
-    git checkout 5318c3e
     python3 test_resource_mdp.py
     python3 test_ecpm_parser.py
 
+To inspect the frozen environment tree itself:
+
+    git ls-tree -r --name-only 5318c3e
+
 ## Running the pilots
 
-`run_pilot.py` (kept out of the frozen tree; joins at merge) runs both
-seed-7 silent-break pilots end to end. Place it in the repo root on the
-frozen commit:
+`run_pilot.py` runs both seed-7 silent-break pilots end to end. Run it
+from `main`: the harness records the environment freeze SHA and sets
+`pinned_to_freeze` in every artifact.
 
     python3 run_pilot.py                # dry run, no API key needed
 
     AZURE_OPENAI_API_KEY=... python3 run_pilot.py \
         --provider azure --model YOUR-DEPLOYMENT \
-        --azure-endpoint https://YOUR-RESOURCE.openai.azure.com \
-        --max-tokens 4096
+        --azure-endpoint https://YOUR-RESOURCE.openai.azure.com
 
     ANTHROPIC_API_KEY=... python3 run_pilot.py \
-        --provider anthropic --model claude-sonnet-4-6 --max-tokens 4096
+        --provider anthropic --model claude-sonnet-4-6
 
-The 1024 default for max_tokens truncates verbose models mid-answer;
-pass --max-tokens 4096 until the default is raised at merge.
+`--max-tokens` defaults to 4096. The earlier 1024 default truncated
+verbose models mid-answer; pass `--max-tokens` explicitly only to
+reproduce that condition.
 
 Outputs land in `pilot_artifacts/`. For review, send
 `pilot_deterministic.json`, `pilot_stochastic.json`, and `run_pilot.py`.
@@ -71,9 +83,19 @@ Outputs land in `pilot_artifacts/`. For review, send
 
 ## Pilot status (23 Aug 2026)
 
-Both seed-7 pilots have run on the frozen commit with three models:
-claude-sonnet-4-6 (official run), gpt-4o (Azure), and Gemma 4 E4B
-(local LM Studio, OpenAI-compatible endpoint). Artifacts are archived per run under `runs/` on main.
+Both seed-7 pilots have run on the frozen environment tree with three
+models: claude-sonnet-4-6 (official run), gpt-4o (Azure), and Gemma 4
+E4B (local LM Studio, OpenAI-compatible endpoint). Artifacts are
+archived per run under `runs/`.
+
+Two directories are kept deliberately and are not duplicates:
+
+- `runs/2026-08-23_sonnet46_mt1024/` is the truncation failure that
+  motivated raising the `--max-tokens` default to 4096. It is the
+  evidence for that change and should not be removed.
+- `*_dryrun.json` files are oracle-derived pipeline demos, not model
+  runs. They exercise the parser and scorer without an API call.
+
 Findings and proposed merge fixes are in the team research doc
 ("The Gist", pilot results section).
 
