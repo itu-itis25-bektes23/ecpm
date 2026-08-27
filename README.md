@@ -24,6 +24,8 @@ own judgment.
 - `INTERFACE.md`: schema 2.1 and the frozen answer contract
 - `run_pilot.py`: pilot harness (outside the frozen tree; pins the
   freeze SHA itself)
+  - `run_pilot_lmstudio.py`: local LM Studio runner (OpenAI-compatible
+  endpoint); produced the Gemma arm under `runs/`
 - `runs/`: pilot artifacts, one directory per run
 - `exploratory/`: prompt-safe packets, evaluator-only oracle packets,
   and the probability scorer
