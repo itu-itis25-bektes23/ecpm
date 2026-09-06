@@ -19,9 +19,9 @@ def _outcome_counts(episodes) -> dict:
         episodes: List of EpisodeOutcome.
 
     Returns:
-        {"reached_goal": n, "horizon_cutoff": n}.
+        {"reached_goal": n, "horizon_cutoff": n, "retries_exhausted": n}.
     """
-    counts = {"reached_goal": 0, "horizon_cutoff": 0}
+    counts = {"reached_goal": 0, "horizon_cutoff": 0, "retries_exhausted": 0}
     for ep in episodes:
         counts[ep.outcome] = counts.get(ep.outcome, 0) + 1
     return counts

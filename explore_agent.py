@@ -30,7 +30,8 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from ecpm_parser import extract_json_object  # noqa: F401  (kept for parity/reference; step-level parsing uses extract_last_json_object below)
-from resource_mdp import explore_policy, invert_labels, legal_actions, rollout
+from resource_mdp import (PolicyAborted, explore_policy, invert_labels,
+                          legal_actions, rollout)
 
 
 # --------------------------------------------------------------------------
@@ -64,7 +65,7 @@ class EpisodeOutcome:
     episode_idx: int          # which episode (0-based)
     phase: str                # "m0" | "m1"
     steps: list = field(default_factory=list)   # all LiveSteps in this episode
-    outcome: str = "horizon_cutoff"      # reached_goal | horizon_cutoff
+    outcome: str = "horizon_cutoff"      # reached_goal | horizon_cutoff | retries_exhausted
 
 
 @dataclass
@@ -274,7 +275,8 @@ def dry_run_policy(mdp, labels, eps=0.15) -> Callable:
 
 def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
                             act_fn=None, system_prompt=None,
-                            node_policy=None, initial_note=None) -> Callable:
+                            node_policy=None, initial_note=None,
+                            abort_info=None) -> Callable:
     """Build the per-step policy that selects and logs one action at a
     time.
 
@@ -304,6 +306,11 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
             one of act_fn or node_policy.
         initial_note: Optional note shown only on the first step (e.g. a
             phase-transition message).
+        abort_info: Optional dict (mutated in place) that gets filled
+            with {"node", "retries", "raw_text", "reasoning"} the moment
+            the policy gives up and raises resource_mdp.PolicyAborted,
+            so the caller can tell an abort apart from a normal
+            horizon cutoff after rollout() returns.
 
     Returns:
         A policy(u, rng) -> node callable (same contract
@@ -358,13 +365,15 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
                 trimmed = trimmed + [
                     {"role": "assistant", "content": raw},
                     {"role": "user", "content": correction}]
-            if parsed["status"] == "ok":
-                action_label, status = parsed["action"], "ok"
-            else:
-                # retries exhausted: fall back to a random legal action
-                # so rollout() still gets a legal move, just flagged
-                action_label = rng.choice(menu) if menu else None
-                status = "retries_exhausted"
+            if parsed["status"] != "ok":
+                # retries exhausted: end the episode here rather than
+                # substituting a random move the model never chose
+                messages.append({"role": "assistant", "content": raw})
+                if abort_info is not None:
+                    abort_info.update(node=u, retries=retries,
+                                      raw_text=raw, reasoning=reasoning)
+                raise PolicyAborted
+            action_label, status = parsed["action"], "ok"
             v = inv.get((u, action_label))   # translate the chosen label back to a node
             if v is None:
                 v = menu_cache.get(u) and inv.get((u, menu_cache[u][0]))
@@ -379,7 +388,7 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
 
 
 def make_llm_policy(mdp, labels, cfg, act_fn, system_prompt, messages,
-                    step_meta, initial_note=None) -> Callable:
+                    step_meta, initial_note=None, abort_info=None) -> Callable:
     """Build a live-LLM policy, already wrapped with logging.
 
     Public wrapper that always uses the act_fn path of
@@ -395,13 +404,19 @@ def make_llm_policy(mdp, labels, cfg, act_fn, system_prompt, messages,
         messages: Shared, growing user/assistant transcript (mutated).
         step_meta: Shared list to append one metadata dict per step to (mutated).
         initial_note: Optional note shown only on the first step.
+        abort_info: Optional dict (mutated in place) filled when the
+            policy gives up after exhausting retries -- see
+            _build_recording_policy.
 
     Returns:
         A policy(u, rng) -> node callable, the same contract
-        resource_mdp.rollout() expects.
+        resource_mdp.rollout() expects. It raises resource_mdp.PolicyAborted
+        instead of returning once retries are exhausted, ending the
+        rollout() episode early.
     """
     return _build_recording_policy(mdp, labels, cfg, messages, step_meta,
                                    act_fn=act_fn, system_prompt=system_prompt,
+                                   abort_info=abort_info,
                                    initial_note=initial_note)
 
 
@@ -483,18 +498,35 @@ def run_explore_instance(inst, cfg, act_fn=None, node_policy_fn=None) -> dict:
         node_policy = node_policy_fn(mdp) if node_policy_fn else None
         for ep_idx in range(max_episodes):
             step_meta = []
+            abort_info = {}
             note = initial_note if ep_idx == 0 else None   # shown only on the phase's first step
             policy = _build_recording_policy(
                 mdp, labels, cfg, messages, step_meta,
                 act_fn=act_fn, system_prompt=system_prompt,
-                node_policy=node_policy, initial_note=note)
+                node_policy=node_policy, initial_note=note,
+                abort_info=abort_info)
             rng = random.Random(f"{cfg.seed}|explore|{phase}|{ep_idx}")
             attempts, delivered = rollout(mdp, inst.start, policy, rng,
                                           horizon=cfg.max_steps_per_episode)
             steps = _zip_steps(attempts, step_meta, phase, ep_idx)
+            if abort_info:
+                # retries exhausted mid-episode: append one diagnostic
+                # step (no move actually taken) and end the episode here
+                # instead of continuing on a fabricated random action
+                steps.append(LiveStep(
+                    t=len(steps) + 1, node=abort_info["node"], chosen="",
+                    success=False, next_node=abort_info["node"], phase=phase,
+                    episode_idx=ep_idx, action_label="",
+                    parse_status="retries_exhausted",
+                    retries=abort_info["retries"],
+                    raw_text=abort_info["raw_text"],
+                    reasoning=abort_info["reasoning"]))
+                outcome = "retries_exhausted"
+            else:
+                outcome = "reached_goal" if delivered else "horizon_cutoff"
             episodes.append(EpisodeOutcome(
                 episode_idx=ep_idx, phase=phase, steps=steps,
-                outcome=("reached_goal" if delivered else "horizon_cutoff")))
+                outcome=outcome))
         return episodes
 
     m0_episodes = run_phase(inst.m0, "m0", cfg.max_episodes_m0)

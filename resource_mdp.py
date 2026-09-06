@@ -653,14 +653,26 @@ class Attempt:
     next_node: str
 
 
+class PolicyAborted(Exception):
+    """Raised by a policy to end the episode early (e.g. giving up after
+    exhausting its own retry budget) instead of returning a next hop.
+    rollout() catches this and returns whatever attempts were completed
+    before the abort; callers whose policies never raise it are
+    unaffected."""
+
+
 def rollout(mdp, start, policy, rng, horizon=40):
-    """Runs one episode from start until the goal is reached or horizon
-    steps are used up. At each step, asks policy for the next hop,
-    executes it via mdp.step, and records the outcome. policy: callable
-    (node, rng) -> next hop. Returns (attempts, delivered)."""
+    """Runs one episode from start until the goal is reached, horizon
+    steps are used up, or the policy raises PolicyAborted. At each step,
+    asks policy for the next hop, executes it via mdp.step, and records
+    the outcome. policy: callable (node, rng) -> next hop. Returns
+    (attempts, delivered)."""
     at, t, attempts = start, 0, []
     while at != mdp.goal and t < horizon:
-        v = policy(at, rng)
+        try:
+            v = policy(at, rng)
+        except PolicyAborted:
+            break
         nxt, ok = mdp.step(at, v, rng)
         t += 1
         attempts.append(Attempt(t, at, v, ok, nxt))

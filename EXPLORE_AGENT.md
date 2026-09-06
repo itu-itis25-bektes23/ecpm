@@ -78,9 +78,9 @@ flag to change them.
 
 **Response attempts** is the correction-attempt budget behind
 `LiveStep.parse_status == "retries_exhausted"` in the table below. Running
-out of retries flags the step and a random legal action is substituted.
-The episode continues normally until it reaches the goal or hits
-`max_steps_per_episode`.
+out of retries ends the episode immediately (`EpisodeOutcome.outcome ==
+"retries_exhausted"`) with one final diagnostic step logged, rather than
+substituting a random legal action and continuing.
 
 ## Key data types
 
@@ -113,7 +113,7 @@ into `resource_mdp`'s existing scoring functions (`broken_link_usage`,
 | `episode_idx` | Which episode (0-based) |
 | `phase` | `"m0"` or `"m1"` |
 | `steps` | Every step taken in this episode |
-| `outcome` | `reached_goal` or `horizon_cutoff` |
+| `outcome` | `reached_goal`, `horizon_cutoff`, or `retries_exhausted` |
 
 **`ExploreConfig`** — the tunable settings for one run.
 
@@ -154,10 +154,10 @@ into `resource_mdp`'s existing scoring functions (`broken_link_usage`,
 | `broken_link_usage_after_first_failure` | How often it was chosen again after that first failure. High means it kept trying despite knowing better         |
 | `adaptation_lag_steps` | How many steps passed between the first and the last attempt at the broken edge — how long it took to stop       |
 | `steps_to_goal_m0` / `_m1` | Average and median episode length, counting only episodes that actually reached the goal                         |
-| `episode_outcome_counts_m0` / `_m1` | How many episodes ended in `reached_goal` vs. `horizon_cutoff`                                                   |
+| `episode_outcome_counts_m0` / `_m1` | How many episodes ended in `reached_goal` vs. `horizon_cutoff` vs. `retries_exhausted`                          |
 | `route_regret_m0` / `_m1` | How much more expensive the realized route was than the true optimal route, averaged over goal-reaching episodes |
 | `parse_failure_rate_m0` / `_m1` | Share of steps where the reply didn't parse as a valid action                                                    |
-| `retries_exhausted_rate_m0` / `_m1` | Share of steps where retries ran out and a random legal action had to be used instead                            |
+| `retries_exhausted_rate_m0` / `_m1` | Share of steps where retries ran out and the episode was ended early                                             |
 
 Note the aggregation difference: `optimal_action_rate` is a **mean of per-episode rates**
 (each episode weighted equally), while `parse_failure_rate`/`retries_exhausted_rate` are **pooled
