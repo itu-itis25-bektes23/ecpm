@@ -631,7 +631,8 @@ def dispatch(args, record, probe, queried, messages):
                               args.timeout)
     if args.provider == "azure":
         return call_azure(args.model, messages, args.max_tokens,
-                          args.azure_endpoint, args.api_version, args.timeout)
+                          args.azure_endpoint, args.api_version, args.timeout,
+                          reasoning=args.azure_reasoning_model)
     if args.provider == "openai":
         return call_openai(args.model, messages, args.max_tokens,
                            args.base_url, args.timeout)
@@ -922,6 +923,10 @@ def main():
     ap.add_argument("--azure-endpoint",
                     default="https://YOUR-RESOURCE.openai.azure.com")
     ap.add_argument("--api-version", default="2024-06-01")
+    ap.add_argument("--azure-reasoning-model", action="store_true",
+                    help="the --model deployment is a GPT-5-family "
+                         "reasoning model (sends max_completion_tokens, "
+                         "no temperature, instead of max_tokens+temperature)")
     ap.add_argument("--max-tokens", type=int, default=4096)
     ap.add_argument("--timeout", type=int, default=120,
                     help="per-request seconds; local endpoints need ~900")
