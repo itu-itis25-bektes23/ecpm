@@ -26,6 +26,11 @@ Usage (from the repo root):
       --provider azure --model YOUR-DEPLOYMENT \
       --azure-endpoint https://YOUR-RESOURCE.openai.azure.com
 
+  # local LM Studio (OpenAI-compatible endpoint), e.g. Gemma:
+  OPENAI_API_KEY=local python3 run_pilot_multiturn.py \
+      --provider openai --base-url http://localhost:1234/v1 \
+      --model google/gemma-3n-e4b --timeout 900
+
   # A/B against the existing one-shot-per-probe condition, same code path:
   python3 run_pilot_multiturn.py --turn-mode single
 
@@ -147,7 +152,7 @@ def phase_line(idx, row, cum):
 # and for the later turns that carry history.
 
 
-def call_anthropic(model, messages, max_tokens):
+def call_anthropic(model, messages, max_tokens, timeout):
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
         data=json.dumps({"model": model, "max_tokens": max_tokens,
@@ -156,13 +161,14 @@ def call_anthropic(model, messages, max_tokens):
         headers={"content-type": "application/json",
                  "x-api-key": os.environ["ANTHROPIC_API_KEY"],
                  "anthropic-version": "2023-06-01"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     text = "".join(b.get("text", "") for b in data.get("content", []))
     return text, data.get("usage", {})
 
 
-def call_azure(deployment, messages, max_tokens, endpoint, api_version):
+def call_azure(deployment, messages, max_tokens, endpoint, api_version,
+               timeout):
     url = (endpoint.rstrip("/") + "/openai/deployments/" + deployment
            + "/chat/completions?api-version=" + api_version)
     req = urllib.request.Request(
@@ -171,33 +177,38 @@ def call_azure(deployment, messages, max_tokens, endpoint, api_version):
                          "messages": messages}).encode(),
         headers={"content-type": "application/json",
                  "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     return data["choices"][0]["message"]["content"], data.get("usage", {})
 
 
-def call_openai(model, messages, max_tokens, base_url):
+def call_openai(model, messages, max_tokens, base_url, timeout):
+    """OpenAI-compatible chat endpoint. Also covers LM Studio and any other
+    local server exposing /v1/chat/completions -- point --base-url at it and
+    set OPENAI_API_KEY to any non-empty placeholder (LM Studio ignores it)."""
     req = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions",
         data=json.dumps({"model": model, "max_tokens": max_tokens,
                          "temperature": 0,
                          "messages": messages}).encode(),
         headers={"content-type": "application/json",
-                 "authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
+                 "authorization":
+                     f"Bearer {os.environ.get('OPENAI_API_KEY', 'local')}"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     return data["choices"][0]["message"]["content"], data.get("usage", {})
 
 
 def dispatch(args, record, probe, queried, messages):
     if args.provider == "anthropic":
-        return call_anthropic(args.model, messages, args.max_tokens)
+        return call_anthropic(args.model, messages, args.max_tokens,
+                              args.timeout)
     if args.provider == "azure":
         return call_azure(args.model, messages, args.max_tokens,
-                          args.azure_endpoint, args.api_version)
+                          args.azure_endpoint, args.api_version, args.timeout)
     if args.provider == "openai":
         return call_openai(args.model, messages, args.max_tokens,
-                           args.base_url)
+                           args.base_url, args.timeout)
     return dry_run_answer(record, probe, queried), {}
 
 
@@ -308,6 +319,9 @@ def main():
     ap.add_argument("--rendering", default="F2_shuffled")
     ap.add_argument("--budget", type=int, default=5)
     ap.add_argument("--max-tokens", type=int, default=4096)
+    ap.add_argument("--timeout", type=int, default=120,
+                    help="per-call HTTP timeout in seconds; use 900 for a "
+                         "local LM Studio model (matches run_pilot_lmstudio)")
     ap.add_argument("--mode", default="both", choices=["both", "det", "sto"])
     ap.add_argument("--out", default="pilot_artifacts")
     args = ap.parse_args()
