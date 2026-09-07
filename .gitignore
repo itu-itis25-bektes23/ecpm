@@ -1,3 +1,17 @@
+# Python bytecode cache
 __pycache__/
 *.pyc
+
+# JetBrains/PyCharm project settings
+.idea/
+
+# macOS Finder metadata
+.DS_Store
+
+# Generated pilot run artifacts (run_pilot.py --out default);
+# curated results belong in runs/, which stays tracked
 pilot_artifacts/
+output/
+
+# Local secrets, if a .env is ever added instead of exporting API keys directly
+.env
