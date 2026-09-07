@@ -77,6 +77,17 @@ def _episode_action_rates(mdp, episodes) -> list:
     return [r for r in rates if r is not None]
 
 
+def _episode_route_regret(mdp, start, ep):
+    """Regret of one episode's realized route (0 = optimal), or None if
+    it didn't reach the goal on a valid route."""
+    if ep.outcome != "reached_goal":
+        return None
+    path = [start] + [s.next_node for s in ep.steps if s.success]
+    if path[-1] != mdp.goal:
+        return None
+    return score_route(mdp, path, start)["regret"]
+
+
 def _route_regrets(mdp, start, episodes) -> list:
     """Regret of the realized route, for episodes that reached the goal.
 
@@ -89,17 +100,26 @@ def _route_regrets(mdp, start, episodes) -> list:
         List of regret values (0 = optimal route), one per episode that
         actually reached the goal on a valid route.
     """
-    out = []
-    for ep in episodes:
-        if ep.outcome != "reached_goal":
-            continue
-        path = [start] + [s.next_node for s in ep.steps if s.success]
-        if path[-1] != mdp.goal:
-            continue
-        regret = score_route(mdp, path, start)["regret"]
-        if regret is not None:
-            out.append(regret)
-    return out
+    regrets = (_episode_route_regret(mdp, start, ep) for ep in episodes)
+    return [r for r in regrets if r is not None]
+
+
+def _per_episode_metrics(mdp, start, episodes) -> list:
+    """Per-episode optimal-action rate and route regret, in episode order.
+
+    Args:
+        mdp: The RoutingMDP the episodes were run on.
+        start: Start node.
+        episodes: List of EpisodeOutcome, in run order.
+
+    Returns:
+        List of {"episode_idx", "outcome", "optimal_action_rate",
+        "route_regret"}, one dict per episode.
+    """
+    return [{"episode_idx": ep.episode_idx, "outcome": ep.outcome,
+            "optimal_action_rate": _optimal_action_rate(mdp, ep.steps),
+            "route_regret": _episode_route_regret(mdp, start, ep)}
+           for ep in episodes]
 
 
 def _edge_mle(mdp, steps) -> dict:
@@ -149,7 +169,7 @@ def compute_explore_metrics(inst, m0_episodes, m1_episodes) -> dict:
         adaptation_lag_steps, steps_to_goal_m0/m1 (mean/median),
         episode_outcome_counts_m0/m1, route_regret_m0/m1,
         parse_failure_rate_m0/m1, retries_exhausted_rate_m0/m1,
-        optimal_action_rate_m1_by_m0_belief.
+        optimal_action_rate_m1_by_m0_belief, per_episode_m0/m1.
     """
     m0_steps = [s for ep in m0_episodes for s in ep.steps]
     m1_steps = [s for ep in m1_episodes for s in ep.steps]
@@ -221,4 +241,8 @@ def compute_explore_metrics(inst, m0_episodes, m1_episodes) -> dict:
         # is still planning against its own stale M0 belief, not reality
         "optimal_action_rate_m1_by_m0_belief": _mean(
             _episode_action_rates(m0_belief, m1_episodes)),
+        "per_episode_m0": _per_episode_metrics(inst.m0, inst.start,
+                                              m0_episodes),
+        "per_episode_m1": _per_episode_metrics(inst.m1, inst.start,
+                                              m1_episodes),
     }

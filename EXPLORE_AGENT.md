@@ -164,6 +164,8 @@ Note the aggregation difference: `optimal_action_rate` is a **mean of per-episod
 over every step in the phase** (each step weighted equally) — an episode with more steps
 contributes more to the latter two, but not to the former.
 
+| `per_episode_m0` / `_m1` | List of `{episode_idx, outcome, optimal_action_rate, route_regret}`, one entry per episode, in run order |
+
 ## Interfaces
 
 `explore_agent.py` sits between the pilot driver and the frozen
