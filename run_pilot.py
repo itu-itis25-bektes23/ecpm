@@ -88,6 +88,7 @@ import explore_agent
 import explore_metrics
 from ecpm_parser import (PARSERS, belief_self_consistency, run_probe,
                          score_belief, score_route_pre)
+from model_clients import call_anthropic, call_azure, call_openai
 from resource_mdp import (CONDITIONS, PROMPT_RENDERINGS, SCHEMA_VERSION,
                           make_pair, pair_to_json, paired_evidence,
                           prompt_view)
@@ -498,53 +499,6 @@ def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
         print(f"retryable error (attempt {attempt}/{max_attempts}), "
               f"retrying in {delay:.1f}s: {last_exc}")
         time.sleep(delay)
-
-
-def call_anthropic(model, messages, max_tokens, timeout):
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=json.dumps({"model": model, "max_tokens": max_tokens,
-                         "temperature": 0,
-                         "messages": messages}).encode(),
-        headers={"content-type": "application/json",
-                 "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-                 "anthropic-version": "2023-06-01"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-    text = "".join(b.get("text", "") for b in data.get("content", []))
-    return text, data.get("usage", {})
-
-
-def call_azure(deployment, messages, max_tokens, endpoint, api_version,
-               timeout):
-    url = (endpoint.rstrip("/") + "/openai/deployments/" + deployment
-           + "/chat/completions?api-version=" + api_version)
-    req = urllib.request.Request(
-        url,
-        data=json.dumps({"max_tokens": max_tokens, "temperature": 0,
-                         "messages": messages}).encode(),
-        headers={"content-type": "application/json",
-                 "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-    return data["choices"][0]["message"]["content"], data.get("usage", {})
-
-
-def call_openai(model, messages, max_tokens, base_url, timeout):
-    """OpenAI-compatible chat endpoint. Also covers LM Studio and any other
-    local server exposing /v1/chat/completions -- point --base-url at it; the
-    key falls back to a placeholder, which local servers ignore."""
-    req = urllib.request.Request(
-        base_url.rstrip("/") + "/chat/completions",
-        data=json.dumps({"model": model, "max_tokens": max_tokens,
-                         "temperature": 0,
-                         "messages": messages}).encode(),
-        headers={"content-type": "application/json",
-                 "authorization":
-                     f"Bearer {os.environ.get('OPENAI_API_KEY', 'local')}"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-    return data["choices"][0]["message"]["content"], data.get("usage", {})
 
 
 # Multi-turn variants for the active-exploration pilot (system + a growing
