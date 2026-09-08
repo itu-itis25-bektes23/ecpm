@@ -83,6 +83,28 @@ Outputs land in `pilot_artifacts/`. For review, send
    Keys and Endpoint. If you hit a 404, check the deployment name and
    try `--api-version 2024-10-21`.
 
+## v2.2 changes (8 Sep 2026)
+
+From the PO review of the methodology doc:
+
+- `irrelevant` breaks U* (p = 0) in both modes instead of halving it in
+  stochastic mode.
+- `degradation` targets the shared on-route link T* (same as
+  silent_break / hard_removal) instead of drawing its own.
+- `run_pilot.py --turn-mode two_turn [--reelicit]`: period A only in
+  turn 1 (`route_pre`, `belief_pre`), period B revealed in turn 2
+  (detection, localization, preservation, adaptation, optionally
+  `belief_post` + self-consistency preservation). `--turn-mode single`
+  is unchanged and still reproduces the frozen prompts.
+
+```
+python3 run_pilot.py --turn-mode two_turn --reelicit --tag twoturn_v1
+python3 run_pilot.py --scenario seed7_degradation --turn-mode two_turn
+```
+
+Artifacts from before v2.2 remain valid for the single-turn baseline;
+`irrelevant` and `degradation` instances must be regenerated.
+
 ## Pilot status (23 Aug 2026)
 
 Both seed-7 pilots have run on the frozen environment tree with three
