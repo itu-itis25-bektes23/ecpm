@@ -10,8 +10,10 @@ now this file plus flags:
   * `--tag`       free label for the run; names the output subdirectory and
                   is recorded in every artifact, so a new experimental
                   condition never needs a new .py file
-  * `--turn-mode` single (four independent calls, the frozen behaviour) or
-                  multi (four turns of one conversation, evidence sent once)
+  * `--turn-mode` single (four independent calls, the frozen behaviour),
+                  multi (legacy: four turns, both periods sent once) or
+                  two_turn (v2.2: period A only first, period B revealed
+                  after the turn-1 answers are in context)
   * `--timeout`   per-request seconds; raise it for slow local endpoints
 
 For each pilot, the probes are run end to end:
@@ -42,7 +44,11 @@ Usage (from the repo root):
       --base-url http://localhost:1234/v1 --timeout 900 \
       --tag 2026-08-23_gemma4e4b_lmstudio
 
-  # multi-turn condition, and its matched single-turn A/B baseline
+  # v2.2 two-turn protocol (period A -> route_pre, belief_pre; then
+  # period B revealed -> detection, localization, preservation,
+  # adaptation), optionally with belief re-elicitation
+  python3 run_pilot.py --turn-mode two_turn --reelicit --tag twoturn_v1
+  # legacy multi-turn and its single-turn A/B baseline
   python3 run_pilot.py --turn-mode multi --tag multiturn_probe
   python3 run_pilot.py --turn-mode single --tag multiturn_probe
 
@@ -68,13 +74,18 @@ import subprocess
 import time
 import urllib.request
 
-from ecpm_parser import run_probe
+from ecpm_parser import (PARSERS, belief_self_consistency, run_probe,
+                         score_belief, score_route_pre)
 from resource_mdp import (CONDITIONS, PROMPT_RENDERINGS, SCHEMA_VERSION,
                           make_pair, pair_to_json, paired_evidence,
                           prompt_view)
 
 FROZEN_SHA = "5318c3e113438c563c5676d58252d84fda22aa49"
 ALL_PROBES = ("detection", "localization", "preservation", "adaptation")
+# v2.2 two-turn protocol: turn 1 sees period A only and answers these two;
+# turn 2 reveals period B (turn 1 stays in context) and asks ALL_PROBES.
+TURN1_PROBES = ("route_pre", "belief_pre")
+REELICIT_PROBE = "belief_post"
 
 # ---------------------------------------------------------------- scenarios
 #
@@ -170,7 +181,57 @@ Observations, period B:
 {ev_post}
 """
 
+# v2.2 two-turn protocol. INTRO_A is the turn-1 header (period A only);
+# REVEAL_B is prepended to the first turn-2 ask. INTRO_A + REVEAL_B carry
+# exactly the same facts as INTRO.
+INTRO_A = """You are analysing a courier network. Nodes are locations; at each
+node you may attempt the listed actions (aK). An attempt either delivers
+you to that action's destination or you stay and retry (each attempt
+costs 1). You observed the network in an earlier period (period A). A
+later period (period B) will be shown afterwards.
+
+Nodes: {nodes}
+Start: {start}   Goal: {goal}
+
+Action menu, period A (earlier): {menu_pre}
+
+Observations, period A:
+{ev_pre}
+"""
+
+REVEAL_B = """Here is the later period (period B) of the same network.
+
+Action menu, period B (later): {menu_post}
+
+Observations, period B:
+{ev_post}
+"""
+
 ASKS = {
+    "route_pre": (
+        'Plan a route for period A from {start} to {goal}. Answer with '
+        'exactly one JSON object of the form {{"route": [{{"node": "...", '
+        '"action": "..."}}, ...]}}: at most 32 steps, the first step\'s '
+        'node must be {start}, each next step\'s node must be where the '
+        'previous action leads, and the route must end at {goal}. No other '
+        'text.'),
+    "belief_pre": (
+        'For EACH of the following (node, action) pairs, state what you '
+        'believe from the period A observations: the destination node the '
+        'action leads to, and its probability of success per attempt '
+        '(a number in [0, 1]):\n{queried}\n'
+        'Answer with exactly one JSON object of the form '
+        '{{"beliefs": [{{"node": "...", "action": "...", "destination": '
+        '"...", "p": 0.0}}, ...]}} containing every listed pair exactly '
+        'once. No other text.'),
+    "belief_post": (
+        'Now, for the SAME (node, action) pairs, state your beliefs for '
+        'period B: destination node and probability of success per '
+        'attempt:\n{queried}\n'
+        'Answer with exactly one JSON object of the form '
+        '{{"beliefs": [{{"node": "...", "action": "...", "destination": '
+        '"...", "p": 0.0}}, ...]}} containing every listed pair exactly '
+        'once. No other text.'),
     "detection": (
         'Question: did the network\'s dynamics change between period A and '
         'period B?\nAnswer with exactly one JSON object: '
@@ -232,12 +293,16 @@ def queried_pairs_for(record, sc, n_other=3):
     return [{"node": n, "action": a} for n, a in picked]
 
 
+def _menus(view):
+    return {p: "; ".join(f"{node}: {', '.join(m)}" for node, m in
+                         sorted(view[f"legal_actions_{p}"].items()))
+            for p in ("pre", "post")}
+
+
 def context_block(view):
-    """The shared evidence header: sent once in multi-turn mode, prepended
-    to every ask in single-turn mode. Identical text in both."""
-    menus = {p: "; ".join(f"{node}: {', '.join(m)}" for node, m in
-                          sorted(view[f"legal_actions_{p}"].items()))
-             for p in ("pre", "post")}
+    """The shared evidence header (both periods): sent once in the legacy
+    multi mode, prepended to every ask in single-turn mode. Frozen text."""
+    menus = _menus(view)
     return INTRO.format(nodes=", ".join(view["nodes"]),
                         start=view["start"], goal=view["goal"],
                         menu_pre=menus["pre"], menu_post=menus["post"],
@@ -245,14 +310,30 @@ def context_block(view):
                         ev_post=view["evidence"]["post"])
 
 
+def context_block_a(view):
+    """v2.2 turn-1 header: period A only."""
+    menus = _menus(view)
+    return INTRO_A.format(nodes=", ".join(view["nodes"]),
+                          start=view["start"], goal=view["goal"],
+                          menu_pre=menus["pre"],
+                          ev_pre=view["evidence"]["pre"])
+
+
+def reveal_block_b(view):
+    """v2.2 turn-2 reveal: period B only (turn 1 stays in context)."""
+    menus = _menus(view)
+    return REVEAL_B.format(menu_post=menus["post"],
+                           ev_post=view["evidence"]["post"])
+
+
 def ask_block(view, probe, queried):
     """The probe question alone (no evidence)."""
     ask = ASKS[probe]
-    if probe == "preservation":
+    if probe in ("preservation", "belief_pre", "belief_post"):
         listed = "\n".join(f'- node {q["node"]}, action {q["action"]}'
                            for q in queried)
         ask = ask.format(queried=listed)
-    elif probe == "adaptation":
+    elif probe in ("adaptation", "route_pre"):
         ask = ask.format(start=view["start"], goal=view["goal"])
     return ask + "\n"
 
@@ -280,7 +361,16 @@ def phase_metrics(probe, scored):
         m["score"] = float(acc) if acc is not None else 0.0
         m["detail"] = {"accuracy": acc, "n_queried": scored.get("n_queried"),
                        "n_scored": scored.get("n_scored")}
-    elif probe == "adaptation":
+    elif probe in ("belief_pre", "belief_post"):
+        acc = scored.get("accuracy")
+        m["score"] = float(acc) if acc is not None else 0.0
+        m["detail"] = {"accuracy": acc,
+                       "destination_accuracy":
+                           scored.get("destination_accuracy"),
+                       "p_mae": scored.get("p_mae"),
+                       "n_queried": scored.get("n_queried"),
+                       "n_scored": scored.get("n_scored")}
+    elif probe in ("adaptation", "route_pre"):
         # graded: optimal route only. regret/cost reported separately.
         m["score"] = 1.0 if scored.get("is_optimal") else 0.0
         m["scored_ok"] = status == "valid_finite"
@@ -310,11 +400,13 @@ def cumulative(rows):
 def phase_line(idx, row, cum):
     d = row["detail"]
     extra = ""
-    if row["probe"] == "adaptation":
+    if row["probe"] in ("adaptation", "route_pre"):
         extra = (f" regret={d.get('regret')} cost={d.get('expected_cost')}"
                  f"/{d.get('optimal_cost')}")
-    elif row["probe"] == "preservation":
+    elif row["probe"] in ("preservation", "belief_pre", "belief_post"):
         extra = f" acc={d.get('accuracy')} ({d.get('n_queried')} pairs)"
+        if row["probe"] != "preservation":
+            extra += f" dest={d.get('destination_accuracy')} pMAE={d.get('p_mae')}"
     return (f"  phase {idx} {row['probe']:<13} status={str(row['status']):<20}"
             f" score={row['score']:.2f}{extra}"
             f" | cum mean={cum['score_mean']} tok~{cum['prompt_tokens_est']}"
@@ -391,10 +483,37 @@ def dry_run_answer(record, probe, queried):
                   "changed": (q["node"], q["action"]) == target}
                  for q in queried]
         return json.dumps({"pairs": pairs})
-    o = record["oracle"]["post"]
+    if probe in ("belief_pre", "belief_post"):
+        period = "pre" if probe == "belief_pre" else "post"
+        truth = {(e["from"], e["action"]): e
+                 for e in record[f"world_{period}"]["edges"]}
+        beliefs = []
+        for q in queried:
+            e = truth.get((q["node"], q["action"]))
+            beliefs.append({"node": q["node"], "action": q["action"],
+                            "destination": e["to"] if e else "?",
+                            "p": (e["p"] if e else 0.0)})
+        return "Beliefs: " + json.dumps({"beliefs": beliefs})
+    o = record["oracle"]["pre" if probe == "route_pre" else "post"]
     steps = [{"node": n, "action": a}
              for n, a in zip(o["optimal_route"], o["optimal_actions"])]
     return json.dumps({"route": steps})
+
+
+def score_any(record, probe, raw, queried):
+    """Frozen probes go through run_probe unchanged; v2.2 turn-1 probes
+    are scored by the additive scorers."""
+    if probe in ALL_PROBES:
+        return run_probe(record, probe, raw,
+                         queried_pairs=(queried if probe == "preservation"
+                                        else None))
+    parsed = PARSERS[probe](raw)
+    if probe == "route_pre":
+        scored = score_route_pre(record, parsed)
+    else:
+        scored = score_belief(record, parsed, queried,
+                              "pre" if probe == "belief_pre" else "post")
+    return {"parsed": parsed, "scored": scored}
 
 
 def dispatch(args, record, probe, queried, messages):
@@ -451,15 +570,35 @@ def run_pilot(sc, deterministic, args):
         "conversation": [],
     }
 
+    two_turn = args.turn_mode == "two_turn"
+    turn1 = list(TURN1_PROBES) if two_turn else []
+    turn2 = list(probes) + ([REELICIT_PROBE] if (two_turn and args.reelicit)
+                            else [])
+    schedule = ([(p, 1) for p in turn1] + [(p, 2) for p in turn2])
+    artifact["phase_order"] = [p for p, _ in schedule]
+    artifact["turn_of_phase"] = {p: t for p, t in schedule}
+    artifact["belief_pairs"] = queried if two_turn else None
+
     messages, rows = [], []
     print(f"[{artifact['pilot']}] tag={args.tag} scenario={sc['name']} "
           f"turn_mode={args.turn_mode} provider={args.provider}")
 
-    for idx, probe in enumerate(probes, start=1):
+    for idx, (probe, turn) in enumerate(schedule, start=1):
         ask = ask_block(view, probe, queried)
         if args.turn_mode == "multi":
-            # evidence only in turn 1; later turns rely on the history
+            # legacy: both periods in message 1; later asks rely on history
             user_msg = (context + "\n" + ask) if idx == 1 else ask
+        elif two_turn:
+            # turn 1 header on the first ask; period-B reveal on the first
+            # turn-2 ask; everything else rides on the conversation
+            first_of_turn = (idx == 1) or (turn == 2 and
+                                            schedule[idx - 2][1] == 1)
+            if turn == 1 and first_of_turn:
+                user_msg = context_block_a(view) + "\n" + ask
+            elif turn == 2 and first_of_turn:
+                user_msg = reveal_block_b(view) + "\n" + ask
+            else:
+                user_msg = ask
         else:
             messages = []                  # no history: one-shot per probe
             user_msg = context + "\n" + ask
@@ -470,11 +609,9 @@ def run_pilot(sc, deterministic, args):
         latency = round(time.time() - t0, 3)
         messages = messages + [{"role": "assistant", "content": raw}]
 
-        result = run_probe(record, probe, raw,
-                           queried_pairs=(queried if probe == "preservation"
-                                          else None))
+        result = score_any(record, probe, raw, queried)
         row = phase_metrics(probe, result["scored"])
-        row.update({"phase": idx,
+        row.update({"phase": idx, "turn": turn,
                     "sent_chars": len(user_msg),
                     "context_chars": sum(len(m["content"]) for m in messages),
                     "prompt_tokens_est":
@@ -485,12 +622,16 @@ def run_pilot(sc, deterministic, args):
 
         artifact["probes"][probe] = {
             "phase": idx,
+            "turn": turn,
             # legacy field names kept so archived runs/ stay comparable
             "prompt_text": user_msg,
             "prompt_chars": len(user_msg),
             "prompt_tokens_est": row["prompt_tokens_est"],
             "latency_s": latency,
-            "queried_pairs": queried if probe == "preservation" else None,
+            "queried_pairs": (queried if probe in ("preservation",
+                                                   "belief_pre",
+                                                   "belief_post")
+                              else None),
             "raw_response": raw,
             "provider_usage": usage,
             "parsed": result["parsed"],
@@ -501,7 +642,16 @@ def run_pilot(sc, deterministic, args):
         artifact["metrics_by_phase"].append({**row, "cumulative": cum})
         print(phase_line(idx, row, cum))
 
-    artifact["conversation"] = messages if args.turn_mode == "multi" else []
+    if two_turn and args.reelicit:
+        sc_pres = belief_self_consistency(
+            record, artifact["probes"]["belief_pre"]["scored"],
+            artifact["probes"]["belief_post"]["scored"])
+        artifact["self_consistency_preservation"] = sc_pres
+        print(f"  self-consistency preservation: status={sc_pres['status']} "
+              f"acc={sc_pres.get('accuracy')}")
+
+    artifact["conversation"] = (messages if args.turn_mode != "single"
+                                else [])
     artifact["metrics_final"] = cumulative(rows)
     artifact["metrics_final"]["per_phase_score"] = {
         r["probe"]: r["score"] for r in rows}
@@ -528,10 +678,16 @@ def main():
     ap.add_argument("--probes", nargs="+", default=None,
                     choices=list(ALL_PROBES))
     ap.add_argument("--turn-mode", default="single",
-                    choices=["single", "multi"],
+                    choices=["single", "multi", "two_turn"],
                     help="single: independent call per probe (frozen "
-                         "baseline); multi: one conversation, evidence "
-                         "sent once")
+                         "baseline); multi: one conversation, both periods "
+                         "sent once (legacy); two_turn (v2.2): turn 1 shows "
+                         "period A only and asks route_pre + belief_pre, "
+                         "turn 2 reveals period B and asks the four probes")
+    ap.add_argument("--reelicit", action="store_true",
+                    help="two_turn only: re-elicit beliefs on the same "
+                         "pairs after period B and score self-consistency "
+                         "preservation")
     ap.add_argument("--mode", default="both", choices=["both", "det", "sto"])
     # who answers
     ap.add_argument("--provider", default="dry-run",
@@ -573,8 +729,8 @@ def main():
     for det in [v == "det" for v in todo]:
         art = run_pilot(sc, det, args)
         parts = ["pilot_deterministic" if det else "pilot_stochastic"]
-        if args.turn_mode == "multi":
-            parts.append("multi")
+        if args.turn_mode != "single":
+            parts.append(args.turn_mode)
         if args.provider == "dry-run":
             parts.append("dryrun")
         path = os.path.join(outdir, "_".join(parts) + ".json")
