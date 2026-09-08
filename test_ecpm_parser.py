@@ -142,8 +142,61 @@ def test_other_probes():
           "rejected")
 
 
+
+def test_v22_turn1_probes():
+    """belief parse/score, route_pre on the PRE world, self-consistency."""
+    from ecpm_parser import (belief_self_consistency, parse_belief,
+                             score_belief, score_route_pre)
+    from resource_mdp import make_pair, pair_to_json, paired_evidence
+    inst = make_pair(7, "silent_break", matched=True)
+    rec = json.loads(json.dumps(pair_to_json(inst, paired_evidence(inst))))
+    ch = rec["change"]
+    tgt = {"node": ch["edge"]["from"], "action": ch["action"]}
+    other = next({"node": e["from"], "action": e["action"]}
+                 for e in rec["world_pre"]["edges"]
+                 if (e["from"], e["action"]) != (tgt["node"], tgt["action"]))
+    q = [tgt, other]
+    truth = {(e["from"], e["action"]): e for e in rec["world_pre"]["edges"]}
+    def b(pair, p_off=0.0, period="pre"):
+        e = {(x["from"], x["action"]): x
+             for x in rec[f"world_{period}"]["edges"]}[(pair["node"],
+                                                        pair["action"])]
+        return {"node": pair["node"], "action": pair["action"],
+                "destination": e["to"], "p": round(e["p"] + p_off, 3)}
+    # exact -> 1.0; within tol -> 1.0; outside tol -> per-pair miss
+    for off, want in ((0.0, 1.0), (0.14, 1.0), (0.2, 0.5)):
+        parsed = parse_belief(json.dumps({"beliefs": [b(tgt, off), b(other)]}))
+        sc = score_belief(rec, parsed, q, "pre")
+        assert sc["status"] == "ok" and sc["accuracy"] == want, (off, sc)
+    assert parse_belief('{"beliefs": [{"node": "A"}]}')["status"] == "invalid_object"
+    assert parse_belief("nope")["status"] == "malformed_json"
+    # duplicate / missing pair -> invalid
+    sc = score_belief(rec, parse_belief(json.dumps({"beliefs": [b(tgt)]})),
+                      q, "pre")
+    assert sc["status"] == "invalid_object"
+    # route_pre: M0 optimum scores 0 regret on the PRE world even though
+    # it crosses the (later) broken link
+    o = rec["oracle"]["pre"]
+    route = [{"node": n, "action": a}
+             for n, a in zip(o["optimal_route"], o["optimal_actions"])]
+    from ecpm_parser import parse_adaptation
+    sr = score_route_pre(rec, parse_adaptation(json.dumps({"route": route})))
+    assert sr["status"] == "valid_finite" and sr["is_optimal"], sr
+    # self-consistency: target dropped to 0 post, other unchanged
+    pre = score_belief(rec, parse_belief(json.dumps(
+        {"beliefs": [b(tgt), b(other)]})), q, "pre")
+    post = score_belief(rec, parse_belief(json.dumps(
+        {"beliefs": [b(tgt, period="post"), b(other, period="post")]})),
+        q, "post")
+    sc = belief_self_consistency(rec, pre, post)
+    assert sc["status"] == "ok" and sc["accuracy"] == 1.0, sc
+    print("PASS v2.2 turn-1 probes: belief tolerance, strict cover, "
+          "route_pre on M0, self-consistency preservation")
+
+
 if __name__ == "__main__":
     test_format_fixtures()
     test_adaptation_scoring()
     test_other_probes()
+    test_v22_turn1_probes()
     print("\nALL PARSER TESTS PASSED")
