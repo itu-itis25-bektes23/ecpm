@@ -450,4 +450,35 @@ def test_v21_examples_in_sync():
         if not os.path.exists(name):
             continue
         rec = json.load(open(name))
-        inst = make_pair(7, "silent
+        inst = make_pair(7, "silent_break", deterministic=det,
+                         matched=rec["params"].get("matched", False))
+        ev = paired_evidence(inst, k=rec["evidence"]["k_per_pair"],
+                             evidence_seed=rec["evidence"]["evidence_seed"])
+        assert json.loads(json.dumps(pair_to_json(inst, ev))) == rec, \
+            f"{name} is stale -- regenerate with `python3 resource_mdp.py`"
+        checked += 1
+    print("PASS v2.1 shipped examples regenerate exactly (%d files)"
+          % checked)
+
+
+if __name__ == "__main__":
+    test_reproducibility()
+    test_deterministic_same_code_path()
+    test_conditions()
+    test_break_randomization()
+    test_balance()
+    test_labels()
+    test_scoring()
+    test_usage_metric_endpoints()
+    test_json_roundtrip()
+    test_multi_seed_sweep()
+    test_v21_shared_break_target()
+    test_v21_irrelevant_off_all_optimal_routes()
+    test_v21_det_degradation_undefined()
+    test_v22_degradation_shares_target()
+    test_v21_obfuscation_pure_relabeling()
+    test_v21_score_statuses()
+    test_v21_prompt_view()
+    test_v211_matched_mode()
+    test_v21_examples_in_sync()
+    print("\nALL TESTS PASSED")
