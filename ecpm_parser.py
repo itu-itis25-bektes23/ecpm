@@ -286,3 +286,159 @@ def run_probe(record, kind, raw_text, queried_pairs=None):
     else:
         scored = SCORERS[kind](record, parsed)
     return {"parsed": parsed, "scored": scored}
+
+
+# --------------------------------------------------------------------------
+# v2.2 additions: turn-1 (period-A-only) probes for the two-turn protocol.
+# Additive -- the frozen four-probe contract above is unchanged.
+# --------------------------------------------------------------------------
+
+BELIEF_P_TOL_STOCHASTIC = 0.15   # frozen before results (PO review)
+BELIEF_P_TOL_DETERMINISTIC = 0.0
+
+
+def parse_belief(text):
+    """{"beliefs": [{"node", "action", "destination", "p"}, ...]}"""
+    obj = extract_json_object(text)
+    if obj is None:
+        return {"status": "malformed_json"}
+    items = obj.get("beliefs")
+    if not isinstance(items, list):
+        return {"status": "invalid_object"}
+    beliefs = []
+    for it in items:
+        if not (isinstance(it, dict) and isinstance(it.get("node"), str)
+                and isinstance(it.get("action"), str)
+                and isinstance(it.get("destination"), str)
+                and isinstance(it.get("p"), (int, float))
+                and not isinstance(it.get("p"), bool)):
+            return {"status": "invalid_object"}
+        beliefs.append({"node": it["node"], "action": it["action"],
+                        "destination": it["destination"],
+                        "p": float(it["p"])})
+    return {"status": "ok", "beliefs": beliefs}
+
+
+def _belief_tol(record):
+    return (BELIEF_P_TOL_DETERMINISTIC if record["deterministic"]
+            else BELIEF_P_TOL_STOCHASTIC)
+
+
+def _world_map(record, period):
+    return {(e["from"], e["action"]): (e["to"], e["p"])
+            for e in record[f"world_{period}"]["edges"]}
+
+
+def score_belief(record, parsed, queried_pairs, period):
+    """Per-pair truth check against the true `period` world. A pair is
+    correct iff destination matches exactly AND |p - true_p| <= tol.
+    Strict cover like preservation: every queried pair exactly once."""
+    out = {"status": parsed["status"], "period": period,
+           "n_queried": len(queried_pairs), "n_scored": 0,
+           "accuracy": None, "destination_accuracy": None,
+           "p_mae": None, "per_pair": [], "tolerance": _belief_tol(record)}
+    if parsed["status"] != "ok":
+        return out
+    want = {(q["node"], q["action"]) for q in queried_pairs}
+    got = {}
+    for b in parsed["beliefs"]:
+        key = (b["node"], b["action"])
+        if key not in want or key in got:
+            out["status"] = "invalid_object"
+            return out
+        got[key] = b
+    if set(got) != want:
+        out["status"] = "invalid_object"
+        return out
+    truth = _world_map(record, period)
+    tol = out["tolerance"]
+    rows, ok_dest, ok_all, abs_err = [], 0, 0, []
+    for q in queried_pairs:
+        key = (q["node"], q["action"])
+        b = got[key]
+        t = truth.get(key)
+        t_dest, t_p = (t if t else (None, None))
+        d_ok = t_dest is not None and b["destination"] == t_dest
+        p_ok = t_p is not None and abs(b["p"] - t_p) <= tol + 1e-9
+        rows.append({"node": q["node"], "action": q["action"],
+                     "destination": b["destination"], "p": b["p"],
+                     "true_destination": t_dest, "true_p": t_p,
+                     "destination_ok": d_ok, "p_ok": p_ok,
+                     "correct": d_ok and p_ok})
+        ok_dest += d_ok
+        ok_all += (d_ok and p_ok)
+        if t_p is not None:
+            abs_err.append(abs(b["p"] - t_p))
+    n = len(rows)
+    out.update({"n_scored": n, "per_pair": rows,
+                "accuracy": round(ok_all / n, 4),
+                "destination_accuracy": round(ok_dest / n, 4),
+                "p_mae": (round(sum(abs_err) / len(abs_err), 4)
+                          if abs_err else None)})
+    return out
+
+
+def score_route_pre(record, parsed):
+    """Route-finding on period A, scored on the PRE world (evidence-only
+    planning baseline). Same walk/cost semantics as score_adaptation."""
+    pre = _world_map(record, "pre")
+    out = {"status": parsed["status"], "path": None, "expected_cost": None,
+           "optimal_cost": record["oracle"]["pre"]["optimal_cost"],
+           "regret": None, "is_optimal": False}
+    if parsed["status"] != "ok":
+        return out
+    pos, path, cost = record["start"], [record["start"]], 0.0
+    for step in parsed["route"]:
+        if step["node"] != pos:
+            out["status"] = "discontinuous_route"
+            return out
+        t = pre.get((pos, step["action"]))
+        if t is None:
+            out["status"] = "unknown_reference"
+            return out
+        dest, pr = t
+        if pr <= 0:
+            out["status"] = "silent_broken_edge"
+            return out
+        cost += 1.0 / pr
+        path.append(dest)
+        pos = dest
+    if pos != record["goal"]:
+        out["status"] = "incomplete_route"
+        return out
+    out.update({"status": "valid_finite", "path": path,
+                "expected_cost": round(cost, 4)})
+    if out["optimal_cost"] is not None:
+        out["regret"] = round(cost - out["optimal_cost"], 4)
+        out["is_optimal"] = out["regret"] <= EPS
+    return out
+
+
+def belief_self_consistency(record, pre_scored, post_scored):
+    """Preservation by self-consistency: a pair 'changed' in the model's
+    own beliefs iff destination differs or |p_post - p_pre| > tol.
+    Compared with ground truth (the intervention target)."""
+    if pre_scored.get("status") != "ok" or post_scored.get("status") != "ok":
+        return {"status": "unscored", "accuracy": None, "per_pair": []}
+    tol = _belief_tol(record)
+    ch = record["change"]
+    target = (None if ch["edge"] is None
+              else (ch["edge"]["from"], ch["action"]))
+    post = {(r["node"], r["action"]): r for r in post_scored["per_pair"]}
+    rows, ok = [], 0
+    for r in pre_scored["per_pair"]:
+        key = (r["node"], r["action"])
+        q = post[key]
+        said_changed = (r["destination"] != q["destination"]
+                        or abs(r["p"] - q["p"]) > tol + 1e-9)
+        truth = key == target
+        rows.append({"node": r["node"], "action": r["action"],
+                     "self_changed": said_changed, "truth_changed": truth,
+                     "correct": said_changed == truth})
+        ok += said_changed == truth
+    return {"status": "ok", "accuracy": round(ok / len(rows), 4),
+            "n_scored": len(rows), "per_pair": rows}
+
+
+PARSERS.update({"route_pre": parse_adaptation, "belief_pre": parse_belief,
+                "belief_post": parse_belief})
