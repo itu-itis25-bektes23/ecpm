@@ -491,12 +491,13 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
 
     condition:
       no_change ...... M1 = M0 (false-positive control)
-      irrelevant ..... perturb one link OFF every optimal route (stochastic:
-                       degrade; deterministic: p -> 0). Optimal route and
-                       uniqueness provably preserved.
-      degradation .... degrade one link ON the optimal route
+      irrelevant ..... p -> 0 on one link OFF every optimal route (both
+                       modes, v2.2). Optimal route and uniqueness provably
+                       preserved.
+      degradation .... degrade the shared target T* ON the optimal route
                        (new_p = max(0.05, old_p * degradation_factor));
-                       stochastic-only.
+                       stochastic-only. Same T* as silent_break /
+                       hard_removal for the (seed, mode) (v2.2).
       silent_break ... p -> 0 on an eligible optimal-route link (still
                        listed; goal stays reachable, forcing replanning)
       hard_removal ... same eligible set, link removed from the action set
@@ -513,8 +514,9 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
     stream drops the mode token, and the eligible set is intersected
     across both sibling worlds -- so det and sto instances of a seed share
     start, goal, AND intervention target. Target sharing applies to
-    irrelevant / silent_break / hard_removal; degradation under
-    matched=True is start-matched only (it has no deterministic arm).
+    irrelevant / silent_break / hard_removal / degradation (v2.2: the
+    stochastic degradation instance degrades the same T* its deterministic
+    silent_break sibling breaks).
     Seeds whose cross-mode eligible set is empty raise ValueError.
     """
     assert condition in CONDITIONS, f"unknown condition {condition!r}"
@@ -558,7 +560,8 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
     # matched pair intervenes on the SAME link for a given (seed, mode).
     # v2.1.1: matched=True drops the mode token entirely, so det and sto
     # draw the SAME target from the cross-mode eligible set.
-    fam = ("break" if condition in ("silent_break", "hard_removal")
+    fam = ("break" if condition in ("silent_break", "hard_removal",
+                                    "degradation")
            else condition)
     mode_tok = ("matched" if matched
                 else ("det" if deterministic else "sto"))
@@ -583,22 +586,18 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
                 f"seed {seed}: no link off every optimal route to perturb"
                 + (" in both modes (matched)" if matched else ""))
         u, v = crng.choice(off)
-        old = m0.p[(u, v)]
-        if deterministic:
-            m1.set_link_prob(u, v, 0.0, mode="silent")
-        else:
-            new = max(0.05, round(old * degradation_factor, 2))
-            if new >= old:
-                new = round(old / 2.0, 3)
-            m1.set_link_prob(u, v, new, mode="degrade")
-    elif condition == "degradation":
-        u, v = crng.choice(route0_edges)
-        old = m0.p[(u, v)]
-        new = max(0.05, round(old * degradation_factor, 2))
-        if new >= old:
-            new = round(old / 2.0, 3)
-        m1.set_link_prob(u, v, new, mode="degrade")
-    elif condition in ("silent_break", "hard_removal"):
+        # v2.2: U* -> 0 in BOTH modes (was: halve in stochastic). A halved
+        # off-route link is found only 32-69% of the time at K=10, so a
+        # kept route would be ambiguous between "judged irrelevant" and
+        # "did not notice". With a break, irrelevant and silent_break
+        # differ only in relevance.
+        m1.set_link_prob(u, v, 0.0, mode="silent")
+    elif condition in ("degradation", "silent_break", "hard_removal"):
+        # v2.2: degradation targets T* -- the SAME on-route link the break
+        # family draws for this (seed, mode) -- instead of its own draw
+        # (which collided with T* on 7/23 seeds and contaminated the
+        # factorial). The three conditions now differ only in the type
+        # of change applied to T*.
         cands = breakable_route_links(m1, start)
         if matched:
             cands = sorted(
@@ -611,9 +610,16 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
                 + (" in both modes (matched)" if matched else "")
                 + "; use a different seed")
         u, v = crng.choice(cands)
-        m1.break_link(u, v,
-                      mode="silent" if condition == "silent_break"
-                      else "remove")
+        if condition == "degradation":
+            old = m0.p[(u, v)]
+            new = max(0.05, round(old * degradation_factor, 2))
+            if new >= old:
+                new = round(old / 2.0, 3)
+            m1.set_link_prob(u, v, new, mode="degrade")
+        else:
+            m1.break_link(u, v,
+                          mode="silent" if condition == "silent_break"
+                          else "remove")
     # condition == "no_change": leave m1 untouched
 
     change = {"edge": None, "action": None, "old_p": None, "new_p": None,
