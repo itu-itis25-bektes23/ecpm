@@ -14,6 +14,8 @@ now this file plus flags:
                   multi (legacy: four turns, both periods sent once) or
                   two_turn (v2.2: period A only first, period B revealed
                   after the turn-1 answers are in context)
+  * `--prompt-style` explicit (the courier-network explanation) or
+                     minimal (neutral records; the model infers the setup)
   * `--timeout`   per-request seconds; raise it for slow local endpoints
 
 For each pilot, the probes are run end to end:
@@ -55,6 +57,9 @@ Usage (from the repo root):
   # period B revealed -> detection, localization, preservation,
   # adaptation), optionally with belief re-elicitation
   python3 run_pilot.py --turn-mode two_turn --reelicit --tag twoturn_v1
+  # same instance and scorer, but without the courier-network explanation
+  python3 run_pilot.py --scenario seed7_silent_break_minimal \
+      --turn-mode two_turn --reelicit
   # legacy multi-turn and its single-turn A/B baseline
   python3 run_pilot.py --turn-mode multi --tag multiturn_probe
   python3 run_pilot.py --turn-mode single --tag multiturn_probe
@@ -98,6 +103,7 @@ ALL_PROBES = ("detection", "localization", "preservation", "adaptation")
 # turn 2 reveals period B (turn 1 stays in context) and asks ALL_PROBES.
 TURN1_PROBES = ("route_pre", "belief_pre")
 REELICIT_PROBE = "belief_post"
+PROMPT_STYLES = ("explicit", "minimal")
 
 # ---------------------------------------------------------------- scenarios
 #
@@ -111,6 +117,7 @@ REELICIT_PROBE = "belief_post"
 #   k              evidence episodes per (state, action) pair
 #   evidence_seed  evidence sampling seed
 #   rendering      one of resource_mdp.PROMPT_RENDERINGS
+#   prompt_style   explicit (current prompt) or minimal (harder framing)
 #   budget         budget_per_pair passed to prompt_view
 #   probes         which probes to run, in order
 #   variants       which of det / sto this condition is defined for
@@ -122,6 +129,7 @@ SCENARIO_DEFAULTS = {
     "k": 5,
     "evidence_seed": 0,
     "rendering": "F2_shuffled",
+    "prompt_style": "explicit",
     "budget": 5,
     "probes": ALL_PROBES,
     "variants": ("det", "sto"),
@@ -130,6 +138,8 @@ SCENARIO_DEFAULTS = {
 SCENARIOS = {
     # the frozen showcase pair; this is what runs/ was produced with
     "seed7_silent_break": {},
+    # Same evidence and probes, with the environment description removed.
+    "seed7_silent_break_minimal": {"prompt_style": "minimal"},
     "seed7_hard_removal": {"condition": "hard_removal"},
     # degradation is undefined in deterministic worlds (v2.1): stochastic only
     "seed7_degradation": {"condition": "degradation", "variants": ("sto",)},
@@ -154,8 +164,10 @@ def resolve_scenario(args):
     sc.update(SCENARIOS[args.scenario])
     sc["name"] = args.scenario
     for key, val in (("condition", args.condition), ("seed", args.seed),
-                     ("rendering", args.rendering), ("budget", args.budget),
-                     ("k", args.k), ("evidence_seed", args.evidence_seed)):
+                     ("rendering", args.rendering),
+                     ("prompt_style", args.prompt_style),
+                     ("budget", args.budget), ("k", args.k),
+                     ("evidence_seed", args.evidence_seed)):
         if val is not None:
             sc[key] = val
     if args.probes:
@@ -166,6 +178,9 @@ def resolve_scenario(args):
     if sc["rendering"] not in PROMPT_RENDERINGS:
         raise SystemExit(f"unknown rendering {sc['rendering']!r}; "
                          f"known: {', '.join(PROMPT_RENDERINGS)}")
+    if sc["prompt_style"] not in PROMPT_STYLES:
+        raise SystemExit(f"unknown prompt style {sc['prompt_style']!r}; "
+                         f"known: {', '.join(PROMPT_STYLES)}")
     if sc["condition"] == "no_change" and "localization" in sc["probes"]:
         raise SystemExit("localization asserts a change occurred; drop it "
                          "for condition=no_change (--probes detection "
@@ -216,6 +231,45 @@ REVEAL_B = """Here is the later period (period B) of the same network.
 Action menu, period B (later): {menu_post}
 
 Observations, period B:
+{ev_post}
+"""
+
+MINIMAL_INTRO = """You are given records from an unfamiliar system. Each
+record shows a current symbol, an action, and the symbol observed after that
+action. Every action costs 1. Infer how the system works from the records.
+
+Symbols: {nodes}
+Start: {start}   Goal: {goal}
+
+Available actions, set A: {menu_pre}
+Available actions, set B: {menu_post}
+
+Records, set A:
+{ev_pre}
+
+Records, set B:
+{ev_post}
+"""
+
+MINIMAL_INTRO_A = """You are given records from an unfamiliar system. Each
+record shows a current symbol, an action, and the symbol observed after that
+action. Every action costs 1. Infer how the system works from the records.
+A later set of records will be shown afterwards.
+
+Symbols: {nodes}
+Start: {start}   Goal: {goal}
+
+Available actions, set A: {menu_pre}
+
+Records, set A:
+{ev_pre}
+"""
+
+MINIMAL_REVEAL_B = """Here is the later set of records from the same system.
+
+Available actions, set B: {menu_post}
+
+Records, set B:
 {ev_post}
 """
 
@@ -342,30 +396,33 @@ def _menus(view):
             for p in ("pre", "post")}
 
 
-def context_block(view):
-    """The shared evidence header (both periods): sent once in the legacy
-    multi mode, prepended to every ask in single-turn mode. Frozen text."""
+def context_block(view, prompt_style="explicit"):
+    """The shared two-period header for the selected prompt style."""
     menus = _menus(view)
-    return INTRO.format(nodes=", ".join(view["nodes"]),
-                        start=view["start"], goal=view["goal"],
-                        menu_pre=menus["pre"], menu_post=menus["post"],
-                        ev_pre=view["evidence"]["pre"],
-                        ev_post=view["evidence"]["post"])
+    template = INTRO if prompt_style == "explicit" else MINIMAL_INTRO
+    return template.format(nodes=", ".join(view["nodes"]),
+                           start=view["start"], goal=view["goal"],
+                           menu_pre=menus["pre"], menu_post=menus["post"],
+                           ev_pre=view["evidence"]["pre"],
+                           ev_post=view["evidence"]["post"])
 
 
-def context_block_a(view):
+def context_block_a(view, prompt_style="explicit"):
     """v2.2 turn-1 header: period A only."""
     menus = _menus(view)
-    return INTRO_A.format(nodes=", ".join(view["nodes"]),
-                          start=view["start"], goal=view["goal"],
-                          menu_pre=menus["pre"],
-                          ev_pre=view["evidence"]["pre"])
+    template = INTRO_A if prompt_style == "explicit" else MINIMAL_INTRO_A
+    return template.format(nodes=", ".join(view["nodes"]),
+                           start=view["start"], goal=view["goal"],
+                           menu_pre=menus["pre"],
+                           ev_pre=view["evidence"]["pre"])
 
 
-def reveal_block_b(view):
+def reveal_block_b(view, prompt_style="explicit"):
     """v2.2 turn-2 reveal: period B only (turn 1 stays in context)."""
     menus = _menus(view)
-    return REVEAL_B.format(menu_post=menus["post"],
+    template = (REVEAL_B if prompt_style == "explicit"
+                else MINIMAL_REVEAL_B)
+    return template.format(menu_post=menus["post"],
                            ev_post=view["evidence"]["post"])
 
 
@@ -696,7 +753,8 @@ def run_pilot(sc, deterministic, args):
                        periods=("pre", "post"),
                        budget_per_pair=sc["budget"])
     queried = queried_pairs_for(record, sc)
-    context = context_block(view)
+    prompt_style = sc["prompt_style"]
+    context = context_block(view, prompt_style)
     head = git_head()
 
     artifact = {
@@ -720,6 +778,7 @@ def run_pilot(sc, deterministic, args):
                   "temperature": 0, "max_tokens": args.max_tokens,
                   "timeout_s": args.timeout,
                   "rendering": sc["rendering"],
+                  "prompt_style": prompt_style,
                   "budget_per_pair": sc["budget"]},
         "prompt_safe_payload": view,
         "probes": {},
@@ -751,9 +810,9 @@ def run_pilot(sc, deterministic, args):
             first_of_turn = (idx == 1) or (turn == 2 and
                                             schedule[idx - 2][1] == 1)
             if turn == 1 and first_of_turn:
-                user_msg = context_block_a(view) + "\n" + ask
+                user_msg = context_block_a(view, prompt_style) + "\n" + ask
             elif turn == 2 and first_of_turn:
-                user_msg = reveal_block_b(view) + "\n" + ask
+                user_msg = reveal_block_b(view, prompt_style) + "\n" + ask
             else:
                 user_msg = ask
         else:
@@ -943,6 +1002,10 @@ def main():
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--rendering", default=None,
                     choices=list(PROMPT_RENDERINGS))
+    ap.add_argument("--prompt-style", default=None,
+                    choices=list(PROMPT_STYLES),
+                    help="explicit: current courier-network explanation; "
+                         "minimal: neutral records with no domain framing")
     ap.add_argument("--budget", type=int, default=None)
     ap.add_argument("--k", type=int, default=None)
     ap.add_argument("--evidence-seed", type=int, default=None)
@@ -1005,6 +1068,7 @@ def main():
             sc.update(SCENARIOS[name])
             print(f"{name:<32} condition={sc['condition']:<13} "
                   f"seed={sc['seed']} rendering={sc['rendering']} "
+                  f"prompt_style={sc['prompt_style']} "
                   f"variants={'/'.join(sc['variants'])} "
                   f"probes={','.join(sc['probes'])}")
         return

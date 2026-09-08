@@ -16,6 +16,7 @@ own judgment.
   `prompt_view()`, oracle
 - `ecpm_parser.py`: frozen parser and probe scoring (INTERFACE.md §7)
 - `test_resource_mdp.py`, `test_ecpm_parser.py`: tests, stdlib only
+- `test_run_pilot.py`: prompt-style and period-boundary tests
 - `parser_fixtures.json`: format-level parser cases
 - `adversarial_review.py`, `ecpm_reply_verification.py`: review tooling
   used for the freeze sign-off
@@ -111,6 +112,19 @@ python3 run_pilot.py --scenario seed7_degradation --turn-mode two_turn
 
 Artifacts from before v2.2 remain valid for the single-turn baseline;
 `irrelevant` and `degradation` instances must be regenerated.
+
+## Harder ICL prompt
+
+The `minimal` prompt style removes the courier-network explanation. It keeps
+the same instance, records, questions, answer format, and scorer, so the only
+change is how much structure the prompt explains.
+
+```
+python3 run_pilot.py --scenario seed7_silent_break \
+    --turn-mode two_turn --reelicit --tag icl_explicit
+python3 run_pilot.py --scenario seed7_silent_break_minimal \
+    --turn-mode two_turn --reelicit --tag icl_minimal
+```
 
 ## Pilot status (23 Aug 2026)
 
