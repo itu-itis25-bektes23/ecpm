@@ -97,9 +97,9 @@ def test_conditions():
             if cond == "irrelevant":
                 assert ch["edge"] not in r0_edges
                 assert ch["on_optimal_route"] is False
-                assert ch["new_p"] < ch["old_p"]
+                assert ch["new_p"] == 0.0, "v2.2: irrelevant breaks U*"
                 assert o["post"]["optimal_route"] == route0, \
-                    "off-route degradation must preserve the optimum"
+                    "off-route break must preserve the optimum"
             if cond == "degradation":
                 assert ch["edge"] in r0_edges and ch["on_optimal_route"]
                 assert 0 < ch["new_p"] < ch["old_p"]
@@ -297,6 +297,32 @@ def test_v21_irrelevant_off_all_optimal_routes():
           "preserved, det post world binary (%d instances)" % hits)
 
 
+def test_v22_degradation_shares_target():
+    """v2.2: degradation, silent_break and hard_removal intervene on the
+    SAME on-route link T* for a given (seed, mode, matched)."""
+    n = 0
+    for seed in range(1, 40):
+        for matched in (False, True):
+            try:
+                d = make_pair(seed, "degradation", matched=matched)
+                s = make_pair(seed, "silent_break", matched=matched)
+                h = make_pair(seed, "hard_removal", matched=matched)
+            except ValueError:
+                continue
+            assert d.change["edge"] == s.change["edge"] == h.change["edge"], \
+                (seed, matched, "degradation must share T*")
+            assert d.change["mode"] == "degrade" and 0 < d.change["new_p"]
+            if matched:
+                ds = make_pair(seed, "silent_break", deterministic=True,
+                               matched=True)
+                assert ds.change["edge"] == d.change["edge"], \
+                    "matched det silent_break sibling shares T*"
+            n += 1
+    assert n > 0
+    print("PASS v2.2 degradation shares T* with the break family "
+          "(%d instances)" % n)
+
+
 def test_v21_det_degradation_undefined():
     try:
         make_pair(SEEDS[0], "degradation", deterministic=True)
@@ -424,34 +450,4 @@ def test_v21_examples_in_sync():
         if not os.path.exists(name):
             continue
         rec = json.load(open(name))
-        inst = make_pair(7, "silent_break", deterministic=det,
-                         matched=rec["params"].get("matched", False))
-        ev = paired_evidence(inst, k=rec["evidence"]["k_per_pair"],
-                             evidence_seed=rec["evidence"]["evidence_seed"])
-        assert json.loads(json.dumps(pair_to_json(inst, ev))) == rec, \
-            f"{name} is stale -- regenerate with `python3 resource_mdp.py`"
-        checked += 1
-    print("PASS v2.1 shipped examples regenerate exactly (%d files)"
-          % checked)
-
-
-if __name__ == "__main__":
-    test_reproducibility()
-    test_deterministic_same_code_path()
-    test_conditions()
-    test_break_randomization()
-    test_balance()
-    test_labels()
-    test_scoring()
-    test_usage_metric_endpoints()
-    test_json_roundtrip()
-    test_multi_seed_sweep()
-    test_v21_shared_break_target()
-    test_v21_irrelevant_off_all_optimal_routes()
-    test_v21_det_degradation_undefined()
-    test_v21_obfuscation_pure_relabeling()
-    test_v21_score_statuses()
-    test_v21_prompt_view()
-    test_v211_matched_mode()
-    test_v21_examples_in_sync()
-    print("\nALL TESTS PASSED")
+        inst = make_pair(7, "silent
