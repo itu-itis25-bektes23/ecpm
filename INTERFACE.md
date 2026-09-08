@@ -17,6 +17,27 @@ goal, and target across det/sto), strict duplicate-safe preservation
 scoring, `0 < B <= k` budget validation, and the first-parseable-object
 parser wording.
 
+v2.2 (2026-09-08, PO review of the methodology doc) changes the
+interventions and the probe delivery; the §7 answer contract is still
+frozen and `single` turn mode reproduces the frozen prompts byte for
+byte:
+
+* `irrelevant` now sets U\* to p = 0 in stochastic mode too (a halved
+  off-route link is found only 32–69% of the time at K=10, so a kept
+  route was ambiguous between "judged irrelevant" and "did not notice").
+* `degradation` degrades the shared target T\* (same link the break
+  family draws for the seed) instead of its own draw, which collided
+  with T\* on 7/23 seeds.
+* `run_pilot.py --turn-mode two_turn`: turn 1 shows period A only and
+  asks `route_pre` (scored vs the M0 optimum; the evidence-only planning
+  baseline) and `belief_pre` (destination + success probability for the
+  4 preservation pairs, which include T\*). Turn 2 reveals period B with
+  turn 1 in context and asks the four frozen probes; `--reelicit` adds
+  `belief_post` and a self-consistency preservation score. Belief
+  tolerance is frozen now: destination exact, p within ±0.15
+  (stochastic) / exact (deterministic). Parsers/scorers are additive in
+  `ecpm_parser.py` (§7 unchanged).
+
 ## 1. Handoff table → implementation
 
 | Handoff request | Where it lives |
@@ -83,8 +104,8 @@ Format unchanged from v2.0. Condition semantics (v2.1):
 | condition | target | effect | guarantees |
 | --- | --- | --- | --- |
 | `no_change` | — | M1 = M0 | false-positive control |
-| `irrelevant` | random edge off **every** optimal route | stochastic: p × `degradation_factor`; deterministic: p → 0 (binary) | optimal route AND `route_unique` provably unchanged; deterministic post world stays {0, 1} |
-| `degradation` | random ON-route edge | p × `degradation_factor` (min 0.05) | **stochastic-only**; deterministic raises ValueError |
+| `irrelevant` | random edge U\* off **every** optimal route | p → 0 in **both** modes (v2.2; was p × 0.5 in stochastic) | optimal route AND `route_unique` provably unchanged; irrelevant and silent_break differ only in relevance |
+| `degradation` | the shared on-route target T\* (same link as silent_break / hard_removal for the seed, v2.2) | p × `degradation_factor` (min 0.05) | **stochastic-only**; deterministic raises ValueError |
 | `silent_break` | random eligible ON-route edge (shared stream) | p → 0, still listed | goal stays reachable → forces replanning |
 | `hard_removal` | **same target as silent_break** per (seed, mode) | edge leaves the action set | detection trivial by menu diff — the easier control |
 
