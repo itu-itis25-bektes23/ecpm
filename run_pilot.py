@@ -27,6 +27,12 @@ settings, and realized event/token counts, plus the env freeze SHA the run
 is pinned to. Multi-turn runs additionally record per-phase metrics and the
 full conversation.
 
+A second pilot type, active exploration (--pilot-type active), runs the
+model as a live agent instead: it picks its own actions on M0, then on M1
+after a reset, and answers the same 4 probes as a continuation of its own
+transcript rather than from a handed-over evidence log. See
+explore_agent.py. The default passive pilot is unchanged.
+
 Usage (from the repo root):
 
   python3 run_pilot.py                                   # dry-run, no API
@@ -37,6 +43,7 @@ Usage (from the repo root):
   AZURE_OPENAI_API_KEY=... python3 run_pilot.py \
       --provider azure --model YOUR-DEPLOYMENT \
       --azure-endpoint https://YOUR-RESOURCE.openai.azure.com
+  python3 run_pilot.py --pilot-type active                # active exploration instead
 
   # local LM Studio (OpenAI-compatible, slow: needs the long timeout)
   OPENAI_API_KEY=lm-studio python3 run_pilot.py \
@@ -60,7 +67,8 @@ Usage (from the repo root):
 
 Outputs: <out>/<tag>/pilot_deterministic.json, pilot_stochastic.json
 (with _multi / _dryrun suffixes as applicable). Default out is
-pilot_artifacts/. stdlib only.
+pilot_artifacts/ (an "_active" part is added for --pilot-type active).
+stdlib only.
 """
 
 from __future__ import annotations
@@ -72,8 +80,12 @@ import os
 import random
 import subprocess
 import time
+import urllib.error
 import urllib.request
+from dataclasses import asdict
 
+import explore_agent
+import explore_metrics
 from ecpm_parser import (PARSERS, belief_self_consistency, run_probe,
                          score_belief, score_route_pre)
 from resource_mdp import (CONDITIONS, PROMPT_RENDERINGS, SCHEMA_VERSION,
@@ -256,6 +268,37 @@ ASKS = {
         'route must end at {goal}. No other text.'),
 }
 
+# Same 4 probes, worded for the active-exploration pilot: the model refers
+# to its own exploration episodes instead of a handed-over period A/B log.
+ASKS_ACTIVE = {
+    "detection": (
+        'Question: across your two rounds of exploring this network (the '
+        'first set of episodes, then the reset and second set), did the '
+        'network\'s dynamics change at any point?\nAnswer with exactly '
+        'one JSON object: {"changed": true} or {"changed": false}. No '
+        'other text.'),
+    "localization": (
+        'The dynamics changed at some point during your exploration. '
+        'Question: which single (node, action) pair changed?\nAnswer '
+        'with exactly one JSON object: {"node": "<node>", "action": '
+        '"<aK>"}. No other text.'),
+    "preservation": (
+        'For EACH of the following (node, action) pairs, judge whether '
+        'its dynamics changed at any point during your exploration:\n'
+        '{queried}\nAnswer with exactly one JSON object of the form '
+        '{{"pairs": [{{"node": "...", "action": "...", "changed": '
+        'true|false}}, ...]}} containing every listed pair exactly once. '
+        'No other text.'),
+    "adaptation": (
+        'Plan a route for the current network (as of your most recent '
+        'exploration) from {start} to {goal}. Answer with exactly one '
+        'JSON object of the form {{"route": [{{"node": "...", "action": '
+        '"..."}}, ...]}}: at most 32 steps, the first step\'s node must '
+        'be {start}, each next step\'s node must be where the previous '
+        'action leads, and the route must end at {goal}. No other '
+        'text.'),
+}
+
 
 def git_head():
     try:
@@ -419,6 +462,44 @@ def phase_line(idx, row, cum):
 # one-shot probe and for a later turn that carries history.
 
 
+class TransientLLMError(Exception):
+    """Empty/unparseable LLM response body -- treated as retryable by
+    with_retry, same spirit as a network error."""
+
+
+def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
+               **kwargs):
+    """Call fn(*args, **kwargs), retrying transient failures with jittered
+    exponential backoff (honoring a Retry-After header when present).
+    Retryable: HTTP 429/500/502/503/504, network/timeout errors, and
+    empty/unparseable response bodies (TransientLLMError, KeyError,
+    json.JSONDecodeError). Everything else (4xx auth/bad-request errors)
+    raises immediately. Stdlib only -- reimplements the retry pattern seen
+    in reference material, no third-party dependency added, matching this
+    repo's stdlib-only convention."""
+    last_exc = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return fn(*args, **kwargs)
+        except urllib.error.HTTPError as ex:
+            if ex.code not in (429, 500, 502, 503, 504):
+                raise
+            last_exc = ex
+            retry_after = ex.headers.get("Retry-After") if ex.headers else None
+            delay = (float(retry_after) if retry_after
+                     else min(max_delay, base_delay * 2 ** (attempt - 1)))
+        except (urllib.error.URLError, TimeoutError, ConnectionError,
+                json.JSONDecodeError, KeyError, TransientLLMError) as ex:
+            last_exc = ex
+            delay = min(max_delay, base_delay * 2 ** (attempt - 1))
+        if attempt == max_attempts:
+            raise last_exc
+        delay *= random.uniform(0.5, 1.5)
+        print(f"retryable error (attempt {attempt}/{max_attempts}), "
+              f"retrying in {delay:.1f}s: {last_exc}")
+        time.sleep(delay)
+
+
 def call_anthropic(model, messages, max_tokens, timeout):
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
@@ -464,6 +545,80 @@ def call_openai(model, messages, max_tokens, base_url, timeout):
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     return data["choices"][0]["message"]["content"], data.get("usage", {})
+
+
+# Multi-turn variants for the active-exploration pilot (system + a growing
+# message list, matching explore_agent.py's act_fn(system, messages)
+# contract) instead of a single one-shot prompt. Wrapped in with_retry,
+# unlike the single-shot passive-mode callers above.
+
+
+def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0):
+    """Calls Claude with the given system prompt and message history.
+    If thinking_budget > 0, enables Extended Thinking with that token
+    budget (Anthropic requires temperature 1 and max_tokens greater than
+    thinking_budget in that case) and returns the thinking content
+    separately from the visible answer."""
+    body = {"model": model, "max_tokens": max_tokens, "system": system,
+            "messages": messages}
+    if thinking_budget > 0:
+        body["thinking"] = {"type": "enabled",
+                            "budget_tokens": thinking_budget}
+        body["temperature"] = 1
+    else:
+        body["temperature"] = 0
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=json.dumps(body).encode(),
+        headers={"content-type": "application/json",
+                 "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                 "anthropic-version": "2023-06-01"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        data = json.loads(resp.read())
+    reasoning = "".join(b.get("thinking", "") for b in data.get("content", [])
+                        if b.get("type") == "thinking")
+    text = "".join(b.get("text", "") for b in data.get("content", [])
+                   if b.get("type") == "text")
+    if not text.strip():
+        raise TransientLLMError("empty Anthropic response content")
+    return text, reasoning, data.get("usage", {})
+
+
+def call_openai_chat(model, system, messages, max_tokens, base_url):
+    full_messages = [{"role": "system", "content": system}] + list(messages)
+    req = urllib.request.Request(
+        base_url.rstrip("/") + "/chat/completions",
+        data=json.dumps({"model": model, "max_tokens": max_tokens,
+                         "temperature": 0,
+                         "messages": full_messages}).encode(),
+        headers={"content-type": "application/json",
+                 "authorization":
+                     f"Bearer {os.environ['OPENAI_API_KEY']}"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        data = json.loads(resp.read())
+    text = data["choices"][0]["message"]["content"]
+    if not text.strip():
+        raise TransientLLMError("empty OpenAI response content")
+    return text, data.get("usage", {})
+
+
+def call_azure_chat(deployment, system, messages, max_tokens, endpoint,
+                    api_version):
+    full_messages = [{"role": "system", "content": system}] + list(messages)
+    url = (endpoint.rstrip("/") + "/openai/deployments/" + deployment
+           + "/chat/completions?api-version=" + api_version)
+    req = urllib.request.Request(
+        url,
+        data=json.dumps({"max_tokens": max_tokens, "temperature": 0,
+                         "messages": full_messages}).encode(),
+        headers={"content-type": "application/json",
+                 "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        data = json.loads(resp.read())
+    text = data["choices"][0]["message"]["content"]
+    if not text.strip():
+        raise TransientLLMError("empty Azure response content")
+    return text, data.get("usage", {})
 
 
 def dry_run_answer(record, probe, queried):
@@ -533,6 +688,8 @@ def dispatch(args, record, probe, queried, messages):
 
 
 def run_pilot(sc, deterministic, args):
+    """Passive pilot: evidence is collected up front and handed to the
+    model as text. See run_pilot_active for the live-agent counterpart."""
     probes = tuple(sc["probes"])
     record = build_record(sc, deterministic)
     view = prompt_view(record, rendering=sc["rendering"],
@@ -660,6 +817,120 @@ def run_pilot(sc, deterministic, args):
     return artifact
 
 
+def _episode_to_json(ep):
+    return asdict(ep)
+
+
+def run_pilot_active(sc, deterministic, args):
+    """Active-exploration pilot: the model explores M0 then M1 itself and
+    answers the 4 probes on a fork of its own transcript. The loop lives in
+    explore_agent.py; this only wires it to a provider and writes the
+    artifact."""
+    inst = make_pair(sc["seed"], sc["condition"],
+                     deterministic=deterministic, matched=True)
+    record = json.loads(json.dumps(pair_to_json(inst)))
+    queried = queried_pairs_for(record, sc)
+    cfg = explore_agent.ExploreConfig(
+        max_episodes_m0=args.m0_episodes, max_episodes_m1=args.m1_episodes,
+        max_steps_per_episode=args.max_steps_per_episode,
+        announce_change=args.announce_change,
+        max_context_tokens_est=args.explore_context_budget,
+        seed=sc["seed"])
+
+    last_usage = {}
+
+    def act_fn(system, messages):
+        nonlocal last_usage  # so the caller can read usage after the call, since only (text, reasoning) is returned
+        reasoning = ""
+        if args.provider == "anthropic":
+            text, reasoning, usage = with_retry(
+                call_anthropic_chat, args.model, system, messages,
+                args.max_tokens, args.thinking_budget)
+        elif args.provider == "azure":
+            text, usage = with_retry(call_azure_chat, args.model, system,
+                                     messages, args.max_tokens,
+                                     args.azure_endpoint, args.api_version)
+        elif args.provider == "openai":
+            text, usage = with_retry(call_openai_chat, args.model, system,
+                                     messages, args.max_tokens,
+                                     args.base_url)
+        else:
+            raise AssertionError("dry-run must not call act_fn")
+        last_usage = usage
+        return text, reasoning
+
+    if args.provider == "dry-run":
+        # no API calls: a scripted policy stands in for the model's actions
+        result = explore_agent.run_explore_instance(
+            inst, cfg, node_policy_fn=lambda mdp: explore_agent.dry_run_policy(
+                mdp, inst.labels))
+    else:
+        result = explore_agent.run_explore_instance(inst, cfg, act_fn=act_fn)
+
+    metrics = explore_metrics.compute_explore_metrics(
+        inst, result["m0_episodes"], result["m1_episodes"])
+    head = git_head()
+    artifact = {
+        "pilot": "deterministic" if deterministic else "stochastic",
+        "created_utc": datetime.datetime.now(
+            datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+        "env": {"schema_version": SCHEMA_VERSION,
+                "frozen_sha": FROZEN_SHA,
+                "git_head": head,
+                "pinned_to_freeze": head == FROZEN_SHA},
+        "instance": {"graph_seed": sc["seed"], "condition": sc["condition"],
+                     "deterministic": deterministic, "matched": True,
+                     "seeds": record["seeds"]},
+        "model": {"provider": args.provider, "model": args.model,
+                  "temperature": 0, "max_tokens": args.max_tokens},
+        "explore": {
+            "config": asdict(cfg),
+            "transcript": result["messages"],
+            "m0_episodes": [_episode_to_json(e)
+                            for e in result["m0_episodes"]],
+            "m1_episodes": [_episode_to_json(e)
+                            for e in result["m1_episodes"]],
+            "metrics": metrics,
+        },
+        "probes": {},
+    }
+
+    system_prompt = explore_agent.build_system_prompt(record["goal"])
+    for probe in ALL_PROBES:
+        ask = ASKS_ACTIVE[probe]
+        if probe == "preservation":
+            listed = "\n".join(f'- node {q["node"]}, action {q["action"]}'
+                               for q in queried)
+            ask = ask.format(queried=listed)
+        elif probe == "adaptation":
+            ask = ask.format(start=record["start"], goal=record["goal"])
+        # each probe appends to a copy of the exploration transcript, not a fresh one
+        forked_messages = list(result["messages"]) + [
+            {"role": "user", "content": ask}]
+
+        if args.provider == "dry-run":
+            raw, reasoning, usage = dry_run_answer(record, probe, queried), "", {}
+        else:
+            raw, reasoning = act_fn(system_prompt, forked_messages)
+            usage = last_usage
+
+        probe_result = run_probe(record, probe, raw,
+                                 queried_pairs=(queried
+                                                if probe == "preservation"
+                                                else None))
+        artifact["probes"][probe] = {
+            "prompt_chars": len(ask),
+            "prompt_tokens_est": len(ask) // 4,
+            "queried_pairs": queried if probe == "preservation" else None,
+            "raw_response": raw,
+            "reasoning": reasoning,
+            "provider_usage": usage,
+            "parsed": probe_result["parsed"],
+            "scored": probe_result["scored"],
+        }
+    return artifact
+
+
 def main():
     ap = argparse.ArgumentParser()
     # what is asked
@@ -701,6 +972,31 @@ def main():
     ap.add_argument("--timeout", type=int, default=120,
                     help="per-request seconds; local endpoints need ~900")
     ap.add_argument("--out", default="pilot_artifacts")
+    ap.add_argument("--pilot-type", default="passive",
+                    choices=["passive", "active"],
+                    help="passive (default): hand the model a "
+                         "pre-collected evidence log, as before. active: "
+                         "let the model explore the MDP itself, picking "
+                         "its own actions (see explore_agent.py).")
+    ap.add_argument("--m0-episodes", type=int, default=4,
+                    help="active pilot-type only")
+    ap.add_argument("--m1-episodes", type=int, default=4,
+                    help="active pilot-type only")
+    ap.add_argument("--max-steps-per-episode", type=int, default=25,
+                    help="active pilot-type only")
+    ap.add_argument("--announce-change", action="store_true",
+                    help="active pilot-type only: explicitly tell the "
+                         "model reliabilities may have changed at the "
+                         "M0->M1 reset (ablation; default is silent, "
+                         "requiring the model to infer the change from "
+                         "observation alone)")
+    ap.add_argument("--explore-context-budget", type=int, default=12000,
+                    help="active pilot-type only")
+    ap.add_argument("--thinking-budget", type=int, default=0,
+                    help="active pilot-type only, Anthropic provider "
+                         "only: greater than 0 enables Claude Extended "
+                         "Thinking with this token budget (requires "
+                         "--max-tokens greater than this value)")
     args = ap.parse_args()
 
     if args.list_scenarios:
@@ -727,18 +1023,31 @@ def main():
                          f"{'/'.join(sc['variants'])}; --mode {args.mode} "
                          f"leaves nothing to run")
     for det in [v == "det" for v in todo]:
-        art = run_pilot(sc, det, args)
+        if args.pilot_type == "active":
+            art = run_pilot_active(sc, det, args)
+        else:
+            art = run_pilot(sc, det, args)
         parts = ["pilot_deterministic" if det else "pilot_stochastic"]
-        if args.turn_mode != "single":
+        if args.pilot_type == "active":
+            parts.append("active")
+        elif args.turn_mode != "single":
             parts.append(args.turn_mode)
         if args.provider == "dry-run":
             parts.append("dryrun")
         path = os.path.join(outdir, "_".join(parts) + ".json")
         with open(path, "w") as fh:
             json.dump(art, fh, indent=2)
-        print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
-              f"final={art['metrics_final']['per_phase_score']} "
-              f"mean={art['metrics_final']['score_mean']}\n")
+        mf = art.get("metrics_final")
+        if mf is None:
+            em = art.get("explore", {}).get("metrics", {})
+            print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
+                  f"opt_rate m0={em.get('optimal_action_rate_m0'):.2f} "
+                  f"m1={em.get('optimal_action_rate_m1'):.2f} "
+                  f"lag={em.get('adaptation_lag_steps')}\n")
+        else:
+            print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
+                  f"final={mf['per_phase_score']} "
+                  f"mean={mf['score_mean']}\n")
 
 
 if __name__ == "__main__":

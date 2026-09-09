@@ -659,11 +659,20 @@ class Attempt:
     next_node: str
 
 
+class PolicyAborted(Exception):
+    """Raised by a policy to end the episode early instead of returning a
+    next hop. Policies that never raise it are unaffected."""
+
+
 def rollout(mdp, start, policy, rng, horizon=40):
-    """policy: callable(node, rng) -> next hop. Returns (attempts, delivered)."""
+    """policy: callable(node, rng) -> next hop, or raises PolicyAborted to
+    stop early. Returns (attempts, delivered)."""
     at, t, attempts = start, 0, []
     while at != mdp.goal and t < horizon:
-        v = policy(at, rng)
+        try:
+            v = policy(at, rng)
+        except PolicyAborted:
+            break
         nxt, ok = mdp.step(at, v, rng)
         t += 1
         attempts.append(Attempt(t, at, v, ok, nxt))
