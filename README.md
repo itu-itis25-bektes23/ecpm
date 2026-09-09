@@ -72,6 +72,13 @@ reproduce that condition.
 Outputs land in `pilot_artifacts/`. For review, send
 `pilot_deterministic.json`, `pilot_stochastic.json`, and `run_pilot.py`.
 
+A second pilot type, active exploration (`--pilot-type active`), lets the
+model explore the MDP itself instead of reading a pre-collected evidence
+log, picking its own actions and observing the real outcome (see
+`EXPLORE_AGENT.md`). It writes into the same `pilot_artifacts/` folder,
+with an `_active` suffix on the filenames:
+`pilot_deterministic_active.json`, `pilot_stochastic_active.json`.
+
 ## Azure access
 
 1. $200 startup credits: https://www.microsoft.com/en-us/startups
