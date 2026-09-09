@@ -81,14 +81,13 @@ import random
 import subprocess
 import time
 import urllib.error
-import urllib.request
 from dataclasses import asdict
 
 import explore_agent
 import explore_metrics
 from ecpm_parser import (PARSERS, belief_self_consistency, run_probe,
                          score_belief, score_route_pre)
-from model_clients import call_anthropic, call_azure, call_openai
+from model_clients import *
 from resource_mdp import (CONDITIONS, PROMPT_RENDERINGS, SCHEMA_VERSION,
                           make_pair, pair_to_json, paired_evidence,
                           prompt_view)
@@ -457,15 +456,7 @@ def phase_line(idx, row, cum):
             f" {cum['latency_s']}s")
 
 
-# ---------------------------------------------------------------- providers
-#
-# All three take a full `messages` list, so the same call works for a
-# one-shot probe and for a later turn that carries history.
-
-
-class TransientLLMError(Exception):
-    """Empty/unparseable LLM response body -- treated as retryable by
-    with_retry, same spirit as a network error."""
+# --------------------------------------------------------- provider retry
 
 
 def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
@@ -499,80 +490,6 @@ def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
         print(f"retryable error (attempt {attempt}/{max_attempts}), "
               f"retrying in {delay:.1f}s: {last_exc}")
         time.sleep(delay)
-
-
-# Multi-turn variants for the active-exploration pilot (system + a growing
-# message list, matching explore_agent.py's act_fn(system, messages)
-# contract) instead of a single one-shot prompt. Wrapped in with_retry,
-# unlike the single-shot passive-mode callers above.
-
-
-def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0):
-    """Calls Claude with the given system prompt and message history.
-    If thinking_budget > 0, enables Extended Thinking with that token
-    budget (Anthropic requires temperature 1 and max_tokens greater than
-    thinking_budget in that case) and returns the thinking content
-    separately from the visible answer."""
-    body = {"model": model, "max_tokens": max_tokens, "system": system,
-            "messages": messages}
-    if thinking_budget > 0:
-        body["thinking"] = {"type": "enabled",
-                            "budget_tokens": thinking_budget}
-        body["temperature"] = 1
-    else:
-        body["temperature"] = 0
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=json.dumps(body).encode(),
-        headers={"content-type": "application/json",
-                 "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-                 "anthropic-version": "2023-06-01"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read())
-    reasoning = "".join(b.get("thinking", "") for b in data.get("content", [])
-                        if b.get("type") == "thinking")
-    text = "".join(b.get("text", "") for b in data.get("content", [])
-                   if b.get("type") == "text")
-    if not text.strip():
-        raise TransientLLMError("empty Anthropic response content")
-    return text, reasoning, data.get("usage", {})
-
-
-def call_openai_chat(model, system, messages, max_tokens, base_url):
-    full_messages = [{"role": "system", "content": system}] + list(messages)
-    req = urllib.request.Request(
-        base_url.rstrip("/") + "/chat/completions",
-        data=json.dumps({"model": model, "max_tokens": max_tokens,
-                         "temperature": 0,
-                         "messages": full_messages}).encode(),
-        headers={"content-type": "application/json",
-                 "authorization":
-                     f"Bearer {os.environ['OPENAI_API_KEY']}"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read())
-    text = data["choices"][0]["message"]["content"]
-    if not text.strip():
-        raise TransientLLMError("empty OpenAI response content")
-    return text, data.get("usage", {})
-
-
-def call_azure_chat(deployment, system, messages, max_tokens, endpoint,
-                    api_version):
-    full_messages = [{"role": "system", "content": system}] + list(messages)
-    url = (endpoint.rstrip("/") + "/openai/deployments/" + deployment
-           + "/chat/completions?api-version=" + api_version)
-    req = urllib.request.Request(
-        url,
-        data=json.dumps({"max_tokens": max_tokens, "temperature": 0,
-                         "messages": full_messages}).encode(),
-        headers={"content-type": "application/json",
-                 "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read())
-    text = data["choices"][0]["message"]["content"]
-    if not text.strip():
-        raise TransientLLMError("empty Azure response content")
-    return text, data.get("usage", {})
 
 
 def dry_run_answer(record, probe, queried):
@@ -804,7 +721,8 @@ def run_pilot_active(sc, deterministic, args):
         elif args.provider == "azure":
             text, usage = with_retry(call_azure_chat, args.model, system,
                                      messages, args.max_tokens,
-                                     args.azure_endpoint, args.api_version)
+                                     args.azure_endpoint, args.api_version,
+                                     reasoning=args.azure_reasoning_model)
         elif args.provider == "openai":
             text, usage = with_retry(call_openai_chat, args.model, system,
                                      messages, args.max_tokens,
