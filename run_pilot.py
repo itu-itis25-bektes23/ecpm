@@ -220,7 +220,7 @@ def phase_metrics(probe, scored):
     be plotted on one axis; probe-specific detail is kept alongside."""
     status = scored.get("status")
     parse_ok = status not in ("malformed_json", "invalid_object", "too_long")
-    m = {"probe": probe, "status": status, "parse_ok": parse_ok,
+    m: dict = {"probe": probe, "status": status, "parse_ok": parse_ok,
          "scored_ok": status == "ok", "score": 0.0, "detail": {}}
     if probe in ("detection", "localization"):
         m["score"] = 1.0 if scored.get("correct") else 0.0

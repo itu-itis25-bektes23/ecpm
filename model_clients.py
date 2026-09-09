@@ -95,7 +95,7 @@ def call_openai(model, messages, max_tokens, base_url, timeout):
 
 
 class TransientLLMError(Exception):
-    """Empty/unparseable LLM response body -- treated as retryable by
+    """Empty/unparseable LLM response body, treated as retryable by
     run_pilot.with_retry, same spirit as a network error."""
 
 
@@ -111,7 +111,7 @@ def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0):
     budget (Anthropic requires temperature 1 and max_tokens greater than
     thinking_budget in that case) and returns the thinking content
     separately from the visible answer. Ignored on models in
-    _ANTHROPIC_NO_SAMPLING -- they run adaptive thinking by default and
+    _ANTHROPIC_NO_SAMPLING, they run adaptive thinking by default and
     reject both temperature and the old fixed budget_tokens format."""
     body = {"model": model, "max_tokens": max_tokens, "system": system,
             "messages": messages}
