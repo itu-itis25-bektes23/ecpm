@@ -442,3 +442,330 @@ def belief_self_consistency(record, pre_scored, post_scored):
 
 PARSERS.update({"route_pre": parse_adaptation, "belief_pre": parse_belief,
                 "belief_post": parse_belief})
+
+
+# --------------------------------------------------------------------------
+# Additive combined-response contract for protocol icl_two_response_v1.
+# The frozen schema 2.1 parsers and scorers above are unchanged.
+# --------------------------------------------------------------------------
+
+
+def _component_status(parts):
+    statuses = [part["status"] for part in parts]
+    if all(status == "ok" for status in statuses):
+        return "ok"
+    if all(status == "malformed_json" for status in statuses):
+        return "malformed_json"
+    return "partial"
+
+
+def _parse_route_value(value):
+    if not isinstance(value, list):
+        return {"status": "invalid_object", "route": []}
+    steps = []
+    for item in value:
+        if not (isinstance(item, dict)
+                and isinstance(item.get("node"), str)
+                and isinstance(item.get("action"), str)):
+            return {"status": "invalid_object", "route": []}
+        steps.append({"node": item["node"], "action": item["action"]})
+    if len(steps) > MAX_ROUTE_STEPS:
+        return {"status": "too_long", "route": []}
+    return {"status": "ok", "route": steps}
+
+
+def _parse_icl_pairs(value, require_changed):
+    if not isinstance(value, list):
+        return {"status": "invalid_object", "pairs": []}
+    pairs = []
+    for item in value:
+        if not (isinstance(item, dict)
+                and isinstance(item.get("node"), str)
+                and isinstance(item.get("action"), str)
+                and isinstance(item.get("available"), bool)):
+            return {"status": "invalid_object", "pairs": []}
+        if require_changed and not isinstance(item.get("changed"), bool):
+            return {"status": "invalid_object", "pairs": []}
+        available = item["available"]
+        destination = item.get("destination")
+        probability = item.get("p_success")
+        if available:
+            if not (isinstance(destination, str)
+                    and isinstance(probability, (int, float))
+                    and not isinstance(probability, bool)):
+                return {"status": "invalid_object", "pairs": []}
+            if not 0.0 <= float(probability) <= 1.0:
+                return {"status": "out_of_range", "pairs": []}
+            probability = float(probability)
+        elif destination is not None or probability is not None:
+            return {"status": "invalid_unavailable", "pairs": []}
+        row = {"node": item["node"], "action": item["action"],
+               "available": available, "destination": destination,
+               "p_success": probability}
+        if require_changed:
+            row["changed"] = item["changed"]
+        pairs.append(row)
+    return {"status": "ok", "pairs": pairs}
+
+
+def _malformed_icl(turn_b=False):
+    bad = {"status": "malformed_json", "pairs": []}
+    route = {"status": "malformed_json", "route": []}
+    out = {"status": "malformed_json", "well_formed": False,
+           "beliefs": bad, "route": route}
+    if turn_b:
+        out.update({"detection": {"status": "malformed_json"},
+                    "localization": {"status": "malformed_json",
+                                     "changed_pair": None}})
+    return out
+
+
+def parse_icl_turn_a(text):
+    """Parse beliefs and route independently from the Turn A object."""
+    obj = extract_json_object(text)
+    if obj is None:
+        return _malformed_icl()
+    beliefs = _parse_icl_pairs(obj.get("pairs"), require_changed=False)
+    route = _parse_route_value(obj.get("route"))
+    status = _component_status((beliefs, route))
+    return {"status": status, "well_formed": status == "ok",
+            "beliefs": beliefs, "route": route}
+
+
+def parse_icl_turn_b(text):
+    """Parse detection, nullable localization, beliefs, and route separately."""
+    obj = extract_json_object(text)
+    if obj is None:
+        return _malformed_icl(turn_b=True)
+    if isinstance(obj.get("changed"), bool):
+        detection = {"status": "ok", "changed": obj["changed"]}
+    else:
+        detection = {"status": "invalid_object"}
+    changed_pair = obj.get("changed_pair")
+    if detection["status"] != "ok":
+        localization = {"status": "invalid_object", "changed_pair": None}
+    elif not detection["changed"] and changed_pair is None:
+        localization = {"status": "ok", "changed_pair": None}
+    elif (detection["changed"] and isinstance(changed_pair, dict)
+          and isinstance(changed_pair.get("node"), str)
+          and isinstance(changed_pair.get("action"), str)):
+        localization = {
+            "status": "ok",
+            "changed_pair": {"node": changed_pair["node"],
+                             "action": changed_pair["action"]},
+        }
+    else:
+        localization = {"status": "invalid_object", "changed_pair": None}
+    beliefs = _parse_icl_pairs(obj.get("pairs"), require_changed=True)
+    route = _parse_route_value(obj.get("route"))
+    parts = (detection, localization, beliefs, route)
+    status = _component_status(parts)
+    return {"status": status, "well_formed": status == "ok",
+            "detection": detection, "localization": localization,
+            "beliefs": beliefs, "route": route}
+
+
+def score_icl_beliefs(record, parsed, queried_pairs, period,
+                      visible_stats=None):
+    """Strict five-pair belief scoring for the additive ICL protocol."""
+    wanted = [(q["node"], q["action"]) for q in queried_pairs]
+    out = {"status": parsed["status"], "period": period,
+           "n_queried": len(wanted), "n_scored": 0,
+           "accuracy": 0.0, "availability_accuracy": 0.0,
+           "destination_accuracy": None, "n_destination_scored": 0,
+           "p_mae_visible": None, "n_p_visible_scored": 0,
+           "p_mae_truth": None, "n_p_truth_scored": 0,
+           "change_label_accuracy": None,
+           "per_pair": []}
+    if parsed["status"] != "ok":
+        return out
+    wset, got = set(wanted), {}
+    for item in parsed["pairs"]:
+        key = (item["node"], item["action"])
+        if key not in wset:
+            out["status"] = "unknown_pair"
+            return out
+        if key in got:
+            out["status"] = "duplicate_pair"
+            return out
+        got[key] = item
+    if set(got) != wset:
+        out["status"] = "missing_pair"
+        return out
+
+    truth = _world_map(record, period)
+    menu = record[f"legal_actions_{period}"]
+    change = record["change"]
+    target = (None if change["edge"] is None else
+              (change["edge"]["from"], change["action"]))
+    rows, truth_errors, visible_errors, destination_rows = [], [], [], []
+    for key in wanted:
+        item = got[key]
+        true_available = key[1] in menu.get(key[0], [])
+        true_transition = truth.get(key)
+        true_destination, true_p = (true_transition if true_transition
+                                    else (None, None))
+        visible_p = ((visible_stats or {}).get(key) or {}).get("p_success")
+        available_ok = item["available"] is true_available
+        destination_ok = item["destination"] == true_destination
+        if true_available:
+            destination_rows.append(destination_ok)
+        if true_p is None or item["p_success"] is None:
+            probability_ok = item["p_success"] is true_p
+            truth_error = None
+        else:
+            truth_error = abs(item["p_success"] - true_p)
+            truth_errors.append(truth_error)
+            probability_ok = truth_error <= _belief_tol(record) + EPS
+        visible_error = (None if visible_p is None
+                         or item["p_success"] is None else
+                         abs(item["p_success"] - visible_p))
+        if visible_error is not None:
+            visible_errors.append(visible_error)
+        transition_ok = available_ok and destination_ok and probability_ok
+        changed_ok = None
+        if period == "post":
+            changed_ok = item["changed"] is (key == target)
+        correct = transition_ok and (changed_ok is not False)
+        rows.append({**item, "true_available": true_available,
+                     "true_destination": true_destination,
+                     "true_p_success": true_p,
+                     "availability_ok": available_ok,
+                     "destination_ok": destination_ok,
+                     "probability_ok": probability_ok,
+                     "visible_p_success": visible_p,
+                     "p_error_visible": visible_error,
+                     "p_error_truth": truth_error,
+                     "transition_correct": transition_ok,
+                     "change_label_ok": changed_ok, "correct": correct})
+
+    n = len(rows)
+    out.update({
+        "status": "ok", "n_scored": n, "per_pair": rows,
+        "accuracy": round(sum(r["correct"] for r in rows) / n, 4),
+        "availability_accuracy": round(
+            sum(r["availability_ok"] for r in rows) / n, 4),
+        "destination_accuracy": (round(
+            sum(destination_rows) / len(destination_rows), 4)
+            if destination_rows else None),
+        "n_destination_scored": len(destination_rows),
+        "p_mae_visible": (round(sum(visible_errors) / len(visible_errors), 4)
+                          if visible_errors else None),
+        "n_p_visible_scored": len(visible_errors),
+        "p_mae_truth": (round(sum(truth_errors) / len(truth_errors), 4)
+                        if truth_errors else None),
+        "n_p_truth_scored": len(truth_errors),
+        "change_label_accuracy": (round(
+            sum(r["change_label_ok"] for r in rows) / n, 4)
+            if period == "post" else None),
+    })
+    return out
+
+
+def score_icl_localization(record, parsed_detection, parsed_localization):
+    truth_changed = record["condition"] != "no_change"
+    predicted = parsed_detection.get("changed")
+    detection_ok = (parsed_detection["status"] == "ok"
+                    and predicted is truth_changed)
+    truth_pair = (None if not truth_changed else
+                  {"node": record["change"]["edge"]["from"],
+                   "action": record["change"]["action"]})
+    predicted_pair = parsed_localization.get("changed_pair")
+    localization_applicable = truth_changed
+    localization_ok = (None if not localization_applicable else
+                       parsed_localization["status"] == "ok"
+                       and predicted_pair == truth_pair)
+    null_contract_applicable = predicted is False
+    null_contract_ok = (None if not null_contract_applicable else
+                        parsed_localization["status"] == "ok"
+                        and predicted_pair is None)
+    return {"detection_status": parsed_detection["status"],
+            "detection_correct": detection_ok,
+            "predicted_changed": predicted, "truth_changed": truth_changed,
+            "localization_status": parsed_localization["status"],
+            "localization_applicable": localization_applicable,
+            "localization_correct": localization_ok,
+            "null_changed_pair_applicable": null_contract_applicable,
+            "null_changed_pair_correct": null_contract_ok,
+            "predicted_changed_pair": predicted_pair,
+            "truth_changed_pair": truth_pair}
+
+
+def diagnose_route_beliefs(parsed_route, parsed_beliefs, goal):
+    """Compare a route with reported beliefs without changing route parsing."""
+    if parsed_route["status"] != "ok":
+        return {"status": "not_scored", "pairs": []}
+    beliefs = {(p["node"], p["action"]): p
+               for p in parsed_beliefs.get("pairs", [])}
+    checked, unresolved, conflicts = [], [], []
+    for index, step in enumerate(parsed_route["route"]):
+        key = (step["node"], step["action"])
+        expected = (parsed_route["route"][index + 1]["node"]
+                    if index + 1 < len(parsed_route["route"]) else goal)
+        belief = beliefs.get(key)
+        if belief is None:
+            unresolved.append({"node": key[0], "action": key[1]})
+            checked.append({"node": key[0], "action": key[1],
+                            "route_destination": expected,
+                            "belief_destination": None,
+                            "status": "unresolvable"})
+            continue
+        conflict = (not belief["available"]
+                    or belief["destination"] != expected
+                    or belief["p_success"] is None
+                    or belief["p_success"] <= 0)
+        checked.append({"node": key[0], "action": key[1],
+                        "route_destination": expected,
+                        "belief_destination": belief["destination"],
+                        "status": ("inconsistent" if conflict else
+                                   "consistent")})
+        if conflict:
+            conflicts.append({"node": key[0], "action": key[1]})
+    if conflicts:
+        return {"status": "route_inconsistent", "pairs": checked,
+                "conflicting_pairs": conflicts,
+                "unresolved_pairs": unresolved}
+    if unresolved:
+        return {"status": "route_unresolvable", "pairs": checked,
+                "unresolved_pairs": unresolved}
+    return {"status": "consistent", "pairs": checked}
+
+
+def score_control_preservation(record, pre_beliefs, post_beliefs,
+                               queried_pairs, target_pair):
+    """Primary self-consistency and secondary truth checks on four controls."""
+    controls = [(q["node"], q["action"]) for q in queried_pairs
+                if (q["node"], q["action"]) != target_pair]
+    base = {"status": "unscored", "n_controls": len(controls),
+            "mean_control_preservation": 0.0,
+            "all_four_controls_correct": False,
+            "truth_mean_control_preservation": 0.0, "per_pair": []}
+    if (pre_beliefs.get("status") != "ok"
+            or post_beliefs.get("status") != "ok"):
+        return base
+    pre = {(r["node"], r["action"]): r for r in pre_beliefs["per_pair"]}
+    post = {(r["node"], r["action"]): r for r in post_beliefs["per_pair"]}
+    rows = []
+    for key in controls:
+        a, b = pre[key], post[key]
+        if a["p_success"] is None or b["p_success"] is None:
+            same_p = a["p_success"] is b["p_success"]
+        else:
+            same_p = abs(a["p_success"] - b["p_success"]) <= \
+                _belief_tol(record) + EPS
+        same_belief = (a["available"] is b["available"]
+                       and a["destination"] == b["destination"] and same_p)
+        self_ok = same_belief and b.get("changed") is False
+        truth_ok = b["transition_correct"] and b.get("change_label_ok") is True
+        rows.append({"node": key[0], "action": key[1],
+                     "belief_preserved": same_belief,
+                     "reported_unchanged": b.get("changed") is False,
+                     "self_consistent": self_ok,
+                     "truth_correct": truth_ok})
+    mean = sum(r["self_consistent"] for r in rows) / len(rows)
+    truth_mean = sum(r["truth_correct"] for r in rows) / len(rows)
+    return {"status": "ok", "n_controls": len(rows),
+            "mean_control_preservation": round(mean, 4),
+            "all_four_controls_correct": len(rows) == 4 and mean == 1.0,
+            "truth_mean_control_preservation": round(truth_mean, 4),
+            "per_pair": rows}
