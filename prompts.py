@@ -141,10 +141,8 @@ ASKS_ACTIVE = {
 
 
 # --------------------------------------------------------------------
-# Passive-pilot formatting helpers (turn the pre-collected evidence log
-# in `view` into the blocks above).
+# Passive-pilot formatting helpers (used by run_pilot()).
 # --------------------------------------------------------------------
-
 
 def _menus(view):
     return {p: "; ".join(f"{node}: {', '.join(m)}" for node, m in
@@ -189,3 +187,20 @@ def ask_block(view, probe, queried):
     elif probe in ("adaptation", "route_pre"):
         ask = ask.format(start=view["start"], goal=view["goal"])
     return ask + "\n"
+
+
+# --------------------------------------------------------------------
+# Active-pilot formatting helper (used by run_pilot_active()).
+# --------------------------------------------------------------------
+
+
+def ask_block_active(record, probe, queried):
+    """The active-pilot probe question alone (no evidence transcript)."""
+    ask = ASKS_ACTIVE[probe]
+    if probe == "preservation":
+        listed = "\n".join(f'- node {q["node"]}, action {q["action"]}'
+                           for q in queried)
+        ask = ask.format(queried=listed)
+    elif probe == "adaptation":
+        ask = ask.format(start=record["start"], goal=record["goal"])
+    return ask

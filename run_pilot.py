@@ -599,13 +599,7 @@ def run_pilot_active(sc, deterministic, args):
 
     system_prompt = explore_agent.build_system_prompt(record["goal"])
     for probe in ALL_PROBES:
-        ask = ASKS_ACTIVE[probe]
-        if probe == "preservation":
-            listed = "\n".join(f'- node {q["node"]}, action {q["action"]}'
-                               for q in queried)
-            ask = ask.format(queried=listed)
-        elif probe == "adaptation":
-            ask = ask.format(start=record["start"], goal=record["goal"])
+        ask = ask_block_active(record, probe, queried)
         # each probe appends to a copy of the exploration transcript, not a fresh one
         forked_messages = list(result["messages"]) + [
             {"role": "user", "content": ask}]
