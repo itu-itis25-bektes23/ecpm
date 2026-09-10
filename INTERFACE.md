@@ -1,4 +1,4 @@
-# Routing-MDP Environment Interface (v2.1) — for prompts, parser, and evaluator
+# Routing-MDP Environment Interface (v2.2) — for prompts, parser, and evaluator
 
 Module: `resource_mdp.py` (stdlib only, Python 3.8+). Schema version **2.1**.
 Response parsing/scoring: `ecpm_parser.py` + `parser_fixtures.json` +
