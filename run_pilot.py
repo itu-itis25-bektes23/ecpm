@@ -82,8 +82,6 @@ import random
 import subprocess
 import time
 import urllib.error
-import urllib.parse
-import urllib.request
 from dataclasses import asdict
 
 import explore_agent
@@ -94,6 +92,8 @@ from ecpm_parser import (PARSERS, belief_self_consistency,
                          score_control_preservation, score_icl_beliefs,
                          score_icl_localization, score_adaptation,
                          score_route_pre)
+from model_clients import *
+from prompts import *
 from resource_mdp import (CONDITIONS, PROMPT_RENDERINGS, SCHEMA_VERSION,
                           make_pair, pair_to_json, paired_evidence,
                           prompt_view)
@@ -186,137 +186,6 @@ def resolve_scenario(args):
     return sc
 
 
-# ------------------------------------------------------------- prompt parts
-
-INTRO = """You are analysing a courier network. Nodes are locations; at each
-node you may attempt the listed actions (aK). An attempt either delivers
-you to that action's destination or you stay and retry (each attempt
-costs 1). You observed the network in two periods.
-
-Nodes: {nodes}
-Start: {start}   Goal: {goal}
-
-Action menu, period A (earlier): {menu_pre}
-Action menu, period B (later): {menu_post}
-
-Observations, period A:
-{ev_pre}
-
-Observations, period B:
-{ev_post}
-"""
-
-# v2.2 two-turn protocol. INTRO_A is the turn-1 header (period A only);
-# REVEAL_B is prepended to the first turn-2 ask. INTRO_A + REVEAL_B carry
-# exactly the same facts as INTRO.
-INTRO_A = """You are analysing a courier network. Nodes are locations; at each
-node you may attempt the listed actions (aK). An attempt either delivers
-you to that action's destination or you stay and retry (each attempt
-costs 1). You observed the network in an earlier period (period A). A
-later period (period B) will be shown afterwards.
-
-Nodes: {nodes}
-Start: {start}   Goal: {goal}
-
-Action menu, period A (earlier): {menu_pre}
-
-Observations, period A:
-{ev_pre}
-"""
-
-REVEAL_B = """Here is the later period (period B) of the same network.
-
-Action menu, period B (later): {menu_post}
-
-Observations, period B:
-{ev_post}
-"""
-
-ASKS = {
-    "route_pre": (
-        'Plan a route for period A from {start} to {goal}. Answer with '
-        'exactly one JSON object of the form {{"route": [{{"node": "...", '
-        '"action": "..."}}, ...]}}: at most 32 steps, the first step\'s '
-        'node must be {start}, each next step\'s node must be where the '
-        'previous action leads, and the destination of the last action '
-        'must be {goal}. Do NOT include a step at {goal} itself. '
-        'No other '
-        'text.'),
-    "belief_pre": (
-        'For EACH of the following (node, action) pairs, state what you '
-        'believe from the period A observations: the destination node the '
-        'action leads to, and its probability of success per attempt '
-        '(a number in [0, 1]):\n{queried}\n'
-        'Answer with exactly one JSON object of the form '
-        '{{"beliefs": [{{"node": "...", "action": "...", "destination": '
-        '"...", "p": 0.0}}, ...]}} containing every listed pair exactly '
-        'once. No other text.'),
-    "belief_post": (
-        'Now, for the SAME (node, action) pairs, state your beliefs for '
-        'period B: destination node and probability of success per '
-        'attempt:\n{queried}\n'
-        'Answer with exactly one JSON object of the form '
-        '{{"beliefs": [{{"node": "...", "action": "...", "destination": '
-        '"...", "p": 0.0}}, ...]}} containing every listed pair exactly '
-        'once. No other text.'),
-    "detection": (
-        'Question: did the network\'s dynamics change between period A and '
-        'period B?\nAnswer with exactly one JSON object: '
-        '{"changed": true} or {"changed": false}. No other text.'),
-    "localization": (
-        'The dynamics changed between the periods. Question: which single '
-        '(node, action) pair changed?\nAnswer with exactly one JSON '
-        'object: {"node": "<node>", "action": "<aK>"}. No other text.'),
-    "preservation": (
-        'For EACH of the following (node, action) pairs, judge whether its '
-        'dynamics changed between period A and period B:\n{queried}\n'
-        'Answer with exactly one JSON object of the form '
-        '{{"pairs": [{{"node": "...", "action": "...", "changed": '
-        'true|false}}, ...]}} containing every listed pair exactly once. '
-        'No other text.'),
-    "adaptation": (
-        'Plan a route for period B (the later network) from {start} to '
-        '{goal}. Answer with exactly one JSON object of the form '
-        '{{"route": [{{"node": "...", "action": "..."}}, ...]}}: at most '
-        '32 steps, the first step\'s node must be {start}, each next '
-        'step\'s node must be where the previous action leads, and the '
-        'destination of the last action must be {goal}. Do NOT include a '
-        'step at {goal} itself. No other text.'),
-}
-
-# Same 4 probes, worded for the active-exploration pilot: the model refers
-# to its own exploration episodes instead of a handed-over period A/B log.
-ASKS_ACTIVE = {
-    "detection": (
-        'Question: across your two rounds of exploring this network (the '
-        'first set of episodes, then the reset and second set), did the '
-        'network\'s dynamics change at any point?\nAnswer with exactly '
-        'one JSON object: {"changed": true} or {"changed": false}. No '
-        'other text.'),
-    "localization": (
-        'The dynamics changed at some point during your exploration. '
-        'Question: which single (node, action) pair changed?\nAnswer '
-        'with exactly one JSON object: {"node": "<node>", "action": '
-        '"<aK>"}. No other text.'),
-    "preservation": (
-        'For EACH of the following (node, action) pairs, judge whether '
-        'its dynamics changed at any point during your exploration:\n'
-        '{queried}\nAnswer with exactly one JSON object of the form '
-        '{{"pairs": [{{"node": "...", "action": "...", "changed": '
-        'true|false}}, ...]}} containing every listed pair exactly once. '
-        'No other text.'),
-    "adaptation": (
-        'Plan a route for the current network (as of your most recent '
-        'exploration) from {start} to {goal}. Answer with exactly one '
-        'JSON object of the form {{"route": [{{"node": "...", "action": '
-        '"..."}}, ...]}}: at most 32 steps, the first step\'s node must '
-        'be {start}, each next step\'s node must be where the previous '
-        'action leads, and the destination of the last action must be '
-        '{goal}. Do NOT include a step at {goal} itself. No other '
-        'text.'),
-}
-
-
 def git_head():
     try:
         out = subprocess.run(["git", "rev-parse", "HEAD"],
@@ -352,53 +221,6 @@ def queried_pairs_for(record, sc, n_other=3):
     rng.shuffle(picked)
     return [{"node": n, "action": a} for n, a in picked]
 
-
-def _menus(view):
-    return {p: "; ".join(f"{node}: {', '.join(m)}" for node, m in
-                         sorted(view[f"legal_actions_{p}"].items()))
-            for p in ("pre", "post")}
-
-
-def context_block(view):
-    """The shared evidence header (both periods): sent once in the legacy
-    multi mode, prepended to every ask in single-turn mode. Frozen text."""
-    menus = _menus(view)
-    return INTRO.format(nodes=", ".join(view["nodes"]),
-                        start=view["start"], goal=view["goal"],
-                        menu_pre=menus["pre"], menu_post=menus["post"],
-                        ev_pre=view["evidence"]["pre"],
-                        ev_post=view["evidence"]["post"])
-
-
-def context_block_a(view):
-    """v2.2 turn-1 header: period A only."""
-    menus = _menus(view)
-    return INTRO_A.format(nodes=", ".join(view["nodes"]),
-                          start=view["start"], goal=view["goal"],
-                          menu_pre=menus["pre"],
-                          ev_pre=view["evidence"]["pre"])
-
-
-def reveal_block_b(view):
-    """v2.2 turn-2 reveal: period B only (turn 1 stays in context)."""
-    menus = _menus(view)
-    return REVEAL_B.format(menu_post=menus["post"],
-                           ev_post=view["evidence"]["post"])
-
-
-def ask_block(view, probe, queried):
-    """The probe question alone (no evidence)."""
-    ask = ASKS[probe]
-    if probe in ("preservation", "belief_pre", "belief_post"):
-        listed = "\n".join(f'- node {q["node"]}, action {q["action"]}'
-                           for q in queried)
-        ask = ask.format(queried=listed)
-    elif probe in ("adaptation", "route_pre"):
-        ask = ask.format(start=view["start"], goal=view["goal"])
-    return ask + "\n"
-
-
-# -------------------------------------------------- icl_two_response_v1
 
 ICL_EXPLAINED_MECHANICS = (
     "Each action has one destination. A successful attempt moves to that "
@@ -626,7 +448,7 @@ def phase_metrics(probe, scored):
     be plotted on one axis; probe-specific detail is kept alongside."""
     status = scored.get("status")
     parse_ok = status not in ("malformed_json", "invalid_object", "too_long")
-    m = {"probe": probe, "status": status, "parse_ok": parse_ok,
+    m: dict = {"probe": probe, "status": status, "parse_ok": parse_ok,
          "scored_ok": status == "ok", "score": 0.0, "detail": {}}
     if probe in ("detection", "localization"):
         m["score"] = 1.0 if scored.get("correct") else 0.0
@@ -691,15 +513,7 @@ def phase_line(idx, row, cum):
             f" {cum['latency_s']}s")
 
 
-# ---------------------------------------------------------------- providers
-#
-# All three take a full `messages` list, so the same call works for a
-# one-shot probe and for a later turn that carries history.
-
-
-class TransientLLMError(Exception):
-    """Empty/unparseable LLM response body -- treated as retryable by
-    with_retry, same spirit as a network error."""
+# --------------------------------------------------------- provider retry
 
 
 def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
@@ -733,127 +547,6 @@ def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
         print(f"retryable error (attempt {attempt}/{max_attempts}), "
               f"retrying in {delay:.1f}s: {last_exc}")
         time.sleep(delay)
-
-
-def call_anthropic(model, messages, max_tokens, timeout):
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=json.dumps({"model": model, "max_tokens": max_tokens,
-                         "temperature": 0,
-                         "messages": messages}).encode(),
-        headers={"content-type": "application/json",
-                 "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-                 "anthropic-version": "2023-06-01"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-    text = "".join(b.get("text", "") for b in data.get("content", []))
-    return text, data.get("usage", {})
-
-
-def call_azure(deployment, messages, max_tokens, endpoint, api_version,
-               timeout):
-    url = (endpoint.rstrip("/") + "/openai/deployments/" + deployment
-           + "/chat/completions?api-version=" + api_version)
-    req = urllib.request.Request(
-        url,
-        data=json.dumps({"max_tokens": max_tokens, "temperature": 0,
-                         "messages": messages}).encode(),
-        headers={"content-type": "application/json",
-                 "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-    return data["choices"][0]["message"]["content"], data.get("usage", {})
-
-
-def call_openai(model, messages, max_tokens, base_url, timeout):
-    """OpenAI-compatible chat endpoint. Also covers LM Studio and any other
-    local server exposing /v1/chat/completions -- point --base-url at it; the
-    key falls back to a placeholder, which local servers ignore."""
-    req = urllib.request.Request(
-        base_url.rstrip("/") + "/chat/completions",
-        data=json.dumps({"model": model, "max_tokens": max_tokens,
-                         "temperature": 0,
-                         "messages": messages}).encode(),
-        headers={"content-type": "application/json",
-                 "authorization":
-                     f"Bearer {os.environ.get('OPENAI_API_KEY', 'local')}"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-    return data["choices"][0]["message"]["content"], data.get("usage", {})
-
-
-# Multi-turn variants for the active-exploration pilot (system + a growing
-# message list, matching explore_agent.py's act_fn(system, messages)
-# contract) instead of a single one-shot prompt. Wrapped in with_retry,
-# unlike the single-shot passive-mode callers above.
-
-
-def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0):
-    """Calls Claude with the given system prompt and message history.
-    If thinking_budget > 0, enables Extended Thinking with that token
-    budget (Anthropic requires temperature 1 and max_tokens greater than
-    thinking_budget in that case) and returns the thinking content
-    separately from the visible answer."""
-    body = {"model": model, "max_tokens": max_tokens, "system": system,
-            "messages": messages}
-    if thinking_budget > 0:
-        body["thinking"] = {"type": "enabled",
-                            "budget_tokens": thinking_budget}
-        body["temperature"] = 1
-    else:
-        body["temperature"] = 0
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=json.dumps(body).encode(),
-        headers={"content-type": "application/json",
-                 "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-                 "anthropic-version": "2023-06-01"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read())
-    reasoning = "".join(b.get("thinking", "") for b in data.get("content", [])
-                        if b.get("type") == "thinking")
-    text = "".join(b.get("text", "") for b in data.get("content", [])
-                   if b.get("type") == "text")
-    if not text.strip():
-        raise TransientLLMError("empty Anthropic response content")
-    return text, reasoning, data.get("usage", {})
-
-
-def call_openai_chat(model, system, messages, max_tokens, base_url):
-    full_messages = [{"role": "system", "content": system}] + list(messages)
-    req = urllib.request.Request(
-        base_url.rstrip("/") + "/chat/completions",
-        data=json.dumps({"model": model, "max_tokens": max_tokens,
-                         "temperature": 0,
-                         "messages": full_messages}).encode(),
-        headers={"content-type": "application/json",
-                 "authorization":
-                     f"Bearer {os.environ['OPENAI_API_KEY']}"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read())
-    text = data["choices"][0]["message"]["content"]
-    if not text.strip():
-        raise TransientLLMError("empty OpenAI response content")
-    return text, data.get("usage", {})
-
-
-def call_azure_chat(deployment, system, messages, max_tokens, endpoint,
-                    api_version):
-    full_messages = [{"role": "system", "content": system}] + list(messages)
-    url = (endpoint.rstrip("/") + "/openai/deployments/" + deployment
-           + "/chat/completions?api-version=" + api_version)
-    req = urllib.request.Request(
-        url,
-        data=json.dumps({"max_tokens": max_tokens, "temperature": 0,
-                         "messages": full_messages}).encode(),
-        headers={"content-type": "application/json",
-                 "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read())
-    text = data["choices"][0]["message"]["content"]
-    if not text.strip():
-        raise TransientLLMError("empty Azure response content")
-    return text, data.get("usage", {})
 
 
 def dry_run_answer(record, probe, queried):
@@ -914,7 +607,8 @@ def dispatch(args, record, probe, queried, messages):
                               args.timeout)
     if args.provider == "azure":
         return call_azure(args.model, messages, args.max_tokens,
-                          args.azure_endpoint, args.api_version, args.timeout)
+                          args.azure_endpoint, args.api_version, args.timeout,
+                          reasoning=args.azure_reasoning_model)
     if args.provider == "openai":
         return call_openai(args.model, messages, args.max_tokens,
                            args.base_url, args.timeout)
@@ -1837,7 +1531,8 @@ def run_pilot_active(sc, deterministic, args):
         elif args.provider == "azure":
             text, usage = with_retry(call_azure_chat, args.model, system,
                                      messages, args.max_tokens,
-                                     args.azure_endpoint, args.api_version)
+                                     args.azure_endpoint, args.api_version,
+                                     reasoning=args.azure_reasoning_model)
         elif args.provider == "openai":
             text, usage = with_retry(call_openai_chat, args.model, system,
                                      messages, args.max_tokens,
@@ -1960,6 +1655,10 @@ def main():
     ap.add_argument("--azure-endpoint",
                     default="https://YOUR-RESOURCE.openai.azure.com")
     ap.add_argument("--api-version", default="2024-06-01")
+    ap.add_argument("--azure-reasoning-model", action="store_true",
+                    help="the --model deployment is a GPT-5-family "
+                         "reasoning model (sends max_completion_tokens, "
+                         "no temperature, instead of max_tokens+temperature)")
     ap.add_argument("--max-tokens", type=int, default=4096)
     ap.add_argument("--temperature", type=float, default=0.0,
                     help="icl_two_response_v1 only; legacy remains at 0")
