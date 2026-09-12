@@ -865,6 +865,8 @@ def dry_run_answer(record, probe, queried):
         return ('Looking at period B: ```json\n'
                 + json.dumps({"changed": changed}) + '\n```')
     if probe == "localization":
+        if ch["edge"] is None:
+            return "N/A: " + json.dumps({"node": None, "action": None})
         obj = {"node": ch["edge"]["from"], "action": ch["action"]}
         return "My answer: " + json.dumps(obj)
     if probe == "preservation":
@@ -1882,7 +1884,7 @@ def run_pilot_active(sc, deterministic, args):
     }
 
     system_prompt = explore_agent.build_system_prompt(record["goal"])
-    for probe in ALL_PROBES:
+    for probe in sc["probes"]:
         ask = ASKS_ACTIVE[probe]
         if probe == "preservation":
             listed = "\n".join(f'- node {q["node"]}, action {q["action"]}'
