@@ -238,7 +238,9 @@ ASKS = {
         'exactly one JSON object of the form {{"route": [{{"node": "...", '
         '"action": "..."}}, ...]}}: at most 32 steps, the first step\'s '
         'node must be {start}, each next step\'s node must be where the '
-        'previous action leads, and the route must end at {goal}. No other '
+        'previous action leads, and the destination of the last action '
+        'must be {goal}. Do NOT include a step at {goal} itself. '
+        'No other '
         'text.'),
     "belief_pre": (
         'For EACH of the following (node, action) pairs, state what you '
@@ -278,7 +280,8 @@ ASKS = {
         '{{"route": [{{"node": "...", "action": "..."}}, ...]}}: at most '
         '32 steps, the first step\'s node must be {start}, each next '
         'step\'s node must be where the previous action leads, and the '
-        'route must end at {goal}. No other text.'),
+        'destination of the last action must be {goal}. Do NOT include a '
+        'step at {goal} itself. No other text.'),
 }
 
 # Same 4 probes, worded for the active-exploration pilot: the model refers
@@ -308,7 +311,8 @@ ASKS_ACTIVE = {
         'JSON object of the form {{"route": [{{"node": "...", "action": '
         '"..."}}, ...]}}: at most 32 steps, the first step\'s node must '
         'be {start}, each next step\'s node must be where the previous '
-        'action leads, and the route must end at {goal}. No other '
+        'action leads, and the destination of the last action must be '
+        '{goal}. Do NOT include a step at {goal} itself. No other '
         'text.'),
 }
 
