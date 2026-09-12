@@ -1,0 +1,65 @@
+{
+  "irrelevant": {
+    "n": 23,
+    "unparsed": 0,
+    "detection": 10,
+    "localization": 9,
+    "loc_asked": 23,
+    "pres_sum": 17.75,
+    "pres_all4": 9,
+    "route_valid": 16,
+    "route_optimal": 4,
+    "regret_sum": 12.5857,
+    "regret_n": 16,
+    "cells": {
+      "(1, 1)": 0,
+      "(1, 0)": 9,
+      "(0, 1)": 4,
+      "(0, 0)": 10
+    },
+    "selfcons_sum": 20.0,
+    "selfcons_n": 23
+  },
+  "no_change": {
+    "n": 23,
+    "unparsed": 0,
+    "detection": 18,
+    "localization": 0,
+    "loc_asked": 0,
+    "pres_sum": 21.25,
+    "pres_all4": 20,
+    "route_valid": 18,
+    "route_optimal": 5,
+    "regret_sum": 22.457699999999996,
+    "regret_n": 18,
+    "cells": {
+      "(1, 1)": 0,
+      "(1, 0)": 0,
+      "(0, 1)": 0,
+      "(0, 0)": 0
+    },
+    "selfcons_sum": 20.75,
+    "selfcons_n": 23
+  },
+  "silent_break": {
+    "n": 23,
+    "unparsed": 0,
+    "detection": 11,
+    "localization": 6,
+    "loc_asked": 23,
+    "pres_sum": 16.0,
+    "pres_all4": 6,
+    "route_valid": 15,
+    "route_optimal": 9,
+    "regret_sum": 7.5817,
+    "regret_n": 15,
+    "cells": {
+      "(1, 1)": 3,
+      "(1, 0)": 3,
+      "(0, 1)": 6,
+      "(0, 0)": 11
+    },
+    "selfcons_sum": 19.5,
+    "selfcons_n": 23
+  }
+}

@@ -15,3 +15,5 @@ output/
 
 # Local secrets, if a .env is ever added instead of exporting API keys directly
 .env
+
+patches/
