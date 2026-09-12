@@ -172,6 +172,37 @@ Three-level ICL protocol, with repeats and provider sampling seeds:
       --repeats 3 --sampling-seeds 0 1 2 --reasoning-mode off \
       --provider dry-run --tag icl_gate
 
+Audited local Gemma 4 E4B Instruct Q6_K (GGUF) gate:
+
+Runtime: Bionic 1.1.2+11; `gemma-4-E4B-it-Q6_K.gguf`; context 16,384;
+evaluation/physical batch 512/256; parallel 1; Flash Attention and KV-cache
+offload enabled; repeat penalty 1.0; Min P and speculative decoding disabled.
+
+```bash
+python3 -B run_pilot.py \
+  --protocol icl_two_response_v1 \
+  --scenario icl_det_gate_seed8 \
+  --mode det \
+  --provider openai \
+  --model sunil-pathak/gemma-4-e4b-it \
+  --base-url http://localhost:1234/v1 \
+  --temperature 1.0 \
+  --top-p 0.95 \
+  --top-k 64 \
+  --repeats 3 \
+  --sampling-seeds 0 1 2 \
+  --sampling-seed-support supported \
+  --reasoning-mode off \
+  --reasoning-control-json '{"reasoning":"off"}' \
+  --reasoning-control-source 'Bionic 1.1.2+11; Q6_K local API audit: reasoning=off accepted, reasoning_tokens=0' \
+  --max-tokens 4096 \
+  --timeout 900 \
+  --tag icl_gate_gemma4e4b_q6k_det_off
+```
+
+Supply optional `--top-p` and `--top-k` values only after verifying that the
+endpoint supports them.
+
 Agentic exploration, where the model picks its own actions instead of reading
 a collected log (see `EXPLORE_AGENT.md`):
 

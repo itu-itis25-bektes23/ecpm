@@ -678,7 +678,13 @@ def endpoint_provenance(args):
 
 
 def sampling_seed_provenance(args, sampling_seed):
-    """Describe whether the repeat seed is actually sent to the provider."""
+    """Validate and describe the sampling controls sent to the provider."""
+    if args.top_p is not None and not 0 < args.top_p <= 1:
+        raise ValueError("top_p must be greater than 0 and at most 1")
+    if (args.top_k is not None
+            and (isinstance(args.top_k, bool)
+                 or not isinstance(args.top_k, int) or args.top_k <= 0)):
+        raise ValueError("top_k must be a positive integer")
     requested = args.sampling_seed_support
     if args.provider == "dry-run":
         if requested == "supported":
@@ -700,7 +706,8 @@ def sampling_seed_provenance(args, sampling_seed):
         status, source = "unsupported", "safe_default"
     return {"sampling_seed": sampling_seed,
             "sampling_seed_status": status,
-            "sampling_seed_status_source": source}
+            "sampling_seed_status_source": source,
+            "top_p": args.top_p, "top_k": args.top_k}
 
 
 def reasoning_provenance(args):
@@ -732,7 +739,8 @@ def reasoning_provenance(args):
         raise ValueError("--reasoning-control-json must be valid JSON") from exc
     if not isinstance(fields, dict) or not fields:
         raise ValueError("--reasoning-control-json must be a non-empty object")
-    blocked = {"model", "messages", "seed", "temperature", "max_tokens",
+    blocked = {"model", "messages", "seed", "temperature", "top_p", "top_k",
+               "max_tokens",
                "max_completion_tokens", "response_format", "tools",
                "tool_choice", "stream"}
     collision = sorted(blocked.intersection(fields))
@@ -820,6 +828,9 @@ def _call_icl_provider_once(args, messages, sampling, reasoning):
         body["model"] = args.model
     if sampling["sampling_seed_status"] == "supported":
         body["seed"] = sampling["sampling_seed"]
+    for field in ("top_p", "top_k"):
+        if sampling[field] is not None:
+            body[field] = sampling[field]
     body.update(reasoning["request_fields"])
     if args.provider in ("openai", "azure"):
         if args.provider == "azure":
@@ -1662,6 +1673,12 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=4096)
     ap.add_argument("--temperature", type=float, default=0.0,
                     help="icl_two_response_v1 only; legacy remains at 0")
+    ap.add_argument("--top-p", type=float, default=None,
+                    help="icl_two_response_v1 only; omit to use the "
+                         "provider default")
+    ap.add_argument("--top-k", type=int, default=None,
+                    help="icl_two_response_v1 only; omit to use the "
+                         "provider default")
     ap.add_argument("--sampling-seeds", type=int, nargs="+", default=[0, 1, 2],
                     help="three matched provider sampling seeds for the "
                          "three repeated outputs")

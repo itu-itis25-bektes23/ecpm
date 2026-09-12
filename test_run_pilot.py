@@ -14,7 +14,7 @@ from ecpm_parser import (diagnose_route_beliefs, parse_icl_turn_a,
 from resource_mdp import prompt_view
 from run_pilot import (COST_STATUSES, ICL_LEVELS, SCENARIO_DEFAULTS, SCENARIOS,
                        _call_icl_provider_once, _cost_provenance,
-                       _dry_run_icl_answer, _icl_run_identity,
+                       _dry_run_icl_answer, _icl_run_id, _icl_run_identity,
                        _reasoning_evidence, build_icl_prompt, build_record,
                        context_block, context_block_a, deterministic_gate,
                        empirical_table_from_visible, endpoint_provenance,
@@ -39,6 +39,7 @@ def scenario(seed=8, condition="silent_break", k=10, budget=10):
 def args(tag="test"):
     return SimpleNamespace(
         provider="dry-run", model="dry-run", temperature=0.0,
+        top_p=None, top_k=None,
         max_tokens=4096, timeout=120, reasoning_mode="off",
         reasoning_control_json=None, reasoning_control_source=None,
         sampling_seed_support="auto",
@@ -325,6 +326,7 @@ def test_provider_sampling_and_reasoning_controls():
     dry = args()
     sampling = sampling_seed_provenance(dry, 7)
     assert sampling["sampling_seed_status"] == "not_applied_dry_run"
+    assert sampling["top_p"] is None and sampling["top_k"] is None
     provenance = reasoning_provenance(dry)
     assert provenance["status"] == "not_applied_dry_run"
     assert provenance["request_fields"] == {}
@@ -375,6 +377,8 @@ def test_provider_sampling_and_reasoning_controls():
     except ValueError as exc:
         assert "reasoning-control-source" in str(exc)
     real_off.reasoning_control_source = "OpenAI Chat API documentation"
+    real_off.top_p = 0.95
+    real_off.top_k = 64
     real_off_control = reasoning_provenance(real_off)
     assert real_off_control["request_fields"] == {
         "reasoning_effort": "none"}
@@ -447,6 +451,9 @@ def test_provider_sampling_and_reasoning_controls():
         _call_icl_provider_once(
             azure, [{"role": "user", "content": "x"}], azure_sampling,
             reasoning_provenance(azure))
+        run_pilot.call_openai(
+            "legacy-model", [{"role": "user", "content": "x"}], 17,
+            "http://localhost:1234/v1", 120)
     finally:
         run_pilot.urllib.request.urlopen = original_urlopen
         if old_key is None:
@@ -460,6 +467,7 @@ def test_provider_sampling_and_reasoning_controls():
     assert captured[0] == {
         "model": "dry-run", "messages": [{"role": "user", "content": "x"}],
         "max_tokens": 4096, "temperature": 0.0,
+        "top_p": 0.95, "top_k": 64,
         "reasoning_effort": "none"}
     assert captured[1] == {
         "model": "test-model", "messages": [{"role": "user", "content": "x"}],
@@ -470,6 +478,21 @@ def test_provider_sampling_and_reasoning_controls():
     assert captured[3] == {
         "messages": [{"role": "user", "content": "x"}],
         "max_tokens": 4096, "temperature": 0.0, "seed": 7}
+    assert captured[4] == {
+        "model": "legacy-model",
+        "messages": [{"role": "user", "content": "x"}],
+        "max_tokens": 17, "temperature": 0}
+    assert "top_p" not in captured[1] and "top_k" not in captured[1]
+
+    for field, value in (("top_p", 0), ("top_p", 1.01),
+                         ("top_k", 0), ("top_k", 1.5)):
+        invalid = args()
+        setattr(invalid, field, value)
+        try:
+            sampling_seed_provenance(invalid, 0)
+            raise AssertionError(f"invalid {field} must be rejected")
+        except ValueError:
+            pass
     assert _reasoning_evidence("openai", {"usage": {
         "completion_tokens_details": {"reasoning_tokens": 0}}}, None) == \
         "false"
@@ -502,6 +525,21 @@ def test_cost_and_endpoint_provenance():
     identity_a = _icl_run_identity(
         sc, True, external, "minimal_logs", 1, sampling, reasoning,
         prompt_a, prompt_b, queried)
+    with_top_p = SimpleNamespace(**vars(external))
+    with_top_p.top_p = 0.95
+    identity_top_p = _icl_run_identity(
+        sc, True, with_top_p, "minimal_logs", 1,
+        sampling_seed_provenance(with_top_p, 0),
+        reasoning_provenance(with_top_p), prompt_a, prompt_b, queried)
+    with_top_k = SimpleNamespace(**vars(external))
+    with_top_k.top_k = 64
+    identity_top_k = _icl_run_identity(
+        sc, True, with_top_k, "minimal_logs", 1,
+        sampling_seed_provenance(with_top_k, 0),
+        reasoning_provenance(with_top_k), prompt_a, prompt_b, queried)
+    assert identity_a != identity_top_p != identity_top_k
+    assert _icl_run_id(identity_a) != _icl_run_id(identity_top_p)
+    assert _icl_run_id(identity_a) != _icl_run_id(identity_top_k)
     other = SimpleNamespace(**vars(external))
     other.base_url = "https://example.com/v1"
     identity_b = _icl_run_identity(
@@ -622,6 +660,8 @@ def test_two_calls_persistence_hashes_and_safe_resume():
 def test_summary_generation_and_safe_replay():
     sc = scenario()
     runner_args = args(tag="summary-test")
+    runner_args.top_p = 0.95
+    runner_args.top_k = 64
     with tempfile.TemporaryDirectory() as outdir:
         run_icl_two_response_suite(sc, True, runner_args, outdir)
         summary_path = os.path.join(outdir, "summary.json")
@@ -633,6 +673,11 @@ def test_summary_generation_and_safe_replay():
         assert summary["operational_gate_pass"] is True
         assert summary["every_level_repeat_present"] is True
         assert summary["any_response_truncated"] is False
+        first_artifact = next(
+            path for path in os.listdir(outdir) if path.startswith("icl_"))
+        with open(os.path.join(outdir, first_artifact)) as fh:
+            model = json.load(fh)["model"]
+        assert model["top_p"] == 0.95 and model["top_k"] == 64
         assert {(row["repeat"], row["level"]) for row in summary["runs"]} == {
             (repeat, level) for repeat in (1, 2, 3) for level in ICL_LEVELS}
         results = run_icl_two_response_suite(sc, True, runner_args, outdir)
