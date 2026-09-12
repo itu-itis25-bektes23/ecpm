@@ -1,44 +1,136 @@
 # ECPM
 
-Can a frozen LLM infer an environment's transition structure from
-observation logs alone, and replan after a hidden change?
+Can a frozen LLM infer an environment's transition structure from observation
+logs alone, and replan after a hidden change?
 
-The environment is an 8-node packet-routing MDP, generated as a pair:
-M0, and a copy M1 with zero or one recorded intervention. The model sees
+The environment is an 8-node packet-routing MDP, generated as a pair: a world
+M0, and a copy M1 carrying zero or one recorded intervention. The model sees
 balanced evidence from both periods and answers four probes: detection,
-localization, preservation, adaptation. Routes are scored by execution
-in the true simulator (expected cost and regret), never by the model's
-own judgment.
+localization, preservation, adaptation. Routes are scored by execution in the
+true simulator (expected cost and regret), never by the model's own judgment.
 
-## Contents
+## What the experiment does
 
-- `resource_mdp.py`: environment: paired generator, evidence collection,
+```mermaid
+flowchart LR
+  G["Seed"] --> M0["World M0"]
+  M0 -->|"copy, edit one link"| M1["World M1"]
+  M0 --> EA["Period A log"]
+  M1 --> EB["Period B log"]
+  EA --> P["Four probes"]
+  EB --> P
+  P --> S["Scored in the true simulator"]
+  M1 -.->|"evaluator only"| S
+```
+
+The model never sees the graph. It sees attempt and outcome logs plus the
+action menu at each node. Action labels are shuffled per node, so a label
+carries no information about where it leads.
+
+## The six interventions
+
+Five edit a link; one edits nothing. Only `redirect` changes a destination.
+
+| Condition | Edit | What it tests |
+| --- | --- | --- |
+| `no_change` | none | false positives |
+| `irrelevant` | off-route link U\* to p = 0 | change noticed, judged harmless |
+| `silent_break` | on-route target T\* to p = 0, stays on the menu | inferring failure from absent successes |
+| `hard_removal` | T\* leaves the menu | control: visible by menu diff alone |
+| `degradation` | T\* probability halved (stochastic only) | re-planning after partial change |
+| `redirect` | T\* keeps its probability, destination moves | structure learned, or only rates? |
+
+`silent_break`, `hard_removal`, `degradation` and `redirect` share one target
+stream, so they edit the same T\* for a given seed. The gap between
+`silent_break` and `hard_removal` measures how much performance comes from
+reading evidence rather than comparing menus.
+
+## Why redirect exists
+
+An evidence-only baseline (`ecpm_baseline.py`) answers the same four probes by
+arithmetic over the same prompt view, with no reasoning. Measured over seeds
+1 to 30 (`runs/baseline_k_sweep_seeds1-30.json`), it localizes the changed
+pair at these rates:
+
+| mode | condition | n | K=5 | K=10 | K=20 |
+| --- | --- | --- | --- | --- | --- |
+| stochastic | `silent_break` | 23 | 0.74 | 0.96 | 1.00 |
+| stochastic | `degradation` | 23 | 0.30 | 0.65 | 0.91 |
+| stochastic | `irrelevant` | 30 | 0.83 | 1.00 | 1.00 |
+| stochastic | `hard_removal` | 23 | 1.00 | 1.00 | 1.00 |
+| stochastic | `redirect` | 23 | 0.09 | 0.00 | 0.04 |
+| deterministic | all except redirect | 23 to 30 | 1.00 | 1.00 | 1.00 |
+
+A counter solves deterministic mode outright and stochastic `silent_break` by
+K = 10. `redirect` is the exception, and it does not improve as K grows,
+because a redirect preserves every success rate and moves only a destination.
+It is the one condition where beating the baseline demonstrates something
+counting cannot do.
+
+This makes the baseline the reference every model result is read against
+rather than a control. It also enforces the project rule that no model may be
+said to fail at localization on an instance the baseline cannot solve either.
+
+## Repository layout
+
+```mermaid
+flowchart TD
+  subgraph frozen["Frozen tree, schema 2.1 at 5318c3e"]
+    RM["resource_mdp.py: generator, evidence, oracle"]
+    EP["ecpm_parser.py: probe parsing and scoring"]
+  end
+  subgraph harness["Harness, outside the freeze"]
+    RP["run_pilot.py"]
+    PR["prompts.py"]
+    MC["model_clients.py"]
+    EA["explore_agent.py"]
+  end
+  subgraph analysis["Analysis"]
+    BL["ecpm_baseline.py"]
+    EX["experiments/"]
+  end
+  RM --> RP
+  EP --> RP
+  PR --> RP
+  MC --> RP
+  RM --> EA
+  RM --> BL
+  BL --> EX
+```
+
+- `resource_mdp.py` environment: paired generator, evidence collection,
   `prompt_view()`, oracle
-- `ecpm_parser.py`: frozen parser and probe scoring (INTERFACE.md §7)
-- `test_resource_mdp.py`, `test_ecpm_parser.py`: tests, stdlib only
-- `test_run_pilot.py`: protocol, prompt, persistence, and resume tests
-- `parser_fixtures.json`: format-level parser cases
-- `adversarial_review.py`, `ecpm_reply_verification.py`: review tooling
-  used for the freeze sign-off
-- `example_deterministic_silent_break.json`,
-  `example_stochastic_silent_break.json`: the matched seed-7 showcase pair
-- `INTERFACE.md`: schema 2.1 and the frozen answer contract
-- `run_pilot.py`: pilot harness (outside the frozen tree; pins the
-  freeze SHA itself)
-  - `run_pilot_lmstudio.py`: local LM Studio runner (OpenAI-compatible
-  endpoint); produced the Gemma arm under `runs/`
-- `runs/`: pilot artifacts, one directory per run
-- `exploratory/`: prompt-safe packets, evaluator-only oracle packets,
-  and the probability scorer
+- `ecpm_parser.py` frozen parser and probe scoring (INTERFACE.md section 7)
+- `prompts.py` prompt templates and block builders
+- `model_clients.py` provider calls, including reasoning-model compatibility
+- `run_pilot.py` pilot harness; pins the freeze SHA into every artifact
+- `explore_agent.py`, `explore_metrics.py` agentic exploration arm
+- `ecpm_baseline.py` evidence-only baseline (the null model)
+- `experiments/baseline_k_sweep.py` baseline accuracy by condition and K
+- `experiments/seed_eligibility.py` the three eligibility criteria, recomputed
+- `experiments/summarize_run.py` run artifacts to the reported statistics
+- `experiments/azure_budget.py` run costing from measured token usage
+- `experiments/run_two_turn_azure.sh` the two-turn run, resumable
+- `docs/PAPER_SPINE.md` proposed claim, hypotheses, readiness, budget
+- `docs/SEED_SELECTION.md` seed criteria and the restraint cases
+- `runs/` artifacts, one directory per run
+- `exploratory/` prompt-safe packets, oracle packets, probability scorer
+
+Tests are stdlib only: `test_resource_mdp.py`, `test_ecpm_parser.py`,
+`test_explore_agent.py`, `test_ecpm_baseline.py`, `test_run_pilot.py`,
+`test_prompt_contract.py`.
 
 ## Freeze
 
-Schema 2.1 is frozen at commit `5318c3e`. Pilot artifacts are valid only
-if produced against that environment tree; each artifact records
-`frozen_sha`, `git_head`, and `pinned_to_freeze`.
+Schema 2.1 is frozen at commit `5318c3e`. Artifacts are valid only if produced
+against that environment tree; each records `frozen_sha`, `git_head` and
+`pinned_to_freeze`.
 
-`run_pilot.py` and this README sit outside the frozen tree, so changes
-to them do not affect the freeze or invalidate existing artifacts.
+`redirect` (2026-09-12) is an additive extension above the frozen schema. It
+emits its second endpoint as `change.new_edge` only for redirect instances, so
+records for the other five conditions are byte-identical to before and the
+shipped examples still regenerate exactly. `SCHEMA_VERSION` therefore remains
+`2.1`; v2.2 and v2.3 are document revisions, not schema bumps.
 
 ## Quickstart
 
@@ -46,18 +138,46 @@ to them do not affect the freeze or invalidate existing artifacts.
     cd ecpm
     python3 test_resource_mdp.py
     python3 test_ecpm_parser.py
-
-To inspect the frozen environment tree itself:
-
-    git ls-tree -r --name-only 5318c3e
+    python3 test_ecpm_baseline.py
+    python3 run_pilot.py            # dry run, no API key needed
 
 ## Running the pilots
 
-`run_pilot.py` runs both seed-7 silent-break pilots end to end. Run it
-from `main`: the harness records the environment freeze SHA and sets
-`pinned_to_freeze` in every artifact.
+```mermaid
+flowchart LR
+  A["protocol legacy, turn-mode single"] --> A1["Both periods at once. Measures planning."]
+  B["protocol legacy, turn-mode two_turn"] --> B1["Period A first, then B. Measures updating."]
+  C["protocol icl_two_response_v1"] --> C1["Three difficulty levels, Turn A then Turn B."]
+  D["pilot-type active"] --> D1["Model chooses its own actions in the world."]
+```
 
-    python3 run_pilot.py                # dry run, no API key needed
+Single turn, the frozen prompts:
+
+    python3 run_pilot.py --scenario seed7_silent_break
+
+Two turn. Period A only in turn 1 (`route_pre`, `belief_pre`), period B
+revealed in turn 2, optionally re-eliciting beliefs for a self-consistency
+check:
+
+    python3 run_pilot.py --turn-mode two_turn --reelicit --tag twoturn_v1
+
+The distinction is load-bearing. A model shown both periods at once can route
+around a break it never noticed, so single-turn results measure planning from
+evidence rather than updating.
+
+Three-level ICL protocol, with repeats and provider sampling seeds:
+
+    python3 run_pilot.py --protocol icl_two_response_v1 \
+      --scenario icl_det_gate_seed8 --mode det \
+      --repeats 3 --sampling-seeds 0 1 2 --reasoning-mode off \
+      --provider dry-run --tag icl_gate
+
+Agentic exploration, where the model picks its own actions instead of reading
+a collected log (see `EXPLORE_AGENT.md`):
+
+    python3 run_pilot.py --pilot-type active --scenario seed7_silent_break
+
+With a provider:
 
     AZURE_OPENAI_API_KEY=... python3 run_pilot.py \
         --provider azure --model YOUR-DEPLOYMENT \
@@ -66,119 +186,92 @@ from `main`: the harness records the environment freeze SHA and sets
     ANTHROPIC_API_KEY=... python3 run_pilot.py \
         --provider anthropic --model claude-sonnet-4-6
 
-`--max-tokens` defaults to 4096. The earlier 1024 default truncated
-verbose models mid-answer; pass `--max-tokens` explicitly only to
-reproduce that condition.
+`--max-tokens` defaults to 4096. The earlier 1024 default truncated verbose
+models mid-answer. Outputs land in `pilot_artifacts/`.
 
-Outputs land in `pilot_artifacts/`. For review, send
-`pilot_deterministic.json`, `pilot_stochastic.json`, and `run_pilot.py`.
+## Named scenarios
 
-A second pilot type, active exploration (`--pilot-type active`), lets the
-model explore the MDP itself instead of reading a pre-collected evidence
-log, picking its own actions and observing the real outcome (see
-`EXPLORE_AGENT.md`). It writes into the same `pilot_artifacts/` folder,
-with an `_active` suffix on the filenames:
-`pilot_deterministic_active.json`, `pilot_stochastic_active.json`.
+    python3 run_pilot.py --list-scenarios
+
+`seed7_silent_break`, `seed7_hard_removal`, `seed7_degradation` (stochastic
+only), `seed7_irrelevant`, `seed7_no_change` (localization dropped, since it
+has a false premise), `seed7_silent_break_narrative` and
+`seed7_silent_break_stats` (rendering ablations), and `icl_det_gate_seed8`.
+
+`redirect` has no named scenario yet and is reached with
+`--condition redirect`. The log header then reports the scenario it overrode,
+which is cosmetic but misleading.
+
+## Seeds, baseline and budget
+
+    python3 experiments/seed_eligibility.py
+    python3 experiments/baseline_k_sweep.py --seeds 1-30
+    python3 experiments/azure_budget.py --budget 100
+
+The run set is 23 matched seeds in stochastic mode, generated by
+`seed_eligibility.py` rather than listed by hand, and read from
+`runs/seed_eligibility.json` by the run script so the two cannot drift. Nine
+degradation cells where the optimal route does not move are labelled
+`restraint` rather than excluded; see `docs/SEED_SELECTION.md`.
+
+The budget model is anchored on measured usage, not estimates: the archived
+Azure run used 5413 prompt and 220 completion tokens for one four-probe
+single-turn conversation at K = 5.
 
 ## Azure access
 
-1. $200 startup credits: https://www.microsoft.com/en-us/startups
-   (sign in, create the Azure account, complete identity verification).
-2. In portal.azure.com create an Azure OpenAI resource. The resource
-   name sets the endpoint: `https://NAME.openai.azure.com`.
-3. In the Foundry portal deploy a chat model (e.g. gpt-4o). The
-   deployment name is the `--model` argument; keys are under
-   Keys and Endpoint. If you hit a 404, check the deployment name and
-   try `--api-version 2024-10-21`.
+1. Startup credits: https://www.microsoft.com/en-us/startups
+2. In portal.azure.com create an Azure OpenAI resource. The resource name sets
+   the endpoint: `https://NAME.openai.azure.com`.
+3. Deploy a chat model. The deployment name is the `--model` argument. On a
+   404, check the deployment name and try `--api-version 2024-10-21`.
 
-## v2.2 changes (8 Sep 2026)
+Reasoning models (GPT-5 and GPT-6 families) reject `temperature` and
+`max_tokens` on Chat Completions; `model_clients.py` detects them and uses
+`max_completion_tokens` instead. Several Claude models reject `temperature`
+and are listed there too.
 
-From the PO review of the methodology doc:
+## Pilot status
 
-- `irrelevant` breaks U* (p = 0) in both modes instead of halving it in
-  stochastic mode.
-- `degradation` targets the shared on-route link T* (same as
-  silent_break / hard_removal) instead of drawing its own.
-- `run_pilot.py --turn-mode two_turn [--reelicit]`: period A only in
-  turn 1 (`route_pre`, `belief_pre`), period B revealed in turn 2
-  (detection, localization, preservation, adaptation, optionally
-  `belief_post` + self-consistency preservation). `--turn-mode single`
-  is unchanged and still reproduces the frozen prompts.
+`runs/2026-09-12_gpt4o_twoturn_k10/` is the first two-turn run at scale:
+GPT-4o, 23 matched seeds, K=10, three stochastic conditions, 69 instances,
+every probe parsed. Summarise it with
+`python3 experiments/summarize_run.py runs/2026-09-12_gpt4o_twoturn_k10`.
 
-```
-python3 run_pilot.py --turn-mode two_turn --reelicit --tag twoturn_v1
-python3 run_pilot.py --scenario seed7_degradation --turn-mode two_turn
-```
+Earlier seed-7 pilots ran on the frozen tree with claude-sonnet-4-6, gpt-4o
+on Azure, and Gemma 4 E4B locally. Artifacts are archived per run under
+`runs/`.
 
-Artifacts from before v2.2 remain valid for the single-turn baseline;
-`irrelevant` and `degradation` instances must be regenerated.
+Two directories are kept deliberately and are not duplicates.
+`runs/2026-08-23_sonnet46_mt1024/` is the truncation failure that motivated
+raising the `--max-tokens` default, and is the evidence for that change.
+`*_dryrun.json` files are oracle-derived pipeline demos rather than model
+runs; they exercise the parser and scorer without an API call.
 
-## ICL two-response protocol
+## What is not done
 
-`--protocol icl_two_response_v1` adds a passive, two-response comparison
-while `legacy` remains the default. Each run uses one of three prompt levels:
-an empirical table derived from visible observations, explained shuffled logs,
-or minimally described shuffled logs. The latter two contain identical rows in
-identical order.
+Stated explicitly rather than left implicit.
 
-Turn A shows Period A and requests five transition beliefs plus a route. Turn B
-keeps that exchange in context, reveals Period B as a system that may or may
-not differ, and requests detection, nullable localization, five updated
-beliefs, and a route. The five pairs are the intervention target and four
-deterministically selected unchanged controls; prompts do not label their
-roles. Under `no_change`, the target comes from the matched silent-break
-sibling.
-
-The deterministic gate searches seeds 1–1000 for a matched silent-break pair
-with unique pre/post optima and a changed optimal route. Its first eligible
-seed is 8. A complete dry gate run is:
-
-```bash
-python3 -B run_pilot.py \
-  --protocol icl_two_response_v1 \
-  --scenario icl_det_gate_seed8 \
-  --mode det \
-  --repeats 3 \
-  --sampling-seeds 0 1 2 \
-  --reasoning-mode off \
-  --provider dry-run \
-  --tag icl_gate_det_off_dry
-```
-
-This writes one resumable JSON artifact per level and repeated output, plus an
-accuracy-independent operational `summary.json`, under
-`pilot_artifacts/icl_gate_det_off_dry/`. Completed run IDs are not overwritten.
-Responses are unconstrained text and are parsed only after their raw form has
-been persisted.
-
-Provider sampling seeds are sent when supported. Unsupported providers still
-run and record `sampling_seed_status: unsupported`; their results are repeated
-outputs, not reproducible samples. Real `off` or `on` runs require an explicit
-provider-specific object through `--reasoning-control-json` and a short
-verification source through `--reasoning-control-source`. The runner records
-the exact control but does not establish its provider-specific semantics. With
-`--reasoning-mode unspecified`, no reasoning-control field is sent. Dry runs
-record that neither sampling nor reasoning controls were applied.
-
-## Pilot status (23 Aug 2026)
-
-Both seed-7 pilots have run on the frozen environment tree with three
-models: claude-sonnet-4-6 (official run), gpt-4o (Azure), and Gemma 4
-E4B (local LM Studio, OpenAI-compatible endpoint). Artifacts are
-archived per run under `runs/`.
-
-Two directories are kept deliberately and are not duplicates:
-
-- `runs/2026-08-23_sonnet46_mt1024/` is the truncation failure that
-  motivated raising the `--max-tokens` default to 4096. It is the
-  evidence for that change and should not be removed.
-- `*_dryrun.json` files are oracle-derived pipeline demos, not model
-  runs. They exercise the parser and scorer without an API call.
-
-Findings and proposed merge fixes are in the team research doc
-("The Gist", pilot results section).
+- No model has been run against `redirect`, `hard_removal` or `degradation`,
+  nor against the three-level ICL protocol, nor in deterministic mode under
+  the two-turn protocol. Those artifacts do not exist yet.
+- There is no cross-artifact aggregation. Contrasts between turn-1 and turn-2
+  routes, between stated beliefs and chosen routes, and confidence intervals
+  over conditions are all specified in `docs/PAPER_SPINE.md` and unbuilt. They
+  are pure functions of stored artifacts, so runs done now remain usable.
+- Route numbers predating the start/goal scoring fix are void. The affected
+  results sections need regenerating.
+- Deterministic mode has only 3 of 30 seeds meeting all three eligibility
+  criteria, because integer hop costs make unique optima rare. Whether to
+  relax the uniqueness criterion is an open decision; see
+  `docs/SEED_SELECTION.md`.
+- Every cell of the current model evidence is n = 1. The findings are
+  demonstrations of a phenomenon, not estimates of a rate.
+- `INTERFACE.md` is titled v2.2 but declares schema version 2.1 internally.
+  The declaration is correct; the title is a document revision number.
 
 ## Write-up
 
-Full explanation and figures: "ECPM Phase 2: The Gist" in the team
-research doc.
+Proposed claim, hypotheses as a pre-registration, readiness audit and budget:
+`docs/PAPER_SPINE.md`. Full explanation and figures: "ECPM Phase 2: The Gist"
+in the team research doc.

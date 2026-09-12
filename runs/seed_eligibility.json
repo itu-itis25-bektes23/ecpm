@@ -1,0 +1,3075 @@
+{
+  "criteria": {
+    "1": "goal reachable under every scenario",
+    "2": "controls leave the optimal route untouched; route-changing scenarios move it",
+    "3": "optimal route unique before and after the edit"
+  },
+  "note": "Criterion 2 is applied per condition. Route-changing cells that fail it are labelled restraint rather than excluded; see the module docstring.",
+  "seeds_examined": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30
+  ],
+  "summary": {
+    "sto|silent_break": {
+      "eligible": [
+        1,
+        4,
+        5,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        25,
+        26,
+        28,
+        29,
+        30
+      ],
+      "restraint": [],
+      "excluded": [],
+      "not_built": [
+        2,
+        3,
+        6,
+        14,
+        15,
+        24,
+        27
+      ],
+      "n_scoreable": 23
+    },
+    "sto|hard_removal": {
+      "eligible": [
+        1,
+        4,
+        5,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        25,
+        26,
+        28,
+        29,
+        30
+      ],
+      "restraint": [],
+      "excluded": [],
+      "not_built": [
+        2,
+        3,
+        6,
+        14,
+        15,
+        24,
+        27
+      ],
+      "n_scoreable": 23
+    },
+    "sto|degradation": {
+      "eligible": [
+        1,
+        7,
+        10,
+        12,
+        16,
+        17,
+        18,
+        19,
+        21,
+        22,
+        23,
+        25,
+        29,
+        30
+      ],
+      "restraint": [
+        4,
+        5,
+        8,
+        9,
+        11,
+        13,
+        20,
+        26,
+        28
+      ],
+      "excluded": [],
+      "not_built": [
+        2,
+        3,
+        6,
+        14,
+        15,
+        24,
+        27
+      ],
+      "n_scoreable": 23
+    },
+    "sto|redirect": {
+      "eligible": [
+        1,
+        4,
+        5,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        25,
+        26,
+        28,
+        29,
+        30
+      ],
+      "restraint": [],
+      "excluded": [],
+      "not_built": [
+        2,
+        3,
+        6,
+        14,
+        15,
+        24,
+        27
+      ],
+      "n_scoreable": 23
+    },
+    "sto|no_change": {
+      "eligible": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "restraint": [],
+      "excluded": [],
+      "not_built": [],
+      "n_scoreable": 30
+    },
+    "sto|irrelevant": {
+      "eligible": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "restraint": [],
+      "excluded": [],
+      "not_built": [],
+      "n_scoreable": 30
+    },
+    "det|silent_break": {
+      "eligible": [
+        8,
+        13,
+        25
+      ],
+      "restraint": [],
+      "excluded": [
+        1,
+        4,
+        5,
+        7,
+        9,
+        10,
+        11,
+        12,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        26,
+        28,
+        29,
+        30
+      ],
+      "not_built": [
+        2,
+        3,
+        6,
+        14,
+        15,
+        24,
+        27
+      ],
+      "n_scoreable": 3
+    },
+    "det|hard_removal": {
+      "eligible": [
+        8,
+        13,
+        25
+      ],
+      "restraint": [],
+      "excluded": [
+        1,
+        4,
+        5,
+        7,
+        9,
+        10,
+        11,
+        12,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        26,
+        28,
+        29,
+        30
+      ],
+      "not_built": [
+        2,
+        3,
+        6,
+        14,
+        15,
+        24,
+        27
+      ],
+      "n_scoreable": 3
+    },
+    "det|redirect": {
+      "eligible": [
+        8,
+        13,
+        25
+      ],
+      "restraint": [],
+      "excluded": [
+        1,
+        4,
+        5,
+        7,
+        9,
+        10,
+        11,
+        12,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        26,
+        28,
+        29,
+        30
+      ],
+      "not_built": [
+        2,
+        3,
+        6,
+        14,
+        15,
+        24,
+        27
+      ],
+      "n_scoreable": 3
+    },
+    "det|no_change": {
+      "eligible": [
+        4,
+        5,
+        8,
+        11,
+        13,
+        25,
+        26
+      ],
+      "restraint": [],
+      "excluded": [
+        1,
+        2,
+        3,
+        6,
+        7,
+        9,
+        10,
+        12,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        27,
+        28,
+        29,
+        30
+      ],
+      "not_built": [],
+      "n_scoreable": 7
+    },
+    "det|irrelevant": {
+      "eligible": [
+        4,
+        5,
+        8,
+        11,
+        13,
+        25,
+        26
+      ],
+      "restraint": [],
+      "excluded": [
+        1,
+        2,
+        3,
+        6,
+        7,
+        9,
+        10,
+        12,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        27,
+        28,
+        29,
+        30
+      ],
+      "not_built": [],
+      "n_scoreable": 7
+    }
+  },
+  "run_set": {
+    "sto": [
+      1,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      25,
+      26,
+      28,
+      29,
+      30
+    ],
+    "det": [
+      8,
+      13,
+      25
+    ]
+  },
+  "cells": {
+    "sto|silent_break|1": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 5.2891,
+      "post_cost": 5.6595,
+      "status": "eligible"
+    },
+    "sto|silent_break|2": {
+      "status": "not_built",
+      "reason": "seed 2: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|silent_break|3": {
+      "status": "not_built",
+      "reason": "seed 3: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|silent_break|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.6626,
+      "post_cost": 3.8858,
+      "status": "eligible"
+    },
+    "sto|silent_break|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.6147,
+      "post_cost": 5.0914,
+      "status": "eligible"
+    },
+    "sto|silent_break|6": {
+      "status": "not_built",
+      "reason": "seed 6: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|silent_break|7": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.1326,
+      "post_cost": 7.4594,
+      "status": "eligible"
+    },
+    "sto|silent_break|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.3026,
+      "post_cost": 3.6171,
+      "status": "eligible"
+    },
+    "sto|silent_break|9": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.5394,
+      "post_cost": 4.8171,
+      "status": "eligible"
+    },
+    "sto|silent_break|10": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.8937,
+      "post_cost": 4.3729,
+      "status": "eligible"
+    },
+    "sto|silent_break|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.3813,
+      "post_cost": 3.7763,
+      "status": "eligible"
+    },
+    "sto|silent_break|12": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4846,
+      "post_cost": 2.6989,
+      "status": "eligible"
+    },
+    "sto|silent_break|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.0679,
+      "post_cost": 4.5856,
+      "status": "eligible"
+    },
+    "sto|silent_break|14": {
+      "status": "not_built",
+      "reason": "seed 14: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|silent_break|15": {
+      "status": "not_built",
+      "reason": "seed 15: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|silent_break|16": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.8051,
+      "post_cost": 5.4933,
+      "status": "eligible"
+    },
+    "sto|silent_break|17": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.5677,
+      "post_cost": 3.7894,
+      "status": "eligible"
+    },
+    "sto|silent_break|18": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.9604,
+      "post_cost": 5.1189,
+      "status": "eligible"
+    },
+    "sto|silent_break|19": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.9725,
+      "post_cost": 4.1229,
+      "status": "eligible"
+    },
+    "sto|silent_break|20": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.9585,
+      "post_cost": 5.4626,
+      "status": "eligible"
+    },
+    "sto|silent_break|21": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.0851,
+      "post_cost": 4.7985,
+      "status": "eligible"
+    },
+    "sto|silent_break|22": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4203,
+      "post_cost": 2.5712,
+      "status": "eligible"
+    },
+    "sto|silent_break|23": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.7461,
+      "post_cost": 6.7889,
+      "status": "eligible"
+    },
+    "sto|silent_break|24": {
+      "status": "not_built",
+      "reason": "seed 24: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|silent_break|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.8958,
+      "post_cost": 3.5878,
+      "status": "eligible"
+    },
+    "sto|silent_break|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.4793,
+      "post_cost": 5.1252,
+      "status": "eligible"
+    },
+    "sto|silent_break|27": {
+      "status": "not_built",
+      "reason": "seed 27: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|silent_break|28": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.7809,
+      "post_cost": 7.7193,
+      "status": "eligible"
+    },
+    "sto|silent_break|29": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.3377,
+      "post_cost": 3.6011,
+      "status": "eligible"
+    },
+    "sto|silent_break|30": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.471,
+      "post_cost": 3.5759,
+      "status": "eligible"
+    },
+    "sto|hard_removal|1": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 5.2891,
+      "post_cost": 5.6595,
+      "status": "eligible"
+    },
+    "sto|hard_removal|2": {
+      "status": "not_built",
+      "reason": "seed 2: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|hard_removal|3": {
+      "status": "not_built",
+      "reason": "seed 3: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|hard_removal|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.6626,
+      "post_cost": 3.8858,
+      "status": "eligible"
+    },
+    "sto|hard_removal|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.6147,
+      "post_cost": 5.0914,
+      "status": "eligible"
+    },
+    "sto|hard_removal|6": {
+      "status": "not_built",
+      "reason": "seed 6: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|hard_removal|7": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.1326,
+      "post_cost": 7.4594,
+      "status": "eligible"
+    },
+    "sto|hard_removal|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.3026,
+      "post_cost": 3.6171,
+      "status": "eligible"
+    },
+    "sto|hard_removal|9": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.5394,
+      "post_cost": 4.8171,
+      "status": "eligible"
+    },
+    "sto|hard_removal|10": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.8937,
+      "post_cost": 4.3729,
+      "status": "eligible"
+    },
+    "sto|hard_removal|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.3813,
+      "post_cost": 3.7763,
+      "status": "eligible"
+    },
+    "sto|hard_removal|12": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4846,
+      "post_cost": 2.6989,
+      "status": "eligible"
+    },
+    "sto|hard_removal|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.0679,
+      "post_cost": 4.5856,
+      "status": "eligible"
+    },
+    "sto|hard_removal|14": {
+      "status": "not_built",
+      "reason": "seed 14: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|hard_removal|15": {
+      "status": "not_built",
+      "reason": "seed 15: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|hard_removal|16": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.8051,
+      "post_cost": 5.4933,
+      "status": "eligible"
+    },
+    "sto|hard_removal|17": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.5677,
+      "post_cost": 3.7894,
+      "status": "eligible"
+    },
+    "sto|hard_removal|18": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.9604,
+      "post_cost": 5.1189,
+      "status": "eligible"
+    },
+    "sto|hard_removal|19": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.9725,
+      "post_cost": 4.1229,
+      "status": "eligible"
+    },
+    "sto|hard_removal|20": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.9585,
+      "post_cost": 5.4626,
+      "status": "eligible"
+    },
+    "sto|hard_removal|21": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.0851,
+      "post_cost": 4.7985,
+      "status": "eligible"
+    },
+    "sto|hard_removal|22": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4203,
+      "post_cost": 2.5712,
+      "status": "eligible"
+    },
+    "sto|hard_removal|23": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.7461,
+      "post_cost": 6.7889,
+      "status": "eligible"
+    },
+    "sto|hard_removal|24": {
+      "status": "not_built",
+      "reason": "seed 24: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|hard_removal|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.8958,
+      "post_cost": 3.5878,
+      "status": "eligible"
+    },
+    "sto|hard_removal|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.4793,
+      "post_cost": 5.1252,
+      "status": "eligible"
+    },
+    "sto|hard_removal|27": {
+      "status": "not_built",
+      "reason": "seed 27: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|hard_removal|28": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.7809,
+      "post_cost": 7.7193,
+      "status": "eligible"
+    },
+    "sto|hard_removal|29": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.3377,
+      "post_cost": 3.6011,
+      "status": "eligible"
+    },
+    "sto|hard_removal|30": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.471,
+      "post_cost": 3.5759,
+      "status": "eligible"
+    },
+    "sto|degradation|1": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 5.2891,
+      "post_cost": 5.6595,
+      "status": "eligible"
+    },
+    "sto|degradation|2": {
+      "status": "not_built",
+      "reason": "seed 2: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|degradation|3": {
+      "status": "not_built",
+      "reason": "seed 3: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|degradation|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.6626,
+      "post_cost": 3.715,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.6147,
+      "post_cost": 4.8647,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|6": {
+      "status": "not_built",
+      "reason": "seed 6: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|degradation|7": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.1326,
+      "post_cost": 7.4594,
+      "status": "eligible"
+    },
+    "sto|degradation|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.3026,
+      "post_cost": 3.3777,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|9": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.5394,
+      "post_cost": 4.5918,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|10": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.8937,
+      "post_cost": 4.3729,
+      "status": "eligible"
+    },
+    "sto|degradation|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.3813,
+      "post_cost": 3.5858,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|12": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4846,
+      "post_cost": 2.6989,
+      "status": "eligible"
+    },
+    "sto|degradation|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.0679,
+      "post_cost": 4.4965,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|14": {
+      "status": "not_built",
+      "reason": "seed 14: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|degradation|15": {
+      "status": "not_built",
+      "reason": "seed 15: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|degradation|16": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.8051,
+      "post_cost": 5.4933,
+      "status": "eligible"
+    },
+    "sto|degradation|17": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.5677,
+      "post_cost": 3.7894,
+      "status": "eligible"
+    },
+    "sto|degradation|18": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.9604,
+      "post_cost": 5.1189,
+      "status": "eligible"
+    },
+    "sto|degradation|19": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.9725,
+      "post_cost": 4.1229,
+      "status": "eligible"
+    },
+    "sto|degradation|20": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9585,
+      "post_cost": 5.178,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|21": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.0851,
+      "post_cost": 4.7985,
+      "status": "eligible"
+    },
+    "sto|degradation|22": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4203,
+      "post_cost": 2.5712,
+      "status": "eligible"
+    },
+    "sto|degradation|23": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.7461,
+      "post_cost": 6.7889,
+      "status": "eligible"
+    },
+    "sto|degradation|24": {
+      "status": "not_built",
+      "reason": "seed 24: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|degradation|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.8958,
+      "post_cost": 3.5878,
+      "status": "eligible"
+    },
+    "sto|degradation|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.4793,
+      "post_cost": 4.5316,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": -0.0
+    },
+    "sto|degradation|27": {
+      "status": "not_built",
+      "reason": "seed 27: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|degradation|28": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.7809,
+      "post_cost": 5.9714,
+      "status": "restraint",
+      "reason": "the edit did not move the optimal route; a stale plan scores regret 0, so adaptation here measures restraint, not re-planning",
+      "stale_plan_regret": 0.0
+    },
+    "sto|degradation|29": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.3377,
+      "post_cost": 3.6011,
+      "status": "eligible"
+    },
+    "sto|degradation|30": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.471,
+      "post_cost": 3.5759,
+      "status": "eligible"
+    },
+    "sto|redirect|1": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 5.2891,
+      "post_cost": 5.6595,
+      "status": "eligible"
+    },
+    "sto|redirect|2": {
+      "status": "not_built",
+      "reason": "seed 2: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|redirect|3": {
+      "status": "not_built",
+      "reason": "seed 3: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|redirect|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.6626,
+      "post_cost": 3.8858,
+      "status": "eligible"
+    },
+    "sto|redirect|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.6147,
+      "post_cost": 5.0914,
+      "status": "eligible"
+    },
+    "sto|redirect|6": {
+      "status": "not_built",
+      "reason": "seed 6: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|redirect|7": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.1326,
+      "post_cost": 7.3826,
+      "status": "eligible"
+    },
+    "sto|redirect|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.3026,
+      "post_cost": 2.3684,
+      "status": "eligible"
+    },
+    "sto|redirect|9": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.5394,
+      "post_cost": 4.8171,
+      "status": "eligible"
+    },
+    "sto|redirect|10": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.8937,
+      "post_cost": 4.3729,
+      "status": "eligible"
+    },
+    "sto|redirect|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.3813,
+      "post_cost": 3.7085,
+      "status": "eligible"
+    },
+    "sto|redirect|12": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4846,
+      "post_cost": 2.6989,
+      "status": "eligible"
+    },
+    "sto|redirect|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.0679,
+      "post_cost": 1.4286,
+      "status": "eligible"
+    },
+    "sto|redirect|14": {
+      "status": "not_built",
+      "reason": "seed 14: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|redirect|15": {
+      "status": "not_built",
+      "reason": "seed 15: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|redirect|16": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.8051,
+      "post_cost": 5.4933,
+      "status": "eligible"
+    },
+    "sto|redirect|17": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.5677,
+      "post_cost": 3.7894,
+      "status": "eligible"
+    },
+    "sto|redirect|18": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.9604,
+      "post_cost": 5.1189,
+      "status": "eligible"
+    },
+    "sto|redirect|19": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.9725,
+      "post_cost": 4.1229,
+      "status": "eligible"
+    },
+    "sto|redirect|20": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.9585,
+      "post_cost": 5.4626,
+      "status": "eligible"
+    },
+    "sto|redirect|21": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.0851,
+      "post_cost": 2.9487,
+      "status": "eligible"
+    },
+    "sto|redirect|22": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.4203,
+      "post_cost": 2.1508,
+      "status": "eligible"
+    },
+    "sto|redirect|23": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 6.7461,
+      "post_cost": 4.1957,
+      "status": "eligible"
+    },
+    "sto|redirect|24": {
+      "status": "not_built",
+      "reason": "seed 24: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|redirect|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.8958,
+      "post_cost": 1.3333,
+      "status": "eligible"
+    },
+    "sto|redirect|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.4793,
+      "post_cost": 3.341,
+      "status": "eligible"
+    },
+    "sto|redirect|27": {
+      "status": "not_built",
+      "reason": "seed 27: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "sto|redirect|28": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 4.7809,
+      "post_cost": 7.7193,
+      "status": "eligible"
+    },
+    "sto|redirect|29": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.3377,
+      "post_cost": 2.6511,
+      "status": "eligible"
+    },
+    "sto|redirect|30": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 3.471,
+      "post_cost": 3.5759,
+      "status": "eligible"
+    },
+    "sto|no_change|1": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 5.2891,
+      "post_cost": 5.2891,
+      "status": "eligible"
+    },
+    "sto|no_change|2": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.5103,
+      "post_cost": 3.5103,
+      "status": "eligible"
+    },
+    "sto|no_change|3": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 5.3527,
+      "post_cost": 5.3527,
+      "status": "eligible"
+    },
+    "sto|no_change|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.6626,
+      "post_cost": 2.6626,
+      "status": "eligible"
+    },
+    "sto|no_change|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.6147,
+      "post_cost": 3.6147,
+      "status": "eligible"
+    },
+    "sto|no_change|6": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.5196,
+      "post_cost": 2.5196,
+      "status": "eligible"
+    },
+    "sto|no_change|7": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 6.1326,
+      "post_cost": 6.1326,
+      "status": "eligible"
+    },
+    "sto|no_change|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.3026,
+      "post_cost": 2.3026,
+      "status": "eligible"
+    },
+    "sto|no_change|9": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.5394,
+      "post_cost": 3.5394,
+      "status": "eligible"
+    },
+    "sto|no_change|10": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.8937,
+      "post_cost": 3.8937,
+      "status": "eligible"
+    },
+    "sto|no_change|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.3813,
+      "post_cost": 2.3813,
+      "status": "eligible"
+    },
+    "sto|no_change|12": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.4846,
+      "post_cost": 2.4846,
+      "status": "eligible"
+    },
+    "sto|no_change|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.0679,
+      "post_cost": 3.0679,
+      "status": "eligible"
+    },
+    "sto|no_change|14": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9535,
+      "post_cost": 3.9535,
+      "status": "eligible"
+    },
+    "sto|no_change|15": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9471,
+      "post_cost": 3.9471,
+      "status": "eligible"
+    },
+    "sto|no_change|16": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.8051,
+      "post_cost": 4.8051,
+      "status": "eligible"
+    },
+    "sto|no_change|17": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.5677,
+      "post_cost": 3.5677,
+      "status": "eligible"
+    },
+    "sto|no_change|18": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.9604,
+      "post_cost": 4.9604,
+      "status": "eligible"
+    },
+    "sto|no_change|19": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9725,
+      "post_cost": 3.9725,
+      "status": "eligible"
+    },
+    "sto|no_change|20": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9585,
+      "post_cost": 3.9585,
+      "status": "eligible"
+    },
+    "sto|no_change|21": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.0851,
+      "post_cost": 4.0851,
+      "status": "eligible"
+    },
+    "sto|no_change|22": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.4203,
+      "post_cost": 2.4203,
+      "status": "eligible"
+    },
+    "sto|no_change|23": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 6.7461,
+      "post_cost": 6.7461,
+      "status": "eligible"
+    },
+    "sto|no_change|24": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.3002,
+      "post_cost": 3.3002,
+      "status": "eligible"
+    },
+    "sto|no_change|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.8958,
+      "post_cost": 2.8958,
+      "status": "eligible"
+    },
+    "sto|no_change|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.4793,
+      "post_cost": 3.4793,
+      "status": "eligible"
+    },
+    "sto|no_change|27": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.492,
+      "post_cost": 3.492,
+      "status": "eligible"
+    },
+    "sto|no_change|28": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.7809,
+      "post_cost": 4.7809,
+      "status": "eligible"
+    },
+    "sto|no_change|29": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.3377,
+      "post_cost": 3.3377,
+      "status": "eligible"
+    },
+    "sto|no_change|30": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.471,
+      "post_cost": 3.471,
+      "status": "eligible"
+    },
+    "sto|irrelevant|1": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 5.2891,
+      "post_cost": 5.2891,
+      "status": "eligible"
+    },
+    "sto|irrelevant|2": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.5103,
+      "post_cost": 3.5103,
+      "status": "eligible"
+    },
+    "sto|irrelevant|3": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 5.3527,
+      "post_cost": 5.3527,
+      "status": "eligible"
+    },
+    "sto|irrelevant|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.6626,
+      "post_cost": 2.6626,
+      "status": "eligible"
+    },
+    "sto|irrelevant|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.6147,
+      "post_cost": 3.6147,
+      "status": "eligible"
+    },
+    "sto|irrelevant|6": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.5196,
+      "post_cost": 2.5196,
+      "status": "eligible"
+    },
+    "sto|irrelevant|7": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 6.1326,
+      "post_cost": 6.1326,
+      "status": "eligible"
+    },
+    "sto|irrelevant|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.3026,
+      "post_cost": 2.3026,
+      "status": "eligible"
+    },
+    "sto|irrelevant|9": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.5394,
+      "post_cost": 3.5394,
+      "status": "eligible"
+    },
+    "sto|irrelevant|10": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.8937,
+      "post_cost": 3.8937,
+      "status": "eligible"
+    },
+    "sto|irrelevant|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.3813,
+      "post_cost": 2.3813,
+      "status": "eligible"
+    },
+    "sto|irrelevant|12": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.4846,
+      "post_cost": 2.4846,
+      "status": "eligible"
+    },
+    "sto|irrelevant|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.0679,
+      "post_cost": 3.0679,
+      "status": "eligible"
+    },
+    "sto|irrelevant|14": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9535,
+      "post_cost": 3.9535,
+      "status": "eligible"
+    },
+    "sto|irrelevant|15": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9471,
+      "post_cost": 3.9471,
+      "status": "eligible"
+    },
+    "sto|irrelevant|16": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.8051,
+      "post_cost": 4.8051,
+      "status": "eligible"
+    },
+    "sto|irrelevant|17": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.5677,
+      "post_cost": 3.5677,
+      "status": "eligible"
+    },
+    "sto|irrelevant|18": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.9604,
+      "post_cost": 4.9604,
+      "status": "eligible"
+    },
+    "sto|irrelevant|19": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9725,
+      "post_cost": 3.9725,
+      "status": "eligible"
+    },
+    "sto|irrelevant|20": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.9585,
+      "post_cost": 3.9585,
+      "status": "eligible"
+    },
+    "sto|irrelevant|21": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.0851,
+      "post_cost": 4.0851,
+      "status": "eligible"
+    },
+    "sto|irrelevant|22": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.4203,
+      "post_cost": 2.4203,
+      "status": "eligible"
+    },
+    "sto|irrelevant|23": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 6.7461,
+      "post_cost": 6.7461,
+      "status": "eligible"
+    },
+    "sto|irrelevant|24": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.3002,
+      "post_cost": 3.3002,
+      "status": "eligible"
+    },
+    "sto|irrelevant|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.8958,
+      "post_cost": 2.8958,
+      "status": "eligible"
+    },
+    "sto|irrelevant|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.4793,
+      "post_cost": 3.4793,
+      "status": "eligible"
+    },
+    "sto|irrelevant|27": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.492,
+      "post_cost": 3.492,
+      "status": "eligible"
+    },
+    "sto|irrelevant|28": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 4.7809,
+      "post_cost": 4.7809,
+      "status": "eligible"
+    },
+    "sto|irrelevant|29": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.3377,
+      "post_cost": 3.3377,
+      "status": "eligible"
+    },
+    "sto|irrelevant|30": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.471,
+      "post_cost": 3.471,
+      "status": "eligible"
+    },
+    "det|silent_break|1": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|2": {
+      "status": "not_built",
+      "reason": "seed 2: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|silent_break|3": {
+      "status": "not_built",
+      "reason": "seed 3: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|silent_break|4": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|5": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|6": {
+      "status": "not_built",
+      "reason": "seed 6: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|silent_break|7": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 5.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|silent_break|9": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|10": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|11": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|12": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|silent_break|14": {
+      "status": "not_built",
+      "reason": "seed 14: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|silent_break|15": {
+      "status": "not_built",
+      "reason": "seed 15: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|silent_break|16": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|17": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|18": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|19": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|20": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|21": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|22": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|23": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 5.0,
+      "post_cost": 5.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|24": {
+      "status": "not_built",
+      "reason": "seed 24: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|silent_break|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|silent_break|26": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|27": {
+      "status": "not_built",
+      "reason": "seed 27: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|silent_break|28": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 6.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|29": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|silent_break|30": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|1": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|2": {
+      "status": "not_built",
+      "reason": "seed 2: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|hard_removal|3": {
+      "status": "not_built",
+      "reason": "seed 3: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|hard_removal|4": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|5": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|6": {
+      "status": "not_built",
+      "reason": "seed 6: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|hard_removal|7": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 5.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|hard_removal|9": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|10": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|11": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|12": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|hard_removal|14": {
+      "status": "not_built",
+      "reason": "seed 14: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|hard_removal|15": {
+      "status": "not_built",
+      "reason": "seed 15: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|hard_removal|16": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|17": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|18": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|19": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|20": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|21": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|22": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|23": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 5.0,
+      "post_cost": 5.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|24": {
+      "status": "not_built",
+      "reason": "seed 24: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|hard_removal|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|hard_removal|26": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|27": {
+      "status": "not_built",
+      "reason": "seed 27: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|hard_removal|28": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 6.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|29": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|hard_removal|30": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|1": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|2": {
+      "status": "not_built",
+      "reason": "seed 2: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|redirect|3": {
+      "status": "not_built",
+      "reason": "seed 3: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|redirect|4": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|5": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|6": {
+      "status": "not_built",
+      "reason": "seed 6: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|redirect|7": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 5.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|redirect|9": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|10": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|11": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|12": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 1.0,
+      "status": "eligible"
+    },
+    "det|redirect|14": {
+      "status": "not_built",
+      "reason": "seed 14: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|redirect|15": {
+      "status": "not_built",
+      "reason": "seed 15: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|redirect|16": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|17": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|18": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|19": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|20": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|21": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|22": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|23": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 5.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|24": {
+      "status": "not_built",
+      "reason": "seed 24: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|redirect|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": true,
+      "pre_cost": 2.0,
+      "post_cost": 1.0,
+      "status": "eligible"
+    },
+    "det|redirect|26": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|27": {
+      "status": "not_built",
+      "reason": "seed 27: no eligible break keeps the goal reachable in both modes (matched); use a different seed"
+    },
+    "det|redirect|28": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 4.0,
+      "post_cost": 6.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|29": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|redirect|30": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": true,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|1": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|2": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|3": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|no_change|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|no_change|6": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|7": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|no_change|9": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|10": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|no_change|12": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|no_change|14": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|15": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|16": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|17": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|18": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|19": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|20": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|21": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|22": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|23": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 5.0,
+      "post_cost": 5.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|24": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|no_change|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|no_change|27": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|28": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|29": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|no_change|30": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|1": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|2": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|3": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|4": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|irrelevant|5": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|irrelevant|6": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|7": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|8": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|irrelevant|9": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|10": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|11": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|irrelevant|12": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|13": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|irrelevant|14": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|15": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|16": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|17": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|18": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|19": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|20": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|21": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|22": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|23": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 5.0,
+      "post_cost": 5.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|24": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|25": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 2.0,
+      "post_cost": 2.0,
+      "status": "eligible"
+    },
+    "det|irrelevant|26": {
+      "reachable": true,
+      "unique_pre_post": true,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "eligible"
+    },
+    "det|irrelevant|27": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|28": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 4.0,
+      "post_cost": 4.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|29": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    },
+    "det|irrelevant|30": {
+      "reachable": true,
+      "unique_pre_post": false,
+      "route_moved": false,
+      "pre_cost": 3.0,
+      "post_cost": 3.0,
+      "status": "excluded",
+      "reason": "optimal route is not unique before and after"
+    }
+  }
+}
