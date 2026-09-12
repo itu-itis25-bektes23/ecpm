@@ -27,7 +27,7 @@ below). But it is largely a property of the task rather than of models,
 and our own Gist explains why: planning needs only the period B rates in
 the right order, while localization needs a *difference* between periods.
 Those are different computations over different inputs, so nothing forces
-them to co-occur -- in a model, in a counter, in anything.
+them to co-occur, in a model, in a counter, in anything.
 
 The evidence-only baseline demonstrates this constructively. It routes
 around the break (zero observed successes means infinite cost) while
@@ -46,7 +46,7 @@ in advance and mean different things:
 
 | region | reading |
 | --- | --- |
-| **above baseline** | the model extracted something counting could not -- the only positive world-model evidence available here |
+| **above baseline** | the model extracted something counting could not, the only positive world-model evidence available here |
 | **at baseline** | the model is a counter; not a failure, but not a world model |
 | **below baseline** | the model had the information and failed to use it |
 
@@ -56,8 +56,8 @@ measured ceiling. Thin evidence stops being fatal, because the claim
 needs a comparison against a computable reference rather than a precise
 rate.
 
-It also answers the PI's standing objection -- *is this test just
-counting?* -- with a measurement instead of a defence: yes, in these
+It also answers the PI's standing objection, *is this test just
+counting?*, with a measurement instead of a defence: yes, in these
 conditions, by this much, and here is the one condition where it is not.
 
 And it earns redirect its place. Redirect is the only condition whose
@@ -77,7 +77,7 @@ deliberately.
 As a **floor**, the baseline defines interpretable regions and models are
 scored against it; every condition stays informative. As a
 **competitor**, it is reported as a system and the finding is that
-frontier models do not beat a counter -- sharper, but it invites "your
+frontier models do not beat a counter, sharper, but it invites "your
 task is too easy," which only the redirect result answers. This draft
 assumes floor. Changing it changes the abstract.
 
@@ -126,13 +126,13 @@ The three arms are not three versions of the same experiment. Each varies
 a different axis over one environment and one probe set, which is what
 makes them comparable at all.
 
-- **ICL (Efe)** — varies *delivery within the prompt*: single-turn versus
+- **ICL (Efe)** varies *delivery within the prompt*: single-turn versus
   two-turn. This arm is what licenses the word "updating"; see scope note
   below.
-- **Agentic exploration (Christian)** — varies *the source of evidence*:
+- **Agentic exploration (Christian)** varies *the source of evidence*:
   a fixed log collected by an external policy versus the model choosing
   its own actions. Same probes, same scorer.
-- **Finetuning (Maciej)** — varies *where the evidence lives*: prompt
+- **Finetuning (Maciej)** varies *where the evidence lives*: prompt
   versus weights, plus a combined arm. Also contributes the scripted
   control answerers and the information-ceiling computation.
 
@@ -141,7 +141,7 @@ when the model gathers its own evidence, when the evidence is in the
 weights, and when the framing gets harder.
 
 Stated honestly, these are not three levels of one factor. The agentic
-arm gives the model *causal control* over which evidence exists at all --
+arm gives the model *causal control* over which evidence exists at all,
 an intervention-versus-observation distinction, deeper than "where the
 evidence comes from." The finetuning arm asks a memory question:
 in-context versus in-weights. They share an environment, a probe set and
@@ -151,8 +151,8 @@ that rather than imply a clean factorial.
 ## The null model
 
 Under the claim above the baseline is not a control, it is the reference
-every result is measured against. It sees exactly what the model sees --
-a `prompt_view` at the same rendering and budget -- and answers the same
+every result is measured against. It sees exactly what the model sees,
+a `prompt_view` at the same rendering and budget, and answers the same
 four probes by arithmetic. `assert_prompt_safe()` enforces that at
 runtime.
 
@@ -170,12 +170,12 @@ condition; ineligible seeds are excluded rather than scored.
 
 Deterministic mode has no headroom: a counter solves it. Stochastic
 silent break is solved by K=10. Among the original five conditions the
-only cell with room is stochastic degradation at K=5 and K=10 -- and
+only cell with room is stochastic degradation at K=5 and K=10, and
 redirect (see Scope) is the only one with a floor of zero.
 
 This is the central result, not an obstacle. It says precisely where a
-model result is interpretable, and it makes the project's own rule -- no
-claim that a model "cannot localize" unless the baseline can --
+model result is interpretable, and it makes the project's own rule, no
+claim that a model "cannot localize" unless the baseline can,
 enforceable rather than aspirational.
 
 **K is not a nuisance parameter.** The table shows K setting how much of
@@ -198,44 +198,81 @@ reported as such.
    The agentic arm supplies the sharpest version: correct probes, 0.78
    broken-link usage.
 
-## Hypotheses, reframed
+## Hypotheses, as a pre-registration
 
-At n=14 the Wilson interval runs roughly 0.21 to 0.67, which cannot
-support a point threshold. Stated as contrasts instead:
+Handbook 4.2: a hypothesis is written as the triple "which measurement, which
+threshold, which verdict", not as a vague statement. Each of the following
+names a computable quantity and a decision, so each can fail. To be frozen
+before the Azure runs, not after.
 
-- **H1 (above).** On redirect, model localization exceeds the baseline by
-  a margin. This is the only condition where the baseline floor is zero,
-  so it is the cleanest test of the claim.
-- **H2 (at).** On silent_break at K>=10, model localization does not
-  differ from the baseline by more than a margin -- i.e. the model is
-  behaving as a counter.
-- **H3 (below).** There exist conditions where model localization is
-  correct and the route still uses the changed link, at a rate above
-  zero. Failure to use information demonstrably held.
-- **H4 (delivery).** The two-turn arm differs from the single-turn arm on
-  matched instances, in the direction of lower apparent adaptation --
-  i.e. part of single-turn "adaptation" was planning.
-- **H5 (specificity).** False-alarm rate on `no_change` is below the
-  detection rate on `silent_break` by a margin, for both model and
-  baseline.
+| id | measurement | threshold | verdict if met |
+| --- | --- | --- | --- |
+| H1 | model localization accuracy on `redirect` minus baseline localization accuracy on the same instances | lower bound of the 95% interval on the difference is above 0 | the model extracted structure counting cannot reach |
+| H2 | model localization accuracy on `silent_break` at K>=10 minus baseline accuracy on the same instances | 95% interval on the difference contains 0 and excludes 0.20 | the model is behaving as a counter on this condition |
+| H3 | proportion of instances where localization is correct and the returned route traverses the changed pair | point estimate above 0 with the interval excluding 0 | failure to use information demonstrably held |
+| H4 | adaptation regret, two-turn arm minus single-turn arm, on matched instances | 95% interval on the paired difference excludes 0 | part of single-turn "adaptation" was planning, not updating |
+| H5 | detection rate on `no_change` minus detection rate on `silent_break` | 95% interval on the difference excludes 0, sign negative | the probe discriminates rather than prompting a report |
 
-Each is a contrast against a computable reference, so each can fail.
+**Forbidden claims** (handbook 4.4, and the project's own rule). No statement
+that a model "cannot localize" on any condition where the baseline also fails:
+that is a property of the evidence. No model ranking. No claim from a cell
+whose n is not stated beside it.
 
-**Both-modes rule: proposed for retirement.** The old rule accepted a
-verdict only if it held in deterministic and stochastic mode. With
-deterministic at ceiling on five of six conditions, that rule now
-discards findings rather than protecting them -- and the two modes are
-not two settings of one task: deterministic is logical inference (one
-failure proves a break), stochastic is statistical inference from a
-sample. Proposal: report mode as a condition and let the reader see where
-each result holds. Retained unchanged: no model rankings from three
-seeds.
+**Ambiguity clause.** Where a hypothesis admits two readings, the conservative
+reading is taken and the ambiguity is recorded.
 
-**Preservation needs splitting or cutting.** Over-reporting and
-under-reporting land in the same score band -- Gemma scored 0.50 with a
-right diagnosis plus collateral damage, GPT-4o scored 0.75 by marking
-nothing changed and missing the break. One number is collapsing
-sensitivity and specificity. Report the pair, or drop the probe.
+### Power, stated before the runs
+
+Handbook 6.3: a null claimed without power is not a null. H2 is the only
+hypothesis of the project that asserts an absence, and it is therefore the one
+that needs its minimum detectable effect stated in advance.
+
+At n=23 seeds with 3 samples each, a difference in proportions below roughly
+0.15 is not detectable at conventional power. H2 is therefore written to
+exclude 0.20 rather than to accept 0, and any H2 result must be reported as
+"consistent with counting, and uninformative about differences smaller than
+0.15" rather than as "the model is a counter".
+
+### Small cells
+
+Handbook 6.6: a cell with a handful of observations supports "consistent with
+the overall finding" and nothing stronger. Every cell in the current evidence
+is n=1. No such cell may appear in the abstract, a heading or a summary
+sentence without its n attached.
+
+The baseline ceiling table is the exception and is stated with its n, because
+it is a computation over 23 to 30 seeds rather than a sample of model
+behaviour.
+
+### Both-modes rule, proposed for retirement
+
+The old rule accepted a verdict only if it held in deterministic and stochastic
+mode. With deterministic at ceiling on five of six conditions, that rule now
+discards findings rather than protecting them. The two modes are also not two
+settings of one task: deterministic is logical inference (one failure proves a
+break), stochastic is statistical inference from a sample. Proposal: report
+mode as a condition and let the reader see where each result holds.
+
+### Preservation needs splitting or cutting
+
+Over-reporting and under-reporting land in the same score band. Gemma scored
+0.50 with a right diagnosis plus collateral damage; GPT-4o scored 0.75 by
+marking nothing changed and missing the break. One number is collapsing
+sensitivity and specificity (handbook 4.4). Report the pair, or drop the probe.
+
+### The triple
+
+Handbook 17.7: a paper carrying only positive results looks like it fits
+everything. This one carries all three.
+
+- **Positive.** Redirect defeats the baseline at every K, and the two scorer
+  bugs it exposed were real.
+- **Negative.** Deterministic mode has no headroom on five of six conditions.
+  The dissociation that motivated the project is reproduced by a counter.
+- **Out of scope.** The baseline declines on evidence with no comparable pairs,
+  and reports `could_not_run` rather than a verdict. Detection at K=5 in
+  stochastic mode has no usable operating point and is reported as unreliable
+  rather than as a number.
 
 ## Delivery is a measured contrast, not a choice
 
@@ -291,7 +328,7 @@ added afterwards without rerunning anything.
 | Self-consistency preservation | 100% | collection |
 | Evidence-only baseline + ceilings | 100% | analysis |
 | Artifact completeness (paths, beliefs, usage) | 100% | collection |
-| Adaptation prompt wording | **0%** | **collection — blocker** |
+| Adaptation prompt wording | **0%** | **collection, blocker** |
 | Repeated sampling (`--samples`) | 0% | collection |
 | Named scenario for redirect | 0% | collection (cosmetic) |
 | Updating-vs-planning contrast | 0% | analysis |
@@ -318,7 +355,7 @@ Two items break that rule and must land first:
 
 ## Where the evidence is thin
 
-Not in coverage -- every arm has a job and the dissociation has four
+Not in coverage, every arm has a job and the dissociation has four
 independent lines of support. In depth:
 
 - Almost every cell is n=1.
@@ -333,9 +370,60 @@ attack depth rather than breadth.
 
 The null-model framing is deliberately tolerant of this. It needs each
 model result compared against a computable reference on the same
-instance, not a precise population rate -- which is why the ceiling table
+instance, not a precise population rate, which is why the ceiling table
 and the below-baseline case are already publishable on data in hand,
 while the Azure runs strengthen the claim rather than constitute it.
+
+## The ceiling this project cannot lift
+
+Handbook 17.10: every project has one caveat it cannot lift. Name it, or a
+reviewer names it for you.
+
+**This work uses one eight-node graph family, generated by one generator, with
+at most one edit per instance.** Until that caveat is lifted the contribution
+remains a demonstration on a constructed environment rather than a measurement
+of model behaviour in general. The way to lift it is a second environment
+family with different topology and a different action-labelling scheme, run
+through the same probes and the same baseline. That is out of scope here and
+should be stated as such.
+
+A second, smaller ceiling: the probes measure report-action agreement, not map
+coherence (see Construct note). A result here does not license a claim about
+the internal consistency of a recovered world model.
+
+## Accountability chain
+
+Handbook 19.6: for three claims, the chain from claim to number to script to
+input to source must be unbroken.
+
+| claim | number | script | input | source |
+| --- | --- | --- | --- | --- |
+| a counter localizes every deterministic condition | 1.00 | `experiments/baseline_k_sweep.py` | seeds 1 to 30, `resource_mdp.make_pair` | `runs/baseline_k_sweep_seeds1-30.json` |
+| redirect does not improve with K | 0.09, 0.00, 0.04 | `experiments/baseline_k_sweep.py` | seeds 1 to 30, condition `redirect` | `runs/baseline_redirect_sweep.json` |
+| the package costs $97.12 | 97.12 | `experiments/azure_budget.py` | 5413 prompt and 220 completion tokens | `runs/2026-08-23_gpt4o_azure_mt4096/pilot_stochastic.json` |
+
+Numbers taken from the team documents rather than from a script in this
+repository are the Gemma sweep counts, the agentic Run 1 metrics and the
+direct-interface findings. Those are cited to their documents and are not
+reproducible from this tree.
+
+**One unresolved link.** The agentic metric "broken-link usage after first
+failure = 0.78" has no written definition: the Metrics section of the agentic
+document says "to be written". It is read here as "used the broken link on 78%
+of opportunities after it first failed". Handbook 16.9 says a claim is its
+artifact, so this row is marked PROVISIONAL until the definition is supplied.
+
+## What was tried and did not work
+
+Handbook 19.1: the failure list needs a "why it failed" column or it is
+useless.
+
+| approach | result | why it failed |
+| --- | --- | --- |
+| single fixed detection threshold across all K | 100% false alarms on `no_change` at K=5 | the noise floor shrinks as K grows, so one value cannot serve three budgets |
+| detection at K=5 in stochastic mode, any threshold | best achievable gap 0.11 | a healthy link swings as hard as a broken one at five attempts |
+| adding `new_edge` to every change record | frozen example artifacts no longer regenerated byte-identically | the field is a second source for conditions that have no second endpoint |
+| first pass at the prompt wording fix | two of three asks corrected, the load-bearing one missed | the file parsed and the dry run passed, so the grep looked conclusive; only rendering the prompt text from a generated artifact caught it |
 
 ## Scope
 
@@ -404,7 +492,7 @@ rather than inherited:
   Both were latent: harmless for the five conditions that reweight an
   edge in place, wrong as soon as one moves. (a) `invert_labels` was
   period-blind, so under redirect one action label mapped to two edges
-  and the inversion kept whichever it saw last -- resolving a Period A
+  and the inversion kept whichever it saw last, resolving a Period A
   route with the Period B destination. It now takes a world.
   (b) `score_adaptation` walked the Period B route on the Period A
   destination map; it now prefers Period B and falls back to Period A so

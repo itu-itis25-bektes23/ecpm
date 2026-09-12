@@ -332,6 +332,34 @@ def run_baseline(pv, queried_pairs=None, delta_threshold=None):
     ranked = rank_pairs(pre_stats, post_stats)
     top = ranked[0] if ranked else None
 
+    # Handbook 24.4: "no violations found" and "nothing was examined" must be
+    # different exit states. With no comparable pairs the baseline would
+    # otherwise return detection=False, localization=None and preservation
+    # all-unchanged, which is indistinguishable from a correct no_change
+    # answer and would score as one. Count what was actually measured and
+    # refuse rather than pass.
+    if not ranked and not removed:
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "status": "could_not_run",
+            "reason": ("no (node, action) pair was observed in both periods, "
+                       "so no comparison exists; this is not a finding of "
+                       "'no change'"),
+            "rendering": pv.get("rendering"),
+            "budget_per_pair": pv.get("budget_per_pair"),
+            "n_pairs_compared": 0,
+            "detection": None,
+            "detection_reliable": False,
+            "localization": None,
+            "localization_basis": None,
+            "margin": None,
+            "ranking": [],
+            "menu_removals": [],
+            "preservation": None,
+            "adaptation": {"route": None, "expected_cost": None,
+                           "reason": "no evidence to plan from"},
+        }
+
     if removed:
         localized, basis = removed[0], "menu_removal"
         detected = True
@@ -345,6 +373,8 @@ def run_baseline(pv, queried_pairs=None, delta_threshold=None):
     deterministic = looks_deterministic(pre_stats, post_stats)
     result = {
         "schema_version": SCHEMA_VERSION,
+        "status": "ok",
+        "n_pairs_compared": len(ranked),
         "rendering": pv.get("rendering"),
         "budget_per_pair": budget,
         "delta_threshold": delta_threshold,

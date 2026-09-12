@@ -259,6 +259,67 @@ def test_redirect_menu_is_invisible_to_the_baseline():
           "rates it cannot use")
 
 
+def test_nothing_examined_is_not_a_pass():
+    """Handbook 24.4: "no violations found" and "nothing was examined" are
+    different exit states. Without this, an empty evidence log returns
+    detection=False with preservation all-unchanged, which is exactly a
+    correct no_change answer and would be scored as one."""
+    empty = {"rendering": "F2_shuffled", "budget_per_pair": 10,
+             "evidence": {"pre": "", "post": ""},
+             "start": "E", "goal": "F",
+             "legal_actions_pre": {}, "legal_actions_post": {}}
+    res = B.run_baseline(empty, queried_pairs=[("D", "a2")])
+    assert res["status"] == "could_not_run", res["status"]
+    assert res["detection"] is None, "an unexamined input must not answer"
+    assert res["detection_reliable"] is False
+    assert res["preservation"] is None
+    assert res["n_pairs_compared"] == 0
+
+    _, good = build(7, "silent_break")
+    ok = B.run_baseline(good)
+    assert ok["status"] == "ok"
+    assert ok["n_pairs_compared"] > 0
+    print("PASS three exit states: empty evidence reports could_not_run, "
+          "never a clean no-change verdict")
+
+
+def test_injected_defects_are_caught():
+    """Handbook 26.3: damage a passing input and record which check catches
+    each class. A check never seen to fail has been run, not tested."""
+    record, pv = build(7, "silent_break", k=5)
+    truth = truth_pair(record)
+    caught = {}
+
+    # 1. evidence removed entirely -> the could-not-run guard
+    blanked = dict(pv, evidence={"pre": "", "post": ""})
+    caught["evidence removed"] = (
+        B.run_baseline(blanked)["status"] == "could_not_run")
+
+    # 2. post period replaced by the pre period -> no swing, no detection
+    flat = dict(pv, evidence={"pre": pv["evidence"]["pre"],
+                              "post": pv["evidence"]["pre"]})
+    caught["periods identical"] = (
+        B.run_baseline(flat)["detection"] is False)
+
+    # 3. evaluator fields smuggled in -> the leak guard
+    try:
+        B.run_baseline(dict(pv, change=record["change"]))
+        caught["ground truth leaked"] = False
+    except B.EvidenceLeak:
+        caught["ground truth leaked"] = True
+
+    # 4. a rendering with no destinations -> adaptation declines
+    stats_pv = R.prompt_view(record, rendering="F3_stats", budget_per_pair=5)
+    caught["destinations absent"] = (
+        B.run_baseline(stats_pv)["adaptation"]["route"] is None)
+
+    missed = [k for k, v in caught.items() if not v]
+    assert not missed, f"damage classes not caught: {missed}"
+    assert truth is not None
+    print("PASS injected defects: " + ", ".join(sorted(caught)) +
+          " each caught by exactly one guard")
+
+
 def test_result_is_json_serializable():
     _, pv = build(7, "silent_break")
     json.dumps(B.run_baseline(pv, queried_pairs=[("D", "a2")]))
@@ -281,5 +342,7 @@ if __name__ == "__main__":
     test_uncalibrated_budget_is_flagged()
     test_redirect_defeats_the_baseline_by_construction()
     test_redirect_menu_is_invisible_to_the_baseline()
+    test_nothing_examined_is_not_a_pass()
+    test_injected_defects_are_caught()
     test_result_is_json_serializable()
     print("\nALL BASELINE TESTS PASSED")
