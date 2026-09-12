@@ -18,6 +18,7 @@ Covers the handoff checklist:
 
 import json
 import random
+import resource_mdp as R
 
 from resource_mdp import (CONDITIONS, RoutingMDP, assign_labels,
                           breakable_route_links, broken_link_usage,
@@ -461,6 +462,71 @@ def test_v21_examples_in_sync():
           % checked)
 
 
+
+def test_redirect_keeps_the_menu_identical():
+    """The defining property: nothing visible changes except where
+    attempts land. A menu diff must reveal nothing."""
+    inst = R.make_pair(7, "redirect", matched=True)
+    rec = R.pair_to_json(inst, R.paired_evidence(inst, k=5))
+    assert rec["legal_actions_pre"] == rec["legal_actions_post"], (
+        "redirect leaked through the action menu")
+    ch = rec["change"]
+    assert ch["mode"] == "redirect"
+    assert ch["old_p"] == ch["new_p"], "redirect must preserve the rate"
+    assert ch["new_edge"]["from"] == ch["edge"]["from"]
+    assert ch["new_edge"]["to"] != ch["edge"]["to"]
+    print("PASS redirect: menu identical, success rate preserved, "
+          "destination moved")
+
+
+def test_redirect_shares_the_break_target():
+    """redirect joins the break family, so it edits the SAME T* that
+    silent_break and hard_removal do for a given seed. Without this the
+    conditions are not comparable."""
+    for seed in (7, 1, 4):
+        try:
+            a = R.make_pair(seed, "silent_break", matched=True)
+            b = R.make_pair(seed, "redirect", matched=True)
+        except ValueError:
+            continue
+        assert a.change["edge"] == b.change["edge"], (
+            f"seed {seed}: redirect target {b.change['edge']} != "
+            f"break target {a.change['edge']}")
+    print("PASS redirect shares T* with the break family")
+
+
+def test_redirect_moves_the_optimal_route():
+    """It is a route-changing condition, not a control."""
+    inst = R.make_pair(7, "redirect", matched=True)
+    pre, post = inst.oracle["pre"], inst.oracle["post"]
+    assert pre["optimal_route"] != post["optimal_route"]
+    assert post["solvable"], "goal must stay reachable"
+    print("PASS redirect moves the optimal route and keeps the goal "
+          "reachable")
+
+
+def test_label_inversion_is_period_scoped():
+    """Under redirect one action label has two edges. A period-blind
+    inversion resolves a period A route with the period B destination,
+    which both mis-scores and leaks the change."""
+    inst = R.make_pair(7, "redirect", matched=True)
+    u, v = inst.change["edge"]
+    w = inst.change["new_edge"][1]
+    lab = inst.labels[(u, v)]
+    assert R.invert_labels(inst.labels, inst.m0)[(u, lab)] == v
+    assert R.invert_labels(inst.labels, inst.m1)[(u, lab)] == w
+    # and the unscoped form is genuinely ambiguous, which is why callers
+    # must pass a world
+    assert inst.labels[(u, v)] == inst.labels[(u, w)]
+    print("PASS invert_labels is period-scoped under redirect")
+
+
+def test_redirect_is_deterministic_per_seed():
+    inst1 = R.make_pair(7, "redirect", matched=True)
+    inst2 = R.make_pair(7, "redirect", matched=True)
+    assert inst1.change == inst2.change
+    print("PASS redirect is reproducible for a fixed seed")
+
 if __name__ == "__main__":
     test_reproducibility()
     test_deterministic_same_code_path()
@@ -481,4 +547,9 @@ if __name__ == "__main__":
     test_v21_prompt_view()
     test_v211_matched_mode()
     test_v21_examples_in_sync()
+    test_redirect_keeps_the_menu_identical()
+    test_redirect_shares_the_break_target()
+    test_redirect_moves_the_optimal_route()
+    test_label_inversion_is_period_scoped()
+    test_redirect_is_deterministic_per_seed()
     print("\nALL TESTS PASSED")

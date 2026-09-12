@@ -159,9 +159,11 @@ def parse_adaptation(text):
 def _maps(record):
     pre_dest = {(e["from"], e["action"]): e["to"]
                 for e in record["world_pre"]["edges"]}
+    post_dest = {(e["from"], e["action"]): e["to"]
+                 for e in record["world_post"]["edges"]}
     post_p = {(e["from"], e["to"]): e["p"]
               for e in record["world_post"]["edges"]}
-    return pre_dest, post_p
+    return pre_dest, post_dest, post_p
 
 
 def score_detection(record, parsed):
@@ -233,13 +235,21 @@ def score_adaptation(record, parsed):
            "regret": None, "is_optimal": False}
     if parsed["status"] != "ok":
         return out
-    pre_dest, post_p = _maps(record)
+    pre_dest, post_dest, post_p = _maps(record)
     pos, path = record["start"], [record["start"]]
     for step in parsed["route"]:
         if step["node"] != pos:
             out["status"] = "discontinuous_route"
             return out
-        dest = pre_dest.get((pos, step["action"]))
+        # The route is planned for period B, so it resolves against the
+        # period-B destinations. Only `redirect` makes the two maps
+        # disagree; for every other condition post_dest equals pre_dest
+        # apart from a hard removal, which the pre_dest fallback keeps
+        # walking so it still lands on illegal_action below rather than
+        # unknown_reference.
+        dest = post_dest.get((pos, step["action"]))
+        if dest is None:
+            dest = pre_dest.get((pos, step["action"]))
         if dest is None:
             out["status"] = "unknown_reference"
             return out

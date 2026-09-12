@@ -90,7 +90,7 @@ from dataclasses import dataclass, field
 INF = float("inf")
 
 CONDITIONS = ("no_change", "irrelevant", "degradation",
-              "silent_break", "hard_removal")
+              "silent_break", "hard_removal", "redirect")
 
 # --------------------------------------------------------------------------
 # Environment
@@ -225,6 +225,37 @@ class RoutingMDP:
             return self.set_link_prob(u, v, 0.0, mode="silent")
         return self.set_link_prob(u, v, None, mode="remove")
 
+    def redirect_link(self, u, v, w):
+        """Move link u->v to u->w, keeping its success probability.
+
+        The intervention the other five cannot express: the success *rate*
+        at (u, v) is unchanged, so any method that works by comparing
+        per-pair success rates across periods -- including the
+        evidence-only baseline -- is blind to it by construction. Only
+        tracking where attempts actually land reveals it.
+
+        Requires that u->w does not already exist: `p` is keyed by edge, so
+        a redirect onto an existing link would silently merge two actions
+        into one and shrink the menu, leaking the change. Callers should
+        draw w from `redirect_targets()`, which enforces this.
+
+        The caller must also carry the action label across
+        (labels[(u, w)] = labels[(u, v)]); otherwise the menu at u loses a
+        label and the change becomes visible by menu diff, which is
+        hard_removal, not redirect.
+        """
+        assert (u, v) in self.p, "cannot redirect a non-existent link"
+        assert (u, w) not in self.p, (
+            f"redirect target {u}->{w} already exists; this would merge two "
+            "actions and leak the change through the menu")
+        assert w != u, "cannot redirect a link into a self-loop"
+        pr = self.p.pop((u, v))
+        self.p[(u, w)] = pr
+        rec = {"edge": (u, v), "old_p": pr, "new_p": pr, "mode": "redirect",
+               "new_edge": (u, w)}
+        self.changes.append(rec)
+        return rec
+
     # -- exact solution (baselines) ----------------------------------------
 
     def optimal(self):
@@ -316,6 +347,38 @@ def alternative_route(mdp, start):
     return best_alt, best_cost
 
 
+def redirect_targets(mdp, u, v, start):
+    """Nodes w such that redirecting u->v to u->w is a valid instance.
+
+    A redirect qualifies when it (a) does not collide with an existing
+    out-link of u, which would merge two menu actions, (b) is not a
+    self-loop, (c) leaves the goal reachable from `start`, so the task
+    stays solvable, and (d) actually moves the optimal route, so the
+    condition sits with silent_break and hard_removal as route-changing
+    rather than with the controls.
+
+    Returned sorted, so the caller's draw is reproducible.
+    """
+    if (u, v) not in mdp.p:
+        return []
+    base_route, _ = mdp.optimal_route(start)
+    keep = []
+    for w in mdp.nodes:
+        if w == u or w == v or (u, w) in mdp.p:
+            continue
+        probe = mdp.copy()
+        pr = probe.p.pop((u, v))
+        probe.p[(u, w)] = pr
+        dist, _ = probe.optimal()
+        if dist[start] >= INF:
+            continue
+        new_route, _ = probe.optimal_route(start)
+        if base_route is not None and new_route == base_route:
+            continue
+        keep.append(w)
+    return sorted(keep)
+
+
 def breakable_route_links(mdp, start):
     """Links on the current optimal route whose silent break keeps the goal
     reachable from `start` -- i.e. perturbations that force *replanning*
@@ -398,9 +461,47 @@ def assign_labels(mdp, label_rng):
     return labels
 
 
-def invert_labels(labels):
-    """{(u, 'aK') -> v} for translating model action-plans back to nodes."""
-    return {(u, lab): v for (u, v), lab in labels.items()}
+def invert_labels(labels, mdp=None):
+    """{(u, 'aK') -> v} for translating model action-plans back to nodes.
+
+    Pass `mdp` whenever the mapping will be used to resolve a route, and
+    pass the world the route belongs to. Labels are keyed by edge, and
+    `redirect` deliberately gives one action label two edges -- the old
+    destination in M0 and the new one in M1 -- so a period-blind
+    inversion silently keeps whichever it saw last. That would resolve a
+    Period A route using the Period B destination, both mis-scoring the
+    route and leaking the change into the pre-period.
+
+    Scoping to a world removes the ambiguity: only edges that exist in
+    that world are included, and each (node, label) is unique within it.
+    """
+    if mdp is None:
+        return {(u, lab): v for (u, v), lab in labels.items()}
+    inv = {}
+    for (u, v), lab in labels.items():
+        if (u, v) in mdp.p:
+            inv[(u, lab)] = v
+    return inv
+
+
+def route_from_actions(start, actions, labels, mdp=None):
+    """Translate an action-label plan ['a2', 'a1', ...] from `start` into a
+    node path using the pair's label mapping; None if any label is not
+    defined at the node reached so far. Score the result with score_route
+    (a removed edge translates but then costs inf, i.e. invalid).
+
+    `mdp` selects the world the plan is resolved against; required for
+    correctness under `redirect` (see invert_labels).
+    """
+    inv = invert_labels(labels, mdp)
+    path, at = [start], start
+    for lab in actions:
+        v = inv.get((at, lab))
+        if v is None:
+            return None
+        path.append(v)
+        at = v
+    return path
 
 
 def legal_actions(mdp, labels):
@@ -414,22 +515,6 @@ def legal_actions(mdp, labels):
             menu[u] = sorted((labels[(u, v)] for v in outs),
                              key=lambda s: int(s[1:]))
     return menu
-
-
-def route_from_actions(start, actions, labels):
-    """Translate an action-label plan ['a2', 'a1', ...] from `start` into a
-    node path using the pair's label mapping; None if any label is not
-    defined at the node reached so far. Score the result with score_route
-    (a removed edge translates but then costs inf, i.e. invalid)."""
-    inv = invert_labels(labels)
-    path, at = [start], start
-    for lab in actions:
-        v = inv.get((at, lab))
-        if v is None:
-            return None
-        path.append(v)
-        at = v
-    return path
 
 
 # --------------------------------------------------------------------------
@@ -561,7 +646,7 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
     # v2.1.1: matched=True drops the mode token entirely, so det and sto
     # draw the SAME target from the cross-mode eligible set.
     fam = ("break" if condition in ("silent_break", "hard_removal",
-                                    "degradation")
+                                    "degradation", "redirect")
            else condition)
     mode_tok = ("matched" if matched
                 else ("det" if deterministic else "sto"))
@@ -592,7 +677,8 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
         # "did not notice". With a break, irrelevant and silent_break
         # differ only in relevance.
         m1.set_link_prob(u, v, 0.0, mode="silent")
-    elif condition in ("degradation", "silent_break", "hard_removal"):
+    elif condition in ("degradation", "silent_break", "hard_removal",
+                       "redirect"):
         # v2.2: degradation targets T* -- the SAME on-route link the break
         # family draws for this (seed, mode) -- instead of its own draw
         # (which collided with T* on 7/23 seeds and contaminated the
@@ -616,6 +702,31 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
             if new >= old:
                 new = round(old / 2.0, 3)
             m1.set_link_prob(u, v, new, mode="degrade")
+        elif condition == "redirect":
+            # v2.3: same T* as the break family, same success rate, new
+            # destination. The eligible destination set is intersected
+            # across modes under matched=True for the same reason the
+            # target is: det and sto instances of a seed must be the same
+            # edit, or the mode comparison is confounded.
+            dests = redirect_targets(m0, u, v, start)
+            if matched:
+                dests = sorted(set(dests)
+                               & set(redirect_targets(det_w, u, v, start))
+                               & set(redirect_targets(sto_w, u, v, start)))
+            if not dests:
+                raise ValueError(
+                    f"seed {seed}: no redirect destination for {u}->{v} "
+                    "keeps the goal reachable and moves the optimal route"
+                    + (" in both modes (matched)" if matched else "")
+                    + "; use a different seed")
+            w = crng.choice(dests)
+            m1.redirect_link(u, v, w)
+            # Carry the action label to the new destination. Without this
+            # the menu at u loses a label and the change is visible by
+            # menu diff -- which is hard_removal, not redirect. labels is
+            # built on M0, where (u, w) does not exist, so adding the key
+            # leaves the M0 menu untouched.
+            labels[(u, w)] = labels[(u, v)]
         else:
             m1.break_link(u, v,
                           mode="silent" if condition == "silent_break"
@@ -624,7 +735,7 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
 
     change = {"edge": None, "action": None, "old_p": None, "new_p": None,
               "mode": "none", "on_optimal_route": None,
-              "route_position": None}
+              "route_position": None, "new_edge": None}
     if m1.changes:
         rec = m1.changes[-1]
         e = rec["edge"]
@@ -633,7 +744,10 @@ def make_pair(seed, condition, *, deterministic=False, matched=False,
                   "old_p": rec["old_p"], "new_p": rec["new_p"],
                   "mode": rec["mode"], "on_optimal_route": on_route,
                   "route_position": route0_edges.index(e) if on_route
-                  else None}
+                  else None,
+                  # Only redirect sets this: the edit moves an edge rather
+                  # than reweighting it, so the diff needs both endpoints.
+                  "new_edge": rec.get("new_edge")}
 
     oracle = build_oracle(m0, m1, start, labels)
     seeds = {"graph_seed": seed, "change_seed": cs, "label_seed": ls}
@@ -966,6 +1080,33 @@ def _edges_json(mdp, labels):
             for (u, v) in sorted(mdp.p)]
 
 
+def _change_json(ch):
+    """Serialize the exact diff.
+
+    `new_edge` is emitted ONLY for redirect. The five pre-existing
+    conditions reweight an edge in place and have no second endpoint, so
+    adding a null field to their records would change the bytes of every
+    frozen artifact and invalidate `pinned_to_freeze` for no benefit.
+    Keeping the key conditional makes redirect a strictly additive
+    extension: records produced before it exist are still reproduced
+    exactly.
+    """
+    out = {
+        "edge": (None if ch["edge"] is None
+                 else {"from": ch["edge"][0], "to": ch["edge"][1]}),
+        "action": ch["action"],
+        "old_p": ch["old_p"],
+        "new_p": ch["new_p"],
+        "mode": ch["mode"],
+        "on_optimal_route": ch["on_optimal_route"],
+        "route_position": ch["route_position"],
+    }
+    if ch.get("new_edge") is not None:
+        out["new_edge"] = {"from": ch["new_edge"][0],
+                           "to": ch["new_edge"][1]}
+    return out
+
+
 def pair_to_json(inst, evidence=None):
     """Full instance record. `model_visible` lists the only fields that may
     reach the prompt; everything else is evaluator-only ground truth."""
@@ -983,16 +1124,7 @@ def pair_to_json(inst, evidence=None):
         "legal_actions_post": legal_actions(inst.m1, inst.labels),
         "world_pre": {"edges": _edges_json(inst.m0, inst.labels)},
         "world_post": {"edges": _edges_json(inst.m1, inst.labels)},
-        "change": {
-            "edge": (None if ch["edge"] is None
-                     else {"from": ch["edge"][0], "to": ch["edge"][1]}),
-            "action": ch["action"],
-            "old_p": ch["old_p"],
-            "new_p": ch["new_p"],
-            "mode": ch["mode"],
-            "on_optimal_route": ch["on_optimal_route"],
-            "route_position": ch["route_position"],
-        },
+        "change": _change_json(ch),
         "oracle": inst.oracle,
         "evidence": evidence,
         "model_visible": ["nodes", "start", "goal", "legal_actions_pre",
