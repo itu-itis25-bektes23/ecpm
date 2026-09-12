@@ -1,0 +1,1294 @@
+{
+  "pilot": "stochastic",
+  "tag": "seed7_silent_break",
+  "scenario": {
+    "condition": "silent_break",
+    "seed": 13,
+    "matched": true,
+    "k": 10,
+    "evidence_seed": 0,
+    "rendering": "F2_shuffled",
+    "budget": 10,
+    "probes": [
+      "detection",
+      "localization",
+      "preservation",
+      "adaptation"
+    ],
+    "variants": [
+      "det",
+      "sto"
+    ],
+    "name": "seed7_silent_break"
+  },
+  "turn_mode": "two_turn",
+  "phase_order": [
+    "route_pre",
+    "belief_pre",
+    "detection",
+    "localization",
+    "preservation",
+    "adaptation",
+    "belief_post"
+  ],
+  "created_utc": "2026-09-12T15:42:14.745972Z",
+  "env": {
+    "schema_version": "2.1",
+    "frozen_sha": "5318c3e113438c563c5676d58252d84fda22aa49",
+    "git_head": "4d55ce40e938e9dc9600a9de9936175e1084d205",
+    "pinned_to_freeze": false
+  },
+  "instance": {
+    "graph_seed": 13,
+    "condition": "silent_break",
+    "deterministic": false,
+    "matched": true,
+    "k_per_pair": 10,
+    "evidence_seed": 0,
+    "seeds": {
+      "graph_seed": 13,
+      "change_seed": "13|break|matched|None",
+      "label_seed": "13|labels"
+    }
+  },
+  "model": {
+    "provider": "azure",
+    "model": "gpt-4o",
+    "temperature": 0,
+    "max_tokens": 4096,
+    "timeout_s": 120,
+    "rendering": "F2_shuffled",
+    "budget_per_pair": 10
+  },
+  "prompt_safe_payload": {
+    "schema_version": "2.1",
+    "rendering": "F2_shuffled",
+    "periods": [
+      "pre",
+      "post"
+    ],
+    "budget_per_pair": 10,
+    "nodes": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H"
+    ],
+    "start": "H",
+    "goal": "E",
+    "evidence": {
+      "pre": "(C, a2, E)\n(C, a3, B)\n(D, a2, H)\n(C, a1, A)\n(A, a1, A)\n(D, a2, H)\n(D, a1, A)\n(D, a1, A)\n(H, a1, C)\n(H, a1, C)\n(H, a1, H)\n(B, a1, B)\n(G, a1, H)\n(A, a1, G)\n(A, a2, E)\n(C, a1, A)\n(H, a1, H)\n(C, a1, A)\n(H, a2, B)\n(H, a1, H)\n(B, a2, C)\n(D, a2, H)\n(D, a1, A)\n(H, a1, H)\n(C, a3, B)\n(B, a1, F)\n(F, a2, C)\n(G, a1, H)\n(H, a2, B)\n(G, a1, H)\n(G, a1, H)\n(F, a1, B)\n(H, a2, B)\n(H, a2, B)\n(G, a2, C)\n(C, a2, C)\n(H, a2, B)\n(D, a2, H)\n(A, a2, E)\n(H, a2, H)\n(H, a1, C)\n(A, a1, G)\n(B, a2, C)\n(F, a2, C)\n(A, a1, A)\n(G, a3, G)\n(D, a1, A)\n(G, a2, C)\n(F, a2, C)\n(C, a2, C)\n(A, a2, E)\n(H, a1, H)\n(C, a3, B)\n(D, a2, H)\n(A, a1, G)\n(D, a1, A)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(A, a2, A)\n(H, a2, B)\n(A, a1, G)\n(C, a2, E)\n(G, a3, F)\n(B, a2, C)\n(C, a2, E)\n(G, a1, G)\n(C, a1, A)\n(D, a1, A)\n(G, a2, C)\n(F, a1, B)\n(A, a2, E)\n(D, a2, D)\n(C, a3, B)\n(F, a1, B)\n(B, a1, F)\n(F, a1, B)\n(G, a3, F)\n(F, a2, C)\n(C, a1, A)\n(B, a1, F)\n(F, a1, B)\n(D, a1, A)\n(B, a2, C)\n(G, a1, H)\n(G, a2, C)\n(H, a2, H)\n(D, a2, H)\n(G, a2, C)\n(F, a1, B)\n(F, a2, C)\n(C, a3, B)\n(G, a1, G)\n(D, a1, A)\n(G, a1, H)\n(G, a2, C)\n(B, a2, C)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(G, a2, C)\n(C, a3, C)\n(C, a3, B)\n(G, a1, G)\n(B, a2, B)\n(H, a2, H)\n(B, a1, F)\n(G, a2, C)\n(G, a2, C)\n(A, a1, A)\n(H, a2, B)\n(C, a3, B)\n(C, a1, A)\n(G, a3, F)\n(D, a2, H)\n(A, a2, E)\n(G, a3, G)\n(F, a2, C)\n(C, a2, C)\n(A, a1, G)\n(H, a1, C)\n(C, a2, C)\n(F, a2, C)\n(B, a1, F)\n(F, a2, C)\n(C, a2, E)\n(G, a1, H)\n(G, a3, G)\n(G, a3, F)\n(D, a2, H)\n(G, a3, F)\n(B, a1, F)\n(C, a2, E)\n(H, a1, H)\n(B, a2, C)\n(D, a1, A)\n(A, a2, E)\n(A, a2, E)\n(D, a1, D)\n(C, a3, B)\n(C, a2, C)\n(B, a2, C)\n(F, a1, B)\n(D, a2, H)\n(G, a2, G)\n(F, a1, B)\n(C, a1, A)\n(B, a2, C)\n(G, a3, F)\n(B, a2, C)\n(F, a1, B)\n(B, a1, F)\n(A, a1, G)\n(F, a1, B)\n(B, a1, F)\n(A, a1, G)\n(C, a1, A)\n(G, a3, F)\n(C, a3, B)\n(B, a1, F)",
+      "post": "(A, a1, G)\n(G, a2, C)\n(C, a1, A)\n(C, a1, A)\n(D, a1, A)\n(G, a3, F)\n(H, a1, H)\n(G, a2, C)\n(B, a1, F)\n(G, a3, G)\n(C, a1, A)\n(H, a2, H)\n(C, a3, B)\n(G, a1, H)\n(G, a3, F)\n(A, a1, G)\n(C, a2, E)\n(B, a2, C)\n(F, a2, C)\n(G, a1, H)\n(B, a1, F)\n(A, a2, E)\n(G, a1, H)\n(B, a1, F)\n(D, a1, A)\n(C, a2, E)\n(D, a2, H)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(H, a1, H)\n(B, a2, C)\n(C, a2, C)\n(A, a1, G)\n(D, a1, A)\n(D, a2, H)\n(H, a1, H)\n(A, a1, G)\n(F, a1, B)\n(F, a1, B)\n(H, a2, B)\n(G, a2, G)\n(H, a2, B)\n(A, a2, E)\n(A, a1, G)\n(G, a2, C)\n(G, a2, C)\n(C, a3, B)\n(D, a1, A)\n(F, a1, F)\n(G, a3, F)\n(B, a1, F)\n(D, a2, H)\n(A, a1, G)\n(F, a1, B)\n(F, a1, F)\n(F, a2, F)\n(G, a3, F)\n(B, a1, F)\n(F, a2, C)\n(A, a2, E)\n(H, a1, H)\n(D, a2, D)\n(C, a3, B)\n(C, a3, C)\n(F, a2, C)\n(F, a1, B)\n(C, a2, E)\n(C, a1, A)\n(C, a3, B)\n(F, a1, F)\n(F, a1, B)\n(D, a2, H)\n(A, a2, E)\n(B, a1, F)\n(B, a2, C)\n(C, a1, A)\n(D, a2, D)\n(G, a2, C)\n(B, a1, F)\n(H, a2, B)\n(C, a2, E)\n(B, a2, C)\n(G, a2, C)\n(G, a3, F)\n(G, a1, H)\n(G, a3, F)\n(B, a1, F)\n(H, a1, H)\n(B, a2, C)\n(A, a1, G)\n(D, a1, A)\n(H, a2, B)\n(C, a2, E)\n(A, a1, G)\n(C, a2, E)\n(D, a1, D)\n(F, a2, C)\n(G, a1, H)\n(C, a2, E)\n(B, a2, B)\n(C, a3, B)\n(A, a2, E)\n(C, a1, A)\n(D, a1, A)\n(G, a1, H)\n(H, a1, H)\n(C, a3, B)\n(F, a2, C)\n(F, a2, C)\n(G, a3, F)\n(G, a1, H)\n(B, a2, C)\n(H, a2, B)\n(G, a1, G)\n(C, a1, A)\n(B, a2, C)\n(F, a1, F)\n(H, a1, H)\n(A, a2, E)\n(G, a3, F)\n(B, a2, C)\n(G, a2, C)\n(G, a2, C)\n(D, a1, A)\n(H, a1, H)\n(D, a1, A)\n(G, a1, H)\n(C, a1, A)\n(D, a2, H)\n(D, a2, H)\n(G, a1, H)\n(B, a2, C)\n(C, a2, E)\n(C, a2, E)\n(F, a2, C)\n(B, a1, F)\n(H, a1, H)\n(A, a1, G)\n(H, a2, H)\n(C, a1, A)\n(C, a3, C)\n(A, a2, E)\n(H, a2, H)\n(D, a2, H)\n(C, a3, B)\n(D, a1, A)\n(F, a1, B)\n(C, a3, B)\n(A, a2, E)\n(B, a1, F)\n(D, a2, H)\n(G, a2, C)\n(H, a1, H)\n(G, a3, F)\n(A, a2, E)\n(H, a2, B)\n(H, a2, H)\n(F, a2, F)\n(A, a1, G)"
+    },
+    "realized": {
+      "pre": {
+        "events": 160,
+        "episodes": 68,
+        "chars": 1759
+      },
+      "post": {
+        "events": 160,
+        "episodes": 83,
+        "chars": 1759
+      }
+    },
+    "legal_actions_pre": {
+      "A": [
+        "a1",
+        "a2"
+      ],
+      "B": [
+        "a1",
+        "a2"
+      ],
+      "C": [
+        "a1",
+        "a2",
+        "a3"
+      ],
+      "D": [
+        "a1",
+        "a2"
+      ],
+      "F": [
+        "a1",
+        "a2"
+      ],
+      "G": [
+        "a1",
+        "a2",
+        "a3"
+      ],
+      "H": [
+        "a1",
+        "a2"
+      ]
+    },
+    "legal_actions_post": {
+      "A": [
+        "a1",
+        "a2"
+      ],
+      "B": [
+        "a1",
+        "a2"
+      ],
+      "C": [
+        "a1",
+        "a2",
+        "a3"
+      ],
+      "D": [
+        "a1",
+        "a2"
+      ],
+      "F": [
+        "a1",
+        "a2"
+      ],
+      "G": [
+        "a1",
+        "a2",
+        "a3"
+      ],
+      "H": [
+        "a1",
+        "a2"
+      ]
+    }
+  },
+  "probes": {
+    "route_pre": {
+      "phase": 1,
+      "turn": 1,
+      "prompt_text": "You are analysing a courier network. Nodes are locations; at each\nnode you may attempt the listed actions (aK). An attempt either delivers\nyou to that action's destination or you stay and retry (each attempt\ncosts 1). You observed the network in an earlier period (period A). A\nlater period (period B) will be shown afterwards.\n\nNodes: A, B, C, D, E, F, G, H\nStart: H   Goal: E\n\nAction menu, period A (earlier): A: a1, a2; B: a1, a2; C: a1, a2, a3; D: a1, a2; F: a1, a2; G: a1, a2, a3; H: a1, a2\n\nObservations, period A:\n(C, a2, E)\n(C, a3, B)\n(D, a2, H)\n(C, a1, A)\n(A, a1, A)\n(D, a2, H)\n(D, a1, A)\n(D, a1, A)\n(H, a1, C)\n(H, a1, C)\n(H, a1, H)\n(B, a1, B)\n(G, a1, H)\n(A, a1, G)\n(A, a2, E)\n(C, a1, A)\n(H, a1, H)\n(C, a1, A)\n(H, a2, B)\n(H, a1, H)\n(B, a2, C)\n(D, a2, H)\n(D, a1, A)\n(H, a1, H)\n(C, a3, B)\n(B, a1, F)\n(F, a2, C)\n(G, a1, H)\n(H, a2, B)\n(G, a1, H)\n(G, a1, H)\n(F, a1, B)\n(H, a2, B)\n(H, a2, B)\n(G, a2, C)\n(C, a2, C)\n(H, a2, B)\n(D, a2, H)\n(A, a2, E)\n(H, a2, H)\n(H, a1, C)\n(A, a1, G)\n(B, a2, C)\n(F, a2, C)\n(A, a1, A)\n(G, a3, G)\n(D, a1, A)\n(G, a2, C)\n(F, a2, C)\n(C, a2, C)\n(A, a2, E)\n(H, a1, H)\n(C, a3, B)\n(D, a2, H)\n(A, a1, G)\n(D, a1, A)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(A, a2, A)\n(H, a2, B)\n(A, a1, G)\n(C, a2, E)\n(G, a3, F)\n(B, a2, C)\n(C, a2, E)\n(G, a1, G)\n(C, a1, A)\n(D, a1, A)\n(G, a2, C)\n(F, a1, B)\n(A, a2, E)\n(D, a2, D)\n(C, a3, B)\n(F, a1, B)\n(B, a1, F)\n(F, a1, B)\n(G, a3, F)\n(F, a2, C)\n(C, a1, A)\n(B, a1, F)\n(F, a1, B)\n(D, a1, A)\n(B, a2, C)\n(G, a1, H)\n(G, a2, C)\n(H, a2, H)\n(D, a2, H)\n(G, a2, C)\n(F, a1, B)\n(F, a2, C)\n(C, a3, B)\n(G, a1, G)\n(D, a1, A)\n(G, a1, H)\n(G, a2, C)\n(B, a2, C)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(G, a2, C)\n(C, a3, C)\n(C, a3, B)\n(G, a1, G)\n(B, a2, B)\n(H, a2, H)\n(B, a1, F)\n(G, a2, C)\n(G, a2, C)\n(A, a1, A)\n(H, a2, B)\n(C, a3, B)\n(C, a1, A)\n(G, a3, F)\n(D, a2, H)\n(A, a2, E)\n(G, a3, G)\n(F, a2, C)\n(C, a2, C)\n(A, a1, G)\n(H, a1, C)\n(C, a2, C)\n(F, a2, C)\n(B, a1, F)\n(F, a2, C)\n(C, a2, E)\n(G, a1, H)\n(G, a3, G)\n(G, a3, F)\n(D, a2, H)\n(G, a3, F)\n(B, a1, F)\n(C, a2, E)\n(H, a1, H)\n(B, a2, C)\n(D, a1, A)\n(A, a2, E)\n(A, a2, E)\n(D, a1, D)\n(C, a3, B)\n(C, a2, C)\n(B, a2, C)\n(F, a1, B)\n(D, a2, H)\n(G, a2, G)\n(F, a1, B)\n(C, a1, A)\n(B, a2, C)\n(G, a3, F)\n(B, a2, C)\n(F, a1, B)\n(B, a1, F)\n(A, a1, G)\n(F, a1, B)\n(B, a1, F)\n(A, a1, G)\n(C, a1, A)\n(G, a3, F)\n(C, a3, B)\n(B, a1, F)\n\nPlan a route for period A from H to E. Answer with exactly one JSON object of the form {\"route\": [{\"node\": \"...\", \"action\": \"...\"}, ...]}: at most 32 steps, the first step's node must be H, each next step's node must be where the previous action leads, and the destination of the last action must be E. Do NOT include a step at E itself. No other text.\n",
+      "prompt_chars": 2635,
+      "prompt_tokens_est": 658,
+      "latency_s": 2.88,
+      "queried_pairs": null,
+      "raw_response": "```json\n{\"route\": [{\"node\": \"H\", \"action\": \"a1\"}, {\"node\": \"C\", \"action\": \"a2\"}, {\"node\": \"E\", \"action\": \"a1\"}]}\n```",
+      "provider_usage": {
+        "completion_tokens": 48,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 4,
+          "engine_ttft_ms": 95,
+          "engine_ttlt_ms": 296,
+          "pre_inference_ms": 238,
+          "service_tbt_ms": 6,
+          "service_ttft_ms": 1202,
+          "service_ttlt_ms": 1496,
+          "user_visible_ttft_ms": 965
+        },
+        "prompt_tokens": 1394,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 0
+        },
+        "total_tokens": 1442
+      },
+      "parsed": {
+        "status": "ok",
+        "route": [
+          {
+            "node": "H",
+            "action": "a1"
+          },
+          {
+            "node": "C",
+            "action": "a2"
+          },
+          {
+            "node": "E",
+            "action": "a1"
+          }
+        ]
+      },
+      "scored": {
+        "status": "unknown_reference",
+        "path": null,
+        "expected_cost": null,
+        "optimal_cost": 3.0679,
+        "regret": null,
+        "is_optimal": false
+      },
+      "metrics": {
+        "probe": "route_pre",
+        "status": "unknown_reference",
+        "parse_ok": true,
+        "scored_ok": false,
+        "score": 0.0,
+        "detail": {
+          "is_optimal": false,
+          "regret": null,
+          "expected_cost": null,
+          "optimal_cost": 3.0679,
+          "path": null
+        },
+        "phase": 1,
+        "turn": 1,
+        "sent_chars": 2635,
+        "context_chars": 2751,
+        "prompt_tokens_est": 658,
+        "latency_s": 2.88
+      },
+      "metrics_cumulative": {
+        "phases_done": 1,
+        "phases_parse_ok": 1,
+        "phases_scored_ok": 0,
+        "score_sum": 0.0,
+        "score_mean": 0.0,
+        "prompt_tokens_est": 658,
+        "latency_s": 2.88
+      }
+    },
+    "belief_pre": {
+      "phase": 2,
+      "turn": 1,
+      "prompt_text": "For EACH of the following (node, action) pairs, state what you believe from the period A observations: the destination node the action leads to, and its probability of success per attempt (a number in [0, 1]):\n- node G, action a2\n- node G, action a1\n- node H, action a1\n- node G, action a3\nAnswer with exactly one JSON object of the form {\"beliefs\": [{\"node\": \"...\", \"action\": \"...\", \"destination\": \"...\", \"p\": 0.0}, ...]} containing every listed pair exactly once. No other text.\n",
+      "prompt_chars": 481,
+      "prompt_tokens_est": 808,
+      "latency_s": 2.321,
+      "queried_pairs": [
+        {
+          "node": "G",
+          "action": "a2"
+        },
+        {
+          "node": "G",
+          "action": "a1"
+        },
+        {
+          "node": "H",
+          "action": "a1"
+        },
+        {
+          "node": "G",
+          "action": "a3"
+        }
+      ],
+      "raw_response": "```json\n{\"beliefs\": [{\"node\": \"G\", \"action\": \"a2\", \"destination\": \"C\", \"p\": 0.9}, {\"node\": \"G\", \"action\": \"a1\", \"destination\": \"H\", \"p\": 1.0}, {\"node\": \"H\", \"action\": \"a1\", \"destination\": \"C\", \"p\": 0.5}, {\"node\": \"G\", \"action\": \"a3\", \"destination\": \"F\", \"p\": 0.5}]}\n```",
+      "provider_usage": {
+        "completion_tokens": 118,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 4,
+          "engine_ttft_ms": 45,
+          "engine_ttlt_ms": 559,
+          "pre_inference_ms": 95,
+          "service_tbt_ms": 4,
+          "service_ttft_ms": 998,
+          "service_ttlt_ms": 1490,
+          "user_visible_ttft_ms": 903
+        },
+        "prompt_tokens": 1577,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1408
+        },
+        "total_tokens": 1695
+      },
+      "parsed": {
+        "status": "ok",
+        "beliefs": [
+          {
+            "node": "G",
+            "action": "a2",
+            "destination": "C",
+            "p": 0.9
+          },
+          {
+            "node": "G",
+            "action": "a1",
+            "destination": "H",
+            "p": 1.0
+          },
+          {
+            "node": "H",
+            "action": "a1",
+            "destination": "C",
+            "p": 0.5
+          },
+          {
+            "node": "G",
+            "action": "a3",
+            "destination": "F",
+            "p": 0.5
+          }
+        ]
+      },
+      "scored": {
+        "status": "ok",
+        "period": "pre",
+        "n_queried": 4,
+        "n_scored": 4,
+        "accuracy": 0.25,
+        "destination_accuracy": 1.0,
+        "p_mae": 0.24,
+        "per_pair": [
+          {
+            "node": "G",
+            "action": "a2",
+            "destination": "C",
+            "p": 0.9,
+            "true_destination": "C",
+            "true_p": 0.88,
+            "destination_ok": true,
+            "p_ok": true,
+            "correct": true
+          },
+          {
+            "node": "G",
+            "action": "a1",
+            "destination": "H",
+            "p": 1.0,
+            "true_destination": "H",
+            "true_p": 0.67,
+            "destination_ok": true,
+            "p_ok": false,
+            "correct": false
+          },
+          {
+            "node": "H",
+            "action": "a1",
+            "destination": "C",
+            "p": 0.5,
+            "true_destination": "C",
+            "true_p": 0.7,
+            "destination_ok": true,
+            "p_ok": false,
+            "correct": false
+          },
+          {
+            "node": "G",
+            "action": "a3",
+            "destination": "F",
+            "p": 0.5,
+            "true_destination": "F",
+            "true_p": 0.91,
+            "destination_ok": true,
+            "p_ok": false,
+            "correct": false
+          }
+        ],
+        "tolerance": 0.15
+      },
+      "metrics": {
+        "probe": "belief_pre",
+        "status": "ok",
+        "parse_ok": true,
+        "scored_ok": true,
+        "score": 0.25,
+        "detail": {
+          "accuracy": 0.25,
+          "destination_accuracy": 1.0,
+          "p_mae": 0.24,
+          "n_queried": 4,
+          "n_scored": 4
+        },
+        "phase": 2,
+        "turn": 1,
+        "sent_chars": 481,
+        "context_chars": 3501,
+        "prompt_tokens_est": 808,
+        "latency_s": 2.321
+      },
+      "metrics_cumulative": {
+        "phases_done": 2,
+        "phases_parse_ok": 2,
+        "phases_scored_ok": 1,
+        "score_sum": 0.25,
+        "score_mean": 0.125,
+        "prompt_tokens_est": 1466,
+        "latency_s": 5.201
+      }
+    },
+    "detection": {
+      "phase": 3,
+      "turn": 2,
+      "prompt_text": "Here is the later period (period B) of the same network.\n\nAction menu, period B (later): A: a1, a2; B: a1, a2; C: a1, a2, a3; D: a1, a2; F: a1, a2; G: a1, a2, a3; H: a1, a2\n\nObservations, period B:\n(A, a1, G)\n(G, a2, C)\n(C, a1, A)\n(C, a1, A)\n(D, a1, A)\n(G, a3, F)\n(H, a1, H)\n(G, a2, C)\n(B, a1, F)\n(G, a3, G)\n(C, a1, A)\n(H, a2, H)\n(C, a3, B)\n(G, a1, H)\n(G, a3, F)\n(A, a1, G)\n(C, a2, E)\n(B, a2, C)\n(F, a2, C)\n(G, a1, H)\n(B, a1, F)\n(A, a2, E)\n(G, a1, H)\n(B, a1, F)\n(D, a1, A)\n(C, a2, E)\n(D, a2, H)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(H, a1, H)\n(B, a2, C)\n(C, a2, C)\n(A, a1, G)\n(D, a1, A)\n(D, a2, H)\n(H, a1, H)\n(A, a1, G)\n(F, a1, B)\n(F, a1, B)\n(H, a2, B)\n(G, a2, G)\n(H, a2, B)\n(A, a2, E)\n(A, a1, G)\n(G, a2, C)\n(G, a2, C)\n(C, a3, B)\n(D, a1, A)\n(F, a1, F)\n(G, a3, F)\n(B, a1, F)\n(D, a2, H)\n(A, a1, G)\n(F, a1, B)\n(F, a1, F)\n(F, a2, F)\n(G, a3, F)\n(B, a1, F)\n(F, a2, C)\n(A, a2, E)\n(H, a1, H)\n(D, a2, D)\n(C, a3, B)\n(C, a3, C)\n(F, a2, C)\n(F, a1, B)\n(C, a2, E)\n(C, a1, A)\n(C, a3, B)\n(F, a1, F)\n(F, a1, B)\n(D, a2, H)\n(A, a2, E)\n(B, a1, F)\n(B, a2, C)\n(C, a1, A)\n(D, a2, D)\n(G, a2, C)\n(B, a1, F)\n(H, a2, B)\n(C, a2, E)\n(B, a2, C)\n(G, a2, C)\n(G, a3, F)\n(G, a1, H)\n(G, a3, F)\n(B, a1, F)\n(H, a1, H)\n(B, a2, C)\n(A, a1, G)\n(D, a1, A)\n(H, a2, B)\n(C, a2, E)\n(A, a1, G)\n(C, a2, E)\n(D, a1, D)\n(F, a2, C)\n(G, a1, H)\n(C, a2, E)\n(B, a2, B)\n(C, a3, B)\n(A, a2, E)\n(C, a1, A)\n(D, a1, A)\n(G, a1, H)\n(H, a1, H)\n(C, a3, B)\n(F, a2, C)\n(F, a2, C)\n(G, a3, F)\n(G, a1, H)\n(B, a2, C)\n(H, a2, B)\n(G, a1, G)\n(C, a1, A)\n(B, a2, C)\n(F, a1, F)\n(H, a1, H)\n(A, a2, E)\n(G, a3, F)\n(B, a2, C)\n(G, a2, C)\n(G, a2, C)\n(D, a1, A)\n(H, a1, H)\n(D, a1, A)\n(G, a1, H)\n(C, a1, A)\n(D, a2, H)\n(D, a2, H)\n(G, a1, H)\n(B, a2, C)\n(C, a2, E)\n(C, a2, E)\n(F, a2, C)\n(B, a1, F)\n(H, a1, H)\n(A, a1, G)\n(H, a2, H)\n(C, a1, A)\n(C, a3, C)\n(A, a2, E)\n(H, a2, H)\n(D, a2, H)\n(C, a3, B)\n(D, a1, A)\n(F, a1, B)\n(C, a3, B)\n(A, a2, E)\n(B, a1, F)\n(D, a2, H)\n(G, a2, C)\n(H, a1, H)\n(G, a3, F)\n(A, a2, E)\n(H, a2, B)\n(H, a2, H)\n(F, a2, F)\n(A, a1, G)\n\nQuestion: did the network's dynamics change between period A and period B?\nAnswer with exactly one JSON object: {\"changed\": true} or {\"changed\": false}. No other text.\n",
+      "prompt_chars": 2127,
+      "prompt_tokens_est": 1407,
+      "latency_s": 1.976,
+      "queried_pairs": null,
+      "raw_response": "```json\n{\"changed\": true}\n```",
+      "provider_usage": {
+        "completion_tokens": 10,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 4,
+          "engine_ttft_ms": 89,
+          "engine_ttlt_ms": 130,
+          "pre_inference_ms": 92,
+          "service_tbt_ms": 6,
+          "service_ttft_ms": 1026,
+          "service_ttlt_ms": 1088,
+          "user_visible_ttft_ms": 934
+        },
+        "prompt_tokens": 2949,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 1664
+        },
+        "total_tokens": 2959
+      },
+      "parsed": {
+        "status": "ok",
+        "changed": true
+      },
+      "scored": {
+        "status": "ok",
+        "truth": true,
+        "predicted": true,
+        "correct": true
+      },
+      "metrics": {
+        "probe": "detection",
+        "status": "ok",
+        "parse_ok": true,
+        "scored_ok": true,
+        "score": 1.0,
+        "detail": {
+          "correct": true,
+          "predicted": true,
+          "truth": true
+        },
+        "phase": 3,
+        "turn": 2,
+        "sent_chars": 2127,
+        "context_chars": 5657,
+        "prompt_tokens_est": 1407,
+        "latency_s": 1.976
+      },
+      "metrics_cumulative": {
+        "phases_done": 3,
+        "phases_parse_ok": 3,
+        "phases_scored_ok": 2,
+        "score_sum": 1.25,
+        "score_mean": 0.4167,
+        "prompt_tokens_est": 2873,
+        "latency_s": 7.177
+      }
+    },
+    "localization": {
+      "phase": 4,
+      "turn": 2,
+      "prompt_text": "The dynamics changed between the periods. Question: which single (node, action) pair changed?\nAnswer with exactly one JSON object: {\"node\": \"<node>\", \"action\": \"<aK>\"}. No other text.\n",
+      "prompt_chars": 184,
+      "prompt_tokens_est": 1460,
+      "latency_s": 2.114,
+      "queried_pairs": null,
+      "raw_response": "```json\n{\"node\": \"F\", \"action\": \"a2\"}\n```",
+      "provider_usage": {
+        "completion_tokens": 18,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 5,
+          "engine_ttft_ms": 48,
+          "engine_ttlt_ms": 137,
+          "pre_inference_ms": 122,
+          "service_tbt_ms": 13,
+          "service_ttft_ms": 1024,
+          "service_ttlt_ms": 1259,
+          "user_visible_ttft_ms": 901
+        },
+        "prompt_tokens": 3010,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 2944
+        },
+        "total_tokens": 3028
+      },
+      "parsed": {
+        "status": "ok",
+        "node": "F",
+        "action": "a2"
+      },
+      "scored": {
+        "status": "ok",
+        "applicable": true,
+        "correct": false,
+        "truth": {
+          "node": "H",
+          "action": "a1"
+        }
+      },
+      "metrics": {
+        "probe": "localization",
+        "status": "ok",
+        "parse_ok": true,
+        "scored_ok": true,
+        "score": 0.0,
+        "detail": {
+          "correct": false,
+          "predicted": null,
+          "truth": {
+            "node": "H",
+            "action": "a1"
+          }
+        },
+        "phase": 4,
+        "turn": 2,
+        "sent_chars": 184,
+        "context_chars": 5882,
+        "prompt_tokens_est": 1460,
+        "latency_s": 2.114
+      },
+      "metrics_cumulative": {
+        "phases_done": 4,
+        "phases_parse_ok": 4,
+        "phases_scored_ok": 3,
+        "score_sum": 1.25,
+        "score_mean": 0.3125,
+        "prompt_tokens_est": 4333,
+        "latency_s": 9.291
+      }
+    },
+    "preservation": {
+      "phase": 5,
+      "turn": 2,
+      "prompt_text": "For EACH of the following (node, action) pairs, judge whether its dynamics changed between period A and period B:\n- node G, action a2\n- node G, action a1\n- node H, action a1\n- node G, action a3\nAnswer with exactly one JSON object of the form {\"pairs\": [{\"node\": \"...\", \"action\": \"...\", \"changed\": true|false}, ...]} containing every listed pair exactly once. No other text.\n",
+      "prompt_chars": 374,
+      "prompt_tokens_est": 1564,
+      "latency_s": 2.495,
+      "queried_pairs": [
+        {
+          "node": "G",
+          "action": "a2"
+        },
+        {
+          "node": "G",
+          "action": "a1"
+        },
+        {
+          "node": "H",
+          "action": "a1"
+        },
+        {
+          "node": "G",
+          "action": "a3"
+        }
+      ],
+      "raw_response": "```json\n{\"pairs\": [{\"node\": \"G\", \"action\": \"a2\", \"changed\": false}, {\"node\": \"G\", \"action\": \"a1\", \"changed\": false}, {\"node\": \"H\", \"action\": \"a1\", \"changed\": false}, {\"node\": \"G\", \"action\": \"a3\", \"changed\": false}]}\n```",
+      "provider_usage": {
+        "completion_tokens": 81,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 4,
+          "engine_ttft_ms": 41,
+          "engine_ttlt_ms": 339,
+          "pre_inference_ms": 172,
+          "service_tbt_ms": 5,
+          "service_ttft_ms": 1071,
+          "service_ttlt_ms": 1460,
+          "user_visible_ttft_ms": 899
+        },
+        "prompt_tokens": 3133,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 2944
+        },
+        "total_tokens": 3214
+      },
+      "parsed": {
+        "status": "ok",
+        "pairs": [
+          {
+            "node": "G",
+            "action": "a2",
+            "changed": false
+          },
+          {
+            "node": "G",
+            "action": "a1",
+            "changed": false
+          },
+          {
+            "node": "H",
+            "action": "a1",
+            "changed": false
+          },
+          {
+            "node": "G",
+            "action": "a3",
+            "changed": false
+          }
+        ]
+      },
+      "scored": {
+        "status": "ok",
+        "n_queried": 4,
+        "n_scored": 4,
+        "accuracy": 0.75
+      },
+      "metrics": {
+        "probe": "preservation",
+        "status": "ok",
+        "parse_ok": true,
+        "scored_ok": true,
+        "score": 0.75,
+        "detail": {
+          "accuracy": 0.75,
+          "n_queried": 4,
+          "n_scored": 4
+        },
+        "phase": 5,
+        "turn": 2,
+        "sent_chars": 374,
+        "context_chars": 6475,
+        "prompt_tokens_est": 1564,
+        "latency_s": 2.495
+      },
+      "metrics_cumulative": {
+        "phases_done": 5,
+        "phases_parse_ok": 5,
+        "phases_scored_ok": 4,
+        "score_sum": 2.0,
+        "score_mean": 0.4,
+        "prompt_tokens_est": 5897,
+        "latency_s": 11.786
+      }
+    },
+    "adaptation": {
+      "phase": 6,
+      "turn": 2,
+      "prompt_text": "Plan a route for period B (the later network) from H to E. Answer with exactly one JSON object of the form {\"route\": [{\"node\": \"...\", \"action\": \"...\"}, ...]}: at most 32 steps, the first step's node must be H, each next step's node must be where the previous action leads, and the destination of the last action must be E. Do NOT include a step at E itself. No other text.\n",
+      "prompt_chars": 373,
+      "prompt_tokens_est": 1712,
+      "latency_s": 2.621,
+      "queried_pairs": null,
+      "raw_response": "```json\n{\"route\": [{\"node\": \"H\", \"action\": \"a1\"}, {\"node\": \"H\", \"action\": \"a2\"}, {\"node\": \"B\", \"action\": \"a2\"}, {\"node\": \"C\", \"action\": \"a2\"}, {\"node\": \"E\", \"action\": \"a1\"}]}\n```",
+      "provider_usage": {
+        "completion_tokens": 74,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 5,
+          "engine_ttft_ms": 50,
+          "engine_ttlt_ms": 409,
+          "pre_inference_ms": 145,
+          "service_tbt_ms": 7,
+          "service_ttft_ms": 1052,
+          "service_ttlt_ms": 1579,
+          "user_visible_ttft_ms": 907
+        },
+        "prompt_tokens": 3315,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 3200
+        },
+        "total_tokens": 3389
+      },
+      "parsed": {
+        "status": "ok",
+        "route": [
+          {
+            "node": "H",
+            "action": "a1"
+          },
+          {
+            "node": "H",
+            "action": "a2"
+          },
+          {
+            "node": "B",
+            "action": "a2"
+          },
+          {
+            "node": "C",
+            "action": "a2"
+          },
+          {
+            "node": "E",
+            "action": "a1"
+          }
+        ]
+      },
+      "scored": {
+        "status": "discontinuous_route",
+        "path": null,
+        "expected_cost": null,
+        "optimal_cost": 4.5856,
+        "regret": null,
+        "is_optimal": false
+      },
+      "metrics": {
+        "probe": "adaptation",
+        "status": "discontinuous_route",
+        "parse_ok": true,
+        "scored_ok": false,
+        "score": 0.0,
+        "detail": {
+          "is_optimal": false,
+          "regret": null,
+          "expected_cost": null,
+          "optimal_cost": 4.5856,
+          "path": null
+        },
+        "phase": 6,
+        "turn": 2,
+        "sent_chars": 373,
+        "context_chars": 7026,
+        "prompt_tokens_est": 1712,
+        "latency_s": 2.621
+      },
+      "metrics_cumulative": {
+        "phases_done": 6,
+        "phases_parse_ok": 6,
+        "phases_scored_ok": 4,
+        "score_sum": 2.0,
+        "score_mean": 0.3333,
+        "prompt_tokens_est": 7609,
+        "latency_s": 14.407
+      }
+    },
+    "belief_post": {
+      "phase": 7,
+      "turn": 2,
+      "prompt_text": "Now, for the SAME (node, action) pairs, state your beliefs for period B: destination node and probability of success per attempt:\n- node G, action a2\n- node G, action a1\n- node H, action a1\n- node G, action a3\nAnswer with exactly one JSON object of the form {\"beliefs\": [{\"node\": \"...\", \"action\": \"...\", \"destination\": \"...\", \"p\": 0.0}, ...]} containing every listed pair exactly once. No other text.\n",
+      "prompt_chars": 401,
+      "prompt_tokens_est": 1856,
+      "latency_s": 2.498,
+      "queried_pairs": [
+        {
+          "node": "G",
+          "action": "a2"
+        },
+        {
+          "node": "G",
+          "action": "a1"
+        },
+        {
+          "node": "H",
+          "action": "a1"
+        },
+        {
+          "node": "G",
+          "action": "a3"
+        }
+      ],
+      "raw_response": "```json\n{\"beliefs\": [{\"node\": \"G\", \"action\": \"a2\", \"destination\": \"C\", \"p\": 0.9}, {\"node\": \"G\", \"action\": \"a1\", \"destination\": \"H\", \"p\": 1.0}, {\"node\": \"H\", \"action\": \"a1\", \"destination\": \"H\", \"p\": 1.0}, {\"node\": \"G\", \"action\": \"a3\", \"destination\": \"F\", \"p\": 0.5}]}\n```",
+      "provider_usage": {
+        "completion_tokens": 118,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": 0,
+          "audio_tokens": 0,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": 0
+        },
+        "latency_checkpoint": {
+          "engine_tbt_ms": 4,
+          "engine_ttft_ms": 48,
+          "engine_ttlt_ms": 515,
+          "pre_inference_ms": 213,
+          "service_tbt_ms": 4,
+          "service_ttft_ms": 1117,
+          "service_ttlt_ms": 1605,
+          "user_visible_ttft_ms": 904
+        },
+        "prompt_tokens": 3505,
+        "prompt_tokens_details": {
+          "audio_tokens": 0,
+          "cached_tokens": 3328
+        },
+        "total_tokens": 3623
+      },
+      "parsed": {
+        "status": "ok",
+        "beliefs": [
+          {
+            "node": "G",
+            "action": "a2",
+            "destination": "C",
+            "p": 0.9
+          },
+          {
+            "node": "G",
+            "action": "a1",
+            "destination": "H",
+            "p": 1.0
+          },
+          {
+            "node": "H",
+            "action": "a1",
+            "destination": "H",
+            "p": 1.0
+          },
+          {
+            "node": "G",
+            "action": "a3",
+            "destination": "F",
+            "p": 0.5
+          }
+        ]
+      },
+      "scored": {
+        "status": "ok",
+        "period": "post",
+        "n_queried": 4,
+        "n_scored": 4,
+        "accuracy": 0.25,
+        "destination_accuracy": 0.75,
+        "p_mae": 0.44,
+        "per_pair": [
+          {
+            "node": "G",
+            "action": "a2",
+            "destination": "C",
+            "p": 0.9,
+            "true_destination": "C",
+            "true_p": 0.88,
+            "destination_ok": true,
+            "p_ok": true,
+            "correct": true
+          },
+          {
+            "node": "G",
+            "action": "a1",
+            "destination": "H",
+            "p": 1.0,
+            "true_destination": "H",
+            "true_p": 0.67,
+            "destination_ok": true,
+            "p_ok": false,
+            "correct": false
+          },
+          {
+            "node": "H",
+            "action": "a1",
+            "destination": "H",
+            "p": 1.0,
+            "true_destination": "C",
+            "true_p": 0.0,
+            "destination_ok": false,
+            "p_ok": false,
+            "correct": false
+          },
+          {
+            "node": "G",
+            "action": "a3",
+            "destination": "F",
+            "p": 0.5,
+            "true_destination": "F",
+            "true_p": 0.91,
+            "destination_ok": true,
+            "p_ok": false,
+            "correct": false
+          }
+        ],
+        "tolerance": 0.15
+      },
+      "metrics": {
+        "probe": "belief_post",
+        "status": "ok",
+        "parse_ok": true,
+        "scored_ok": true,
+        "score": 0.25,
+        "detail": {
+          "accuracy": 0.25,
+          "destination_accuracy": 0.75,
+          "p_mae": 0.44,
+          "n_queried": 4,
+          "n_scored": 4
+        },
+        "phase": 7,
+        "turn": 2,
+        "sent_chars": 401,
+        "context_chars": 7696,
+        "prompt_tokens_est": 1856,
+        "latency_s": 2.498
+      },
+      "metrics_cumulative": {
+        "phases_done": 7,
+        "phases_parse_ok": 7,
+        "phases_scored_ok": 5,
+        "score_sum": 2.25,
+        "score_mean": 0.3214,
+        "prompt_tokens_est": 9465,
+        "latency_s": 16.905
+      }
+    }
+  },
+  "metrics_by_phase": [
+    {
+      "probe": "route_pre",
+      "status": "unknown_reference",
+      "parse_ok": true,
+      "scored_ok": false,
+      "score": 0.0,
+      "detail": {
+        "is_optimal": false,
+        "regret": null,
+        "expected_cost": null,
+        "optimal_cost": 3.0679,
+        "path": null
+      },
+      "phase": 1,
+      "turn": 1,
+      "sent_chars": 2635,
+      "context_chars": 2751,
+      "prompt_tokens_est": 658,
+      "latency_s": 2.88,
+      "cumulative": {
+        "phases_done": 1,
+        "phases_parse_ok": 1,
+        "phases_scored_ok": 0,
+        "score_sum": 0.0,
+        "score_mean": 0.0,
+        "prompt_tokens_est": 658,
+        "latency_s": 2.88
+      }
+    },
+    {
+      "probe": "belief_pre",
+      "status": "ok",
+      "parse_ok": true,
+      "scored_ok": true,
+      "score": 0.25,
+      "detail": {
+        "accuracy": 0.25,
+        "destination_accuracy": 1.0,
+        "p_mae": 0.24,
+        "n_queried": 4,
+        "n_scored": 4
+      },
+      "phase": 2,
+      "turn": 1,
+      "sent_chars": 481,
+      "context_chars": 3501,
+      "prompt_tokens_est": 808,
+      "latency_s": 2.321,
+      "cumulative": {
+        "phases_done": 2,
+        "phases_parse_ok": 2,
+        "phases_scored_ok": 1,
+        "score_sum": 0.25,
+        "score_mean": 0.125,
+        "prompt_tokens_est": 1466,
+        "latency_s": 5.201
+      }
+    },
+    {
+      "probe": "detection",
+      "status": "ok",
+      "parse_ok": true,
+      "scored_ok": true,
+      "score": 1.0,
+      "detail": {
+        "correct": true,
+        "predicted": true,
+        "truth": true
+      },
+      "phase": 3,
+      "turn": 2,
+      "sent_chars": 2127,
+      "context_chars": 5657,
+      "prompt_tokens_est": 1407,
+      "latency_s": 1.976,
+      "cumulative": {
+        "phases_done": 3,
+        "phases_parse_ok": 3,
+        "phases_scored_ok": 2,
+        "score_sum": 1.25,
+        "score_mean": 0.4167,
+        "prompt_tokens_est": 2873,
+        "latency_s": 7.177
+      }
+    },
+    {
+      "probe": "localization",
+      "status": "ok",
+      "parse_ok": true,
+      "scored_ok": true,
+      "score": 0.0,
+      "detail": {
+        "correct": false,
+        "predicted": null,
+        "truth": {
+          "node": "H",
+          "action": "a1"
+        }
+      },
+      "phase": 4,
+      "turn": 2,
+      "sent_chars": 184,
+      "context_chars": 5882,
+      "prompt_tokens_est": 1460,
+      "latency_s": 2.114,
+      "cumulative": {
+        "phases_done": 4,
+        "phases_parse_ok": 4,
+        "phases_scored_ok": 3,
+        "score_sum": 1.25,
+        "score_mean": 0.3125,
+        "prompt_tokens_est": 4333,
+        "latency_s": 9.291
+      }
+    },
+    {
+      "probe": "preservation",
+      "status": "ok",
+      "parse_ok": true,
+      "scored_ok": true,
+      "score": 0.75,
+      "detail": {
+        "accuracy": 0.75,
+        "n_queried": 4,
+        "n_scored": 4
+      },
+      "phase": 5,
+      "turn": 2,
+      "sent_chars": 374,
+      "context_chars": 6475,
+      "prompt_tokens_est": 1564,
+      "latency_s": 2.495,
+      "cumulative": {
+        "phases_done": 5,
+        "phases_parse_ok": 5,
+        "phases_scored_ok": 4,
+        "score_sum": 2.0,
+        "score_mean": 0.4,
+        "prompt_tokens_est": 5897,
+        "latency_s": 11.786
+      }
+    },
+    {
+      "probe": "adaptation",
+      "status": "discontinuous_route",
+      "parse_ok": true,
+      "scored_ok": false,
+      "score": 0.0,
+      "detail": {
+        "is_optimal": false,
+        "regret": null,
+        "expected_cost": null,
+        "optimal_cost": 4.5856,
+        "path": null
+      },
+      "phase": 6,
+      "turn": 2,
+      "sent_chars": 373,
+      "context_chars": 7026,
+      "prompt_tokens_est": 1712,
+      "latency_s": 2.621,
+      "cumulative": {
+        "phases_done": 6,
+        "phases_parse_ok": 6,
+        "phases_scored_ok": 4,
+        "score_sum": 2.0,
+        "score_mean": 0.3333,
+        "prompt_tokens_est": 7609,
+        "latency_s": 14.407
+      }
+    },
+    {
+      "probe": "belief_post",
+      "status": "ok",
+      "parse_ok": true,
+      "scored_ok": true,
+      "score": 0.25,
+      "detail": {
+        "accuracy": 0.25,
+        "destination_accuracy": 0.75,
+        "p_mae": 0.44,
+        "n_queried": 4,
+        "n_scored": 4
+      },
+      "phase": 7,
+      "turn": 2,
+      "sent_chars": 401,
+      "context_chars": 7696,
+      "prompt_tokens_est": 1856,
+      "latency_s": 2.498,
+      "cumulative": {
+        "phases_done": 7,
+        "phases_parse_ok": 7,
+        "phases_scored_ok": 5,
+        "score_sum": 2.25,
+        "score_mean": 0.3214,
+        "prompt_tokens_est": 9465,
+        "latency_s": 16.905
+      }
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "You are analysing a courier network. Nodes are locations; at each\nnode you may attempt the listed actions (aK). An attempt either delivers\nyou to that action's destination or you stay and retry (each attempt\ncosts 1). You observed the network in an earlier period (period A). A\nlater period (period B) will be shown afterwards.\n\nNodes: A, B, C, D, E, F, G, H\nStart: H   Goal: E\n\nAction menu, period A (earlier): A: a1, a2; B: a1, a2; C: a1, a2, a3; D: a1, a2; F: a1, a2; G: a1, a2, a3; H: a1, a2\n\nObservations, period A:\n(C, a2, E)\n(C, a3, B)\n(D, a2, H)\n(C, a1, A)\n(A, a1, A)\n(D, a2, H)\n(D, a1, A)\n(D, a1, A)\n(H, a1, C)\n(H, a1, C)\n(H, a1, H)\n(B, a1, B)\n(G, a1, H)\n(A, a1, G)\n(A, a2, E)\n(C, a1, A)\n(H, a1, H)\n(C, a1, A)\n(H, a2, B)\n(H, a1, H)\n(B, a2, C)\n(D, a2, H)\n(D, a1, A)\n(H, a1, H)\n(C, a3, B)\n(B, a1, F)\n(F, a2, C)\n(G, a1, H)\n(H, a2, B)\n(G, a1, H)\n(G, a1, H)\n(F, a1, B)\n(H, a2, B)\n(H, a2, B)\n(G, a2, C)\n(C, a2, C)\n(H, a2, B)\n(D, a2, H)\n(A, a2, E)\n(H, a2, H)\n(H, a1, C)\n(A, a1, G)\n(B, a2, C)\n(F, a2, C)\n(A, a1, A)\n(G, a3, G)\n(D, a1, A)\n(G, a2, C)\n(F, a2, C)\n(C, a2, C)\n(A, a2, E)\n(H, a1, H)\n(C, a3, B)\n(D, a2, H)\n(A, a1, G)\n(D, a1, A)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(A, a2, A)\n(H, a2, B)\n(A, a1, G)\n(C, a2, E)\n(G, a3, F)\n(B, a2, C)\n(C, a2, E)\n(G, a1, G)\n(C, a1, A)\n(D, a1, A)\n(G, a2, C)\n(F, a1, B)\n(A, a2, E)\n(D, a2, D)\n(C, a3, B)\n(F, a1, B)\n(B, a1, F)\n(F, a1, B)\n(G, a3, F)\n(F, a2, C)\n(C, a1, A)\n(B, a1, F)\n(F, a1, B)\n(D, a1, A)\n(B, a2, C)\n(G, a1, H)\n(G, a2, C)\n(H, a2, H)\n(D, a2, H)\n(G, a2, C)\n(F, a1, B)\n(F, a2, C)\n(C, a3, B)\n(G, a1, G)\n(D, a1, A)\n(G, a1, H)\n(G, a2, C)\n(B, a2, C)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(G, a2, C)\n(C, a3, C)\n(C, a3, B)\n(G, a1, G)\n(B, a2, B)\n(H, a2, H)\n(B, a1, F)\n(G, a2, C)\n(G, a2, C)\n(A, a1, A)\n(H, a2, B)\n(C, a3, B)\n(C, a1, A)\n(G, a3, F)\n(D, a2, H)\n(A, a2, E)\n(G, a3, G)\n(F, a2, C)\n(C, a2, C)\n(A, a1, G)\n(H, a1, C)\n(C, a2, C)\n(F, a2, C)\n(B, a1, F)\n(F, a2, C)\n(C, a2, E)\n(G, a1, H)\n(G, a3, G)\n(G, a3, F)\n(D, a2, H)\n(G, a3, F)\n(B, a1, F)\n(C, a2, E)\n(H, a1, H)\n(B, a2, C)\n(D, a1, A)\n(A, a2, E)\n(A, a2, E)\n(D, a1, D)\n(C, a3, B)\n(C, a2, C)\n(B, a2, C)\n(F, a1, B)\n(D, a2, H)\n(G, a2, G)\n(F, a1, B)\n(C, a1, A)\n(B, a2, C)\n(G, a3, F)\n(B, a2, C)\n(F, a1, B)\n(B, a1, F)\n(A, a1, G)\n(F, a1, B)\n(B, a1, F)\n(A, a1, G)\n(C, a1, A)\n(G, a3, F)\n(C, a3, B)\n(B, a1, F)\n\nPlan a route for period A from H to E. Answer with exactly one JSON object of the form {\"route\": [{\"node\": \"...\", \"action\": \"...\"}, ...]}: at most 32 steps, the first step's node must be H, each next step's node must be where the previous action leads, and the destination of the last action must be E. Do NOT include a step at E itself. No other text.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\"route\": [{\"node\": \"H\", \"action\": \"a1\"}, {\"node\": \"C\", \"action\": \"a2\"}, {\"node\": \"E\", \"action\": \"a1\"}]}\n```"
+    },
+    {
+      "role": "user",
+      "content": "For EACH of the following (node, action) pairs, state what you believe from the period A observations: the destination node the action leads to, and its probability of success per attempt (a number in [0, 1]):\n- node G, action a2\n- node G, action a1\n- node H, action a1\n- node G, action a3\nAnswer with exactly one JSON object of the form {\"beliefs\": [{\"node\": \"...\", \"action\": \"...\", \"destination\": \"...\", \"p\": 0.0}, ...]} containing every listed pair exactly once. No other text.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\"beliefs\": [{\"node\": \"G\", \"action\": \"a2\", \"destination\": \"C\", \"p\": 0.9}, {\"node\": \"G\", \"action\": \"a1\", \"destination\": \"H\", \"p\": 1.0}, {\"node\": \"H\", \"action\": \"a1\", \"destination\": \"C\", \"p\": 0.5}, {\"node\": \"G\", \"action\": \"a3\", \"destination\": \"F\", \"p\": 0.5}]}\n```"
+    },
+    {
+      "role": "user",
+      "content": "Here is the later period (period B) of the same network.\n\nAction menu, period B (later): A: a1, a2; B: a1, a2; C: a1, a2, a3; D: a1, a2; F: a1, a2; G: a1, a2, a3; H: a1, a2\n\nObservations, period B:\n(A, a1, G)\n(G, a2, C)\n(C, a1, A)\n(C, a1, A)\n(D, a1, A)\n(G, a3, F)\n(H, a1, H)\n(G, a2, C)\n(B, a1, F)\n(G, a3, G)\n(C, a1, A)\n(H, a2, H)\n(C, a3, B)\n(G, a1, H)\n(G, a3, F)\n(A, a1, G)\n(C, a2, E)\n(B, a2, C)\n(F, a2, C)\n(G, a1, H)\n(B, a1, F)\n(A, a2, E)\n(G, a1, H)\n(B, a1, F)\n(D, a1, A)\n(C, a2, E)\n(D, a2, H)\n(F, a2, C)\n(C, a1, A)\n(A, a2, E)\n(H, a1, H)\n(B, a2, C)\n(C, a2, C)\n(A, a1, G)\n(D, a1, A)\n(D, a2, H)\n(H, a1, H)\n(A, a1, G)\n(F, a1, B)\n(F, a1, B)\n(H, a2, B)\n(G, a2, G)\n(H, a2, B)\n(A, a2, E)\n(A, a1, G)\n(G, a2, C)\n(G, a2, C)\n(C, a3, B)\n(D, a1, A)\n(F, a1, F)\n(G, a3, F)\n(B, a1, F)\n(D, a2, H)\n(A, a1, G)\n(F, a1, B)\n(F, a1, F)\n(F, a2, F)\n(G, a3, F)\n(B, a1, F)\n(F, a2, C)\n(A, a2, E)\n(H, a1, H)\n(D, a2, D)\n(C, a3, B)\n(C, a3, C)\n(F, a2, C)\n(F, a1, B)\n(C, a2, E)\n(C, a1, A)\n(C, a3, B)\n(F, a1, F)\n(F, a1, B)\n(D, a2, H)\n(A, a2, E)\n(B, a1, F)\n(B, a2, C)\n(C, a1, A)\n(D, a2, D)\n(G, a2, C)\n(B, a1, F)\n(H, a2, B)\n(C, a2, E)\n(B, a2, C)\n(G, a2, C)\n(G, a3, F)\n(G, a1, H)\n(G, a3, F)\n(B, a1, F)\n(H, a1, H)\n(B, a2, C)\n(A, a1, G)\n(D, a1, A)\n(H, a2, B)\n(C, a2, E)\n(A, a1, G)\n(C, a2, E)\n(D, a1, D)\n(F, a2, C)\n(G, a1, H)\n(C, a2, E)\n(B, a2, B)\n(C, a3, B)\n(A, a2, E)\n(C, a1, A)\n(D, a1, A)\n(G, a1, H)\n(H, a1, H)\n(C, a3, B)\n(F, a2, C)\n(F, a2, C)\n(G, a3, F)\n(G, a1, H)\n(B, a2, C)\n(H, a2, B)\n(G, a1, G)\n(C, a1, A)\n(B, a2, C)\n(F, a1, F)\n(H, a1, H)\n(A, a2, E)\n(G, a3, F)\n(B, a2, C)\n(G, a2, C)\n(G, a2, C)\n(D, a1, A)\n(H, a1, H)\n(D, a1, A)\n(G, a1, H)\n(C, a1, A)\n(D, a2, H)\n(D, a2, H)\n(G, a1, H)\n(B, a2, C)\n(C, a2, E)\n(C, a2, E)\n(F, a2, C)\n(B, a1, F)\n(H, a1, H)\n(A, a1, G)\n(H, a2, H)\n(C, a1, A)\n(C, a3, C)\n(A, a2, E)\n(H, a2, H)\n(D, a2, H)\n(C, a3, B)\n(D, a1, A)\n(F, a1, B)\n(C, a3, B)\n(A, a2, E)\n(B, a1, F)\n(D, a2, H)\n(G, a2, C)\n(H, a1, H)\n(G, a3, F)\n(A, a2, E)\n(H, a2, B)\n(H, a2, H)\n(F, a2, F)\n(A, a1, G)\n\nQuestion: did the network's dynamics change between period A and period B?\nAnswer with exactly one JSON object: {\"changed\": true} or {\"changed\": false}. No other text.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\"changed\": true}\n```"
+    },
+    {
+      "role": "user",
+      "content": "The dynamics changed between the periods. Question: which single (node, action) pair changed?\nAnswer with exactly one JSON object: {\"node\": \"<node>\", \"action\": \"<aK>\"}. No other text.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\"node\": \"F\", \"action\": \"a2\"}\n```"
+    },
+    {
+      "role": "user",
+      "content": "For EACH of the following (node, action) pairs, judge whether its dynamics changed between period A and period B:\n- node G, action a2\n- node G, action a1\n- node H, action a1\n- node G, action a3\nAnswer with exactly one JSON object of the form {\"pairs\": [{\"node\": \"...\", \"action\": \"...\", \"changed\": true|false}, ...]} containing every listed pair exactly once. No other text.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\"pairs\": [{\"node\": \"G\", \"action\": \"a2\", \"changed\": false}, {\"node\": \"G\", \"action\": \"a1\", \"changed\": false}, {\"node\": \"H\", \"action\": \"a1\", \"changed\": false}, {\"node\": \"G\", \"action\": \"a3\", \"changed\": false}]}\n```"
+    },
+    {
+      "role": "user",
+      "content": "Plan a route for period B (the later network) from H to E. Answer with exactly one JSON object of the form {\"route\": [{\"node\": \"...\", \"action\": \"...\"}, ...]}: at most 32 steps, the first step's node must be H, each next step's node must be where the previous action leads, and the destination of the last action must be E. Do NOT include a step at E itself. No other text.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\"route\": [{\"node\": \"H\", \"action\": \"a1\"}, {\"node\": \"H\", \"action\": \"a2\"}, {\"node\": \"B\", \"action\": \"a2\"}, {\"node\": \"C\", \"action\": \"a2\"}, {\"node\": \"E\", \"action\": \"a1\"}]}\n```"
+    },
+    {
+      "role": "user",
+      "content": "Now, for the SAME (node, action) pairs, state your beliefs for period B: destination node and probability of success per attempt:\n- node G, action a2\n- node G, action a1\n- node H, action a1\n- node G, action a3\nAnswer with exactly one JSON object of the form {\"beliefs\": [{\"node\": \"...\", \"action\": \"...\", \"destination\": \"...\", \"p\": 0.0}, ...]} containing every listed pair exactly once. No other text.\n"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\"beliefs\": [{\"node\": \"G\", \"action\": \"a2\", \"destination\": \"C\", \"p\": 0.9}, {\"node\": \"G\", \"action\": \"a1\", \"destination\": \"H\", \"p\": 1.0}, {\"node\": \"H\", \"action\": \"a1\", \"destination\": \"H\", \"p\": 1.0}, {\"node\": \"G\", \"action\": \"a3\", \"destination\": \"F\", \"p\": 0.5}]}\n```"
+    }
+  ],
+  "turn_of_phase": {
+    "route_pre": 1,
+    "belief_pre": 1,
+    "detection": 2,
+    "localization": 2,
+    "preservation": 2,
+    "adaptation": 2,
+    "belief_post": 2
+  },
+  "belief_pairs": [
+    {
+      "node": "G",
+      "action": "a2"
+    },
+    {
+      "node": "G",
+      "action": "a1"
+    },
+    {
+      "node": "H",
+      "action": "a1"
+    },
+    {
+      "node": "G",
+      "action": "a3"
+    }
+  ],
+  "self_consistency_preservation": {
+    "status": "ok",
+    "accuracy": 1.0,
+    "n_scored": 4,
+    "per_pair": [
+      {
+        "node": "G",
+        "action": "a2",
+        "self_changed": false,
+        "truth_changed": false,
+        "correct": true
+      },
+      {
+        "node": "G",
+        "action": "a1",
+        "self_changed": false,
+        "truth_changed": false,
+        "correct": true
+      },
+      {
+        "node": "H",
+        "action": "a1",
+        "self_changed": true,
+        "truth_changed": true,
+        "correct": true
+      },
+      {
+        "node": "G",
+        "action": "a3",
+        "self_changed": false,
+        "truth_changed": false,
+        "correct": true
+      }
+    ]
+  },
+  "metrics_final": {
+    "phases_done": 7,
+    "phases_parse_ok": 7,
+    "phases_scored_ok": 5,
+    "score_sum": 2.25,
+    "score_mean": 0.3214,
+    "prompt_tokens_est": 9465,
+    "latency_s": 16.905,
+    "per_phase_score": {
+      "route_pre": 0.0,
+      "belief_pre": 0.25,
+      "detection": 1.0,
+      "localization": 0.0,
+      "preservation": 0.75,
+      "adaptation": 0.0,
+      "belief_post": 0.25
+    },
+    "per_phase_status": {
+      "route_pre": "unknown_reference",
+      "belief_pre": "ok",
+      "detection": "ok",
+      "localization": "ok",
+      "preservation": "ok",
+      "adaptation": "discontinuous_route",
+      "belief_post": "ok"
+    }
+  }
+}
