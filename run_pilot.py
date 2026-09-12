@@ -75,19 +75,25 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import random
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import asdict
 
 import explore_agent
 import explore_metrics
-from ecpm_parser import (PARSERS, belief_self_consistency, run_probe,
-                         score_belief, score_route_pre)
+from ecpm_parser import (PARSERS, belief_self_consistency,
+                         diagnose_route_beliefs, parse_icl_turn_a,
+                         parse_icl_turn_b, run_probe, score_belief,
+                         score_control_preservation, score_icl_beliefs,
+                         score_icl_localization, score_adaptation,
+                         score_route_pre)
 from resource_mdp import (CONDITIONS, PROMPT_RENDERINGS, SCHEMA_VERSION,
                           make_pair, pair_to_json, paired_evidence,
                           prompt_view)
@@ -98,6 +104,9 @@ ALL_PROBES = ("detection", "localization", "preservation", "adaptation")
 # turn 2 reveals period B (turn 1 stays in context) and asks ALL_PROBES.
 TURN1_PROBES = ("route_pre", "belief_pre")
 REELICIT_PROBE = "belief_post"
+PROTOCOLS = ("legacy", "icl_two_response_v1")
+ICL_LEVELS = ("empirical_table", "explained_logs", "minimal_logs")
+COST_STATUSES = ("exact", "estimated", "unavailable", "local_unpriced")
 
 # ---------------------------------------------------------------- scenarios
 #
@@ -130,6 +139,10 @@ SCENARIO_DEFAULTS = {
 SCENARIOS = {
     # the frozen showcase pair; this is what runs/ was produced with
     "seed7_silent_break": {},
+    "icl_det_gate_seed8": {
+        "condition": "silent_break", "seed": 8, "k": 10, "budget": 10,
+        "variants": ("det",),
+    },
     "seed7_hard_removal": {"condition": "hard_removal"},
     # degradation is undefined in deterministic worlds (v2.1): stochastic only
     "seed7_degradation": {"condition": "degradation", "variants": ("sto",)},
@@ -379,6 +392,224 @@ def ask_block(view, probe, queried):
     elif probe in ("adaptation", "route_pre"):
         ask = ask.format(start=view["start"], goal=view["goal"])
     return ask + "\n"
+
+
+# -------------------------------------------------- icl_two_response_v1
+
+ICL_EXPLAINED_MECHANICS = (
+    "Each action has one destination. A successful attempt moves to that "
+    "destination. A failed attempt leaves the system at the current node, "
+    "and the action can be retried. Each attempt costs 1."
+)
+
+ICL_MINIMAL_MECHANICS = (
+    "Each record is [current_node, action, observed_next_node]. The action "
+    "menu lists actions available at each node. Each attempt costs 1. "
+    "Report the requested fields and choose a route that minimizes the "
+    "expected number of attempts from Start to Goal."
+)
+
+ICL_BELIEF_DEFINITIONS = (
+    "destination is the node the action is estimated to reach when it "
+    "succeeds. p_success is the estimated probability that one attempt "
+    "reaches that destination."
+)
+
+ICL_TURN_A_SCHEMA = """Return exactly one JSON object with exactly five pairs:
+{
+  "pairs": [
+    {"node": "<node>", "action": "<action>", "available": <boolean>,
+     "destination": "<node or null>", "p_success": <number or null>}
+  ],
+  "route": [{"node": "<node>", "action": "<action>"}]
+}
+For each listed pair, available means that the action appears in the current
+menu; it does not mean the action works. The route must start at Start, use
+state-action steps, and finish at Goal. Do not include other text."""
+
+ICL_TURN_B_SCHEMA = """Return exactly one JSON object with exactly five pairs:
+{
+  "changed": <boolean>,
+  "changed_pair": <null or {"node": "<node>", "action": "<action>"}>,
+  "pairs": [
+    {"node": "<node>", "action": "<action>", "available": <boolean>,
+     "changed": <boolean>,
+     "destination": "<node or null>", "p_success": <number or null>}
+  ],
+  "route": [{"node": "<node>", "action": "<action>"}]
+}
+If changed is false, changed_pair must be null. If changed is true,
+changed_pair must name the one pair judged to have changed. For each listed
+pair, available means that the action appears in the Period B menu; it does
+not mean the action works. If an action is unavailable, use available=false,
+destination=null, and p_success=null. The route must start at Start, use
+state-action steps, and finish at Goal. Do not include other text."""
+
+
+def parse_visible_rows(text):
+    """Parse only the prompt-visible F2 rows into neutral triples."""
+    rows = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not (line.startswith("(") and line.endswith(")")):
+            raise ValueError(f"unexpected visible observation row: {line!r}")
+        parts = [part.strip() for part in line[1:-1].split(",")]
+        if len(parts) != 3 or not all(parts):
+            raise ValueError(f"unexpected visible observation row: {line!r}")
+        rows.append(tuple(parts))
+    return rows
+
+
+def raw_visible_rows(view, period):
+    """Bracketed raw rows, preserving prompt_view's shuffled row order."""
+    return [f"[{node}, {action}, {next_node}]"
+            for node, action, next_node in
+            parse_visible_rows(view["evidence"][period])]
+
+
+def visible_transition_stats(raw_rows, current_menu, prior_menu=None):
+    """Aggregate prompt-visible outcomes once for tables and scoring."""
+    menus = [current_menu] + ([prior_menu] if prior_menu is not None else [])
+    pairs = sorted({(node, action) for menu in menus
+                    for node, actions in menu.items() for action in actions})
+    counts = {pair: {} for pair in pairs}
+    for row in raw_rows:
+        if not (row.startswith("[") and row.endswith("]")):
+            raise ValueError(f"unexpected raw row: {row!r}")
+        node, action, next_node = [x.strip() for x in row[1:-1].split(",")]
+        key = (node, action)
+        if key not in counts:
+            raise ValueError(f"observation pair absent from visible menus: {key}")
+        counts[key][next_node] = counts[key].get(next_node, 0) + 1
+    stats = {}
+    for node, action in pairs:
+        next_counts = counts[(node, action)]
+        total = sum(next_counts.values())
+        stats[(node, action)] = {
+            "available": action in current_menu.get(node, []),
+            "observations": total,
+            "next_state_counts": dict(sorted(next_counts.items())),
+            "next_state_proportions": {
+                key: round(value / total, 4)
+                for key, value in sorted(next_counts.items())} if total else {},
+            "p_success": (sum(value for next_node, value in next_counts.items()
+                              if next_node != node) / total if total else None),
+        }
+    return stats
+
+
+def empirical_table_from_visible(raw_rows, current_menu, prior_menu=None):
+    """Render the shared prompt-visible transition aggregation."""
+    stats = visible_transition_stats(raw_rows, current_menu, prior_menu)
+    lines = ["node | action | available | observations | next_state_counts "
+             "| next_state_proportions"]
+    lines.append("--- | --- | --- | ---: | --- | ---")
+    for (node, action), row in stats.items():
+        lines.append(f"{node} | {action} | {str(row['available']).lower()} | "
+                     f"{row['observations']} | "
+                     f"{json.dumps(row['next_state_counts'])} | "
+                     f"{json.dumps(row['next_state_proportions'])}")
+    return "\n".join(lines)
+
+
+def _format_menu(menu):
+    return "; ".join(f"{node}: {', '.join(actions)}"
+                     for node, actions in sorted(menu.items()))
+
+
+def _format_queried_pairs(queried):
+    return "\n".join(f"- {q['node']} {q['action']}" for q in queried)
+
+
+def build_icl_prompt(view, level, period, queried):
+    """Build one protocol prompt without access to evaluator-only fields."""
+    if level not in ICL_LEVELS or period not in ("pre", "post"):
+        raise ValueError("unknown ICL level or period")
+    menu = view[f"legal_actions_{period}"]
+    rows = raw_visible_rows(view, period)
+    mechanics = (ICL_MINIMAL_MECHANICS if level == "minimal_logs"
+                 else ICL_EXPLAINED_MECHANICS)
+    if level == "empirical_table":
+        prior = view["legal_actions_pre"] if period == "post" else None
+        evidence = empirical_table_from_visible(rows, menu, prior)
+        evidence_heading = "Empirical table from the visible observations"
+    else:
+        evidence = "\n".join(rows)
+        evidence_heading = "Raw shuffled observations"
+    period_name = "A" if period == "pre" else "B"
+    opening = (f"Period {period_name}.\n" if period == "pre" else
+               "Period B may or may not differ from Period A.\n")
+    schema = ICL_TURN_A_SCHEMA if period == "pre" else ICL_TURN_B_SCHEMA
+    return (f"{opening}{mechanics}\n{ICL_BELIEF_DEFINITIONS}\n\n"
+            f"Nodes: {', '.join(view['nodes'])}\n"
+            f"Start: {view['start']}   Goal: {view['goal']}\n"
+            f"Action menu, Period {period_name}: {_format_menu(menu)}\n\n"
+            f"{evidence_heading}, Period {period_name}:\n{evidence}\n\n"
+            f"Pairs to report in this order:\n{_format_queried_pairs(queried)}"
+            f"\n\n{schema}\n")
+
+
+def protocol_target_pair(record, sc):
+    """Observed target, or the matched silent-break target under no_change."""
+    change = record["change"]
+    if change["edge"] is not None:
+        return (change["edge"]["from"], change["action"])
+    sibling = make_pair(sc["seed"], "silent_break",
+                        deterministic=record["deterministic"],
+                        matched=sc["matched"])
+    sibling_record = pair_to_json(sibling)
+    sibling_change = sibling_record["change"]
+    return (sibling_change["edge"]["from"], sibling_change["action"])
+
+
+def queried_pairs_for_icl(record, sc):
+    """T* plus four deterministic unchanged controls; legacy selection stays separate."""
+    target = protocol_target_pair(record, sc)
+    pre = {(e["from"], e["action"]): (e["to"], e["p"])
+           for e in record["world_pre"]["edges"]}
+    post = {(e["from"], e["action"]): (e["to"], e["p"])
+            for e in record["world_post"]["edges"]}
+    unchanged = sorted(key for key, value in pre.items()
+                       if key != target and post.get(key) == value)
+    if len(unchanged) < 4:
+        raise ValueError("fewer than four unchanged controls are available")
+    rng = random.Random(f"icl_two_response_v1|{sc['seed']}|pairs")
+    selected = sorted(rng.sample(unchanged, 4) + [target])
+    return [{"node": node, "action": action} for node, action in selected]
+
+
+def deterministic_gate(seed):
+    """Evaluate the fixed deterministic silent-break eligibility rule."""
+    try:
+        inst = make_pair(seed, "silent_break", deterministic=True,
+                         matched=True)
+    except ValueError as exc:
+        return {"seed": seed, "eligible": False,
+                "reasons": ["construction_failed"], "error": str(exc)}
+    oracle = inst.oracle
+    checks = {
+        "pre_reachable": oracle["pre"]["solvable"],
+        "post_reachable": oracle["post"]["solvable"],
+        "target_on_pre_optimum": bool(inst.change["on_optimal_route"]),
+        "pre_optimum_unique": oracle["pre"]["route_unique"],
+        "post_optimum_unique": oracle["post"]["route_unique"],
+        "route_changed": oracle["route_changed"],
+    }
+    reasons = [name for name, passed in checks.items() if not passed]
+    return {"seed": seed, "eligible": not reasons, "checks": checks,
+            "reasons": reasons, "pre_route": oracle["pre"]["optimal_route"],
+            "post_route": oracle["post"]["optimal_route"],
+            "target": {"node": inst.change["edge"][0],
+                       "action": inst.change["action"],
+                       "destination": inst.change["edge"][1]}}
+
+
+def first_deterministic_gate_seed():
+    for seed in range(1, 1001):
+        result = deterministic_gate(seed)
+        if result["eligible"]:
+            return result
+    raise RuntimeError("no eligible deterministic gate seed in 1..1000")
 
 
 # ------------------------------------------------------------------ metrics
@@ -684,6 +915,757 @@ def dispatch(args, record, probe, queried, messages):
     return dry_run_answer(record, probe, queried), {}
 
 
+def sha256_text(value):
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _canonical_sha256(value):
+    return sha256_text(json.dumps(value, sort_keys=True, separators=(",", ":")))
+
+
+def _utc_now():
+    return datetime.datetime.now(
+        datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _write_json_atomic(path, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    temporary = path + ".tmp"
+    with open(temporary, "w") as fh:
+        json.dump(value, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    os.replace(temporary, path)
+
+
+def _cost_provenance(args):
+    if args.provider == "dry-run":
+        return {"status": "unavailable", "amount": None,
+                "reason": "dry_run_no_provider_call"}
+    if args.provider == "openai" and any(
+            marker in args.base_url.lower()
+            for marker in ("localhost", "127.0.0.1", "0.0.0.0")):
+        return {"status": "local_unpriced", "amount": None,
+                "reason": "local_endpoint"}
+    return {"status": "unavailable", "amount": None,
+            "reason": "price_not_calculated"}
+
+
+def _official_openai_endpoint(base_url):
+    return urllib.parse.urlparse(base_url).hostname == "api.openai.com"
+
+
+def endpoint_provenance(args):
+    """Return an API version and non-secret endpoint-configuration hash."""
+    if args.provider == "dry-run":
+        endpoint, api_version = "dry-run", "not_applicable"
+    elif args.provider == "anthropic":
+        endpoint, api_version = "https://api.anthropic.com", "2023-06-01"
+    elif args.provider == "azure":
+        endpoint, api_version = args.azure_endpoint, args.api_version
+    else:
+        endpoint, api_version = args.base_url, "openai-compatible-v1"
+    parsed = urllib.parse.urlsplit(endpoint)
+    host = parsed.hostname or parsed.path
+    if parsed.port:
+        host += f":{parsed.port}"
+    safe_endpoint = urllib.parse.urlunsplit(
+        (parsed.scheme, host, parsed.path if parsed.hostname else "", "", ""))
+    fingerprint = _canonical_sha256({
+        "provider": args.provider, "endpoint": safe_endpoint,
+        "api_version": api_version})
+    return {"api_version": api_version,
+            "endpoint_config_sha256": fingerprint}
+
+
+def sampling_seed_provenance(args, sampling_seed):
+    """Describe whether the repeat seed is actually sent to the provider."""
+    requested = args.sampling_seed_support
+    if args.provider == "dry-run":
+        if requested == "supported":
+            raise ValueError("dry-run cannot apply a provider sampling seed")
+        status, source = "not_applied_dry_run", "dry_run"
+    elif args.provider == "anthropic":
+        if requested == "supported":
+            raise ValueError("Anthropic does not accept a sampling seed")
+        status, source = "unsupported", "provider"
+    elif requested == "supported":
+        status, source = "supported", "cli"
+    elif requested == "unsupported":
+        status, source = "unsupported", "cli"
+    elif args.provider == "openai" and _official_openai_endpoint(args.base_url):
+        status, source = "supported", "provider"
+    else:
+        # Azure deployments and OpenAI-compatible servers vary. Do not send
+        # an unverified field; the operator may opt in explicitly.
+        status, source = "unsupported", "safe_default"
+    return {"sampling_seed": sampling_seed,
+            "sampling_seed_status": status,
+            "sampling_seed_status_source": source}
+
+
+def reasoning_provenance(args):
+    """Validate and record an explicit provider-specific reasoning control."""
+    mode = args.reasoning_mode
+    raw = args.reasoning_control_json
+    source = (args.reasoning_control_source or "").strip()
+    if args.provider == "dry-run":
+        if raw or source:
+            raise ValueError("dry-run does not send a reasoning control")
+        return {"mode": mode, "status": "not_applied_dry_run",
+                "operator_json": None, "request_fields": {}, "source": None,
+                "semantics_verified_by_runner": False}
+    if mode == "unspecified":
+        if raw or source:
+            raise ValueError("a reasoning control requires --reasoning-mode off|on")
+        return {"mode": mode, "status": "unspecified",
+                "operator_json": None, "request_fields": {}, "source": None,
+                "semantics_verified_by_runner": False}
+    if not raw or not source:
+        raise ValueError(
+            "real off/on runs require --reasoning-control-json and "
+            "--reasoning-control-source")
+    if len(source) > 200 or "\n" in source:
+        raise ValueError("--reasoning-control-source must be one short line")
+    try:
+        fields = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("--reasoning-control-json must be valid JSON") from exc
+    if not isinstance(fields, dict) or not fields:
+        raise ValueError("--reasoning-control-json must be a non-empty object")
+    blocked = {"model", "messages", "seed", "temperature", "max_tokens",
+               "max_completion_tokens", "response_format", "tools",
+               "tool_choice", "stream"}
+    collision = sorted(blocked.intersection(fields))
+    if collision:
+        raise ValueError("reasoning control cannot override: "
+                         + ", ".join(collision))
+    if (args.provider == "azure"
+            or (args.provider == "openai"
+                and _official_openai_endpoint(args.base_url))):
+        if set(fields) != {"reasoning_effort"}:
+            raise ValueError("OpenAI/Azure reasoning control must contain "
+                             "only reasoning_effort")
+    if args.provider in ("openai", "azure") and "reasoning_effort" in fields:
+        effort = fields["reasoning_effort"]
+        if effort not in ("none", "minimal", "low", "medium", "high", "xhigh"):
+            raise ValueError("unsupported reasoning_effort value")
+        if ((mode == "off" and effort != "none")
+                or (mode == "on" and effort == "none")):
+            raise ValueError("reasoning_effort conflicts with reasoning mode")
+    if args.provider == "anthropic":
+        if set(fields) != {"thinking"}:
+            raise ValueError("Anthropic reasoning control must contain only thinking")
+        thinking = fields.get("thinking")
+        expected = {"off": {"disabled"},
+                    "on": {"enabled", "adaptive"}}[mode]
+        if not isinstance(thinking, dict) or thinking.get("type") not in expected:
+            raise ValueError("Anthropic reasoning control conflicts with mode")
+    return {"mode": mode, "status": "explicit_provider_control",
+            "operator_json": raw, "request_fields": fields,
+            "source": source, "semantics_verified_by_runner": False}
+
+
+def _dry_run_icl_answer(record, queried, period):
+    truth = {(e["from"], e["action"]): (e["to"], e["p"])
+             for e in record[f"world_{period}"]["edges"]}
+    menu = record[f"legal_actions_{period}"]
+    change = record["change"]
+    changed = change["edge"] is not None
+    target = (None if not changed else
+              (change["edge"]["from"], change["action"]))
+    pairs = []
+    for query in queried:
+        key = (query["node"], query["action"])
+        available = key[1] in menu.get(key[0], [])
+        transition = truth.get(key)
+        row = {"node": key[0], "action": key[1],
+               "available": available,
+               "destination": transition[0] if transition else None,
+               "p_success": transition[1] if transition else None}
+        if period == "post":
+            row["changed"] = changed and key == target
+        pairs.append(row)
+    oracle = record["oracle"][period]
+    route = [{"node": node, "action": action}
+             for node, action in zip(oracle["optimal_route"],
+                                     oracle["optimal_actions"])]
+    obj = {"pairs": pairs, "route": route}
+    if period == "post":
+        obj = {"changed": changed,
+               "changed_pair": (None if not changed else
+                                {"node": target[0], "action": target[1]}),
+               **obj}
+    return json.dumps(obj, separators=(",", ":"))
+
+
+def _reasoning_evidence(provider, response, reasoning):
+    if reasoning:
+        return "true"
+    details = response.get("usage", {}).get("completion_tokens_details", {})
+    tokens = details.get("reasoning_tokens")
+    if isinstance(tokens, (int, float)):
+        return "true" if tokens > 0 else "false"
+    if provider == "anthropic" and isinstance(response.get("content"), list):
+        return "false"
+    return "unknown"
+
+
+def _call_icl_provider_once(args, messages, sampling, reasoning):
+    """One unconstrained text response with explicit sampling controls."""
+    if args.provider == "dry-run":
+        raise AssertionError("dry-run response is generated by the caller")
+    body = {"messages": messages, "max_tokens": args.max_tokens,
+            "temperature": args.temperature}
+    if args.provider != "azure":
+        body["model"] = args.model
+    if sampling["sampling_seed_status"] == "supported":
+        body["seed"] = sampling["sampling_seed"]
+    body.update(reasoning["request_fields"])
+    if args.provider in ("openai", "azure"):
+        if args.provider == "azure":
+            url = (args.azure_endpoint.rstrip("/") + "/openai/deployments/"
+                   + args.model + "/chat/completions?api-version="
+                   + args.api_version)
+            headers = {"content-type": "application/json",
+                       "api-key": os.environ["AZURE_OPENAI_API_KEY"]}
+        else:
+            url = args.base_url.rstrip("/") + "/chat/completions"
+            headers = {"content-type": "application/json",
+                       "authorization": "Bearer " +
+                       os.environ.get("OPENAI_API_KEY", "local")}
+        req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                     headers=headers)
+        with urllib.request.urlopen(req, timeout=args.timeout) as response:
+            data = json.loads(response.read())
+        choice = data["choices"][0]
+        message = choice["message"]
+        text = message.get("content") or ""
+        finish = choice.get("finish_reason")
+        reasoning_text = message.get("reasoning_content")
+    elif args.provider == "anthropic":
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=json.dumps(body).encode(),
+            headers={"content-type": "application/json",
+                     "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                     "anthropic-version": "2023-06-01"})
+        with urllib.request.urlopen(req, timeout=args.timeout) as response:
+            data = json.loads(response.read())
+        text = "".join(block.get("text", "") for block in data["content"]
+                       if block.get("type") == "text")
+        reasoning_text = [block for block in data["content"]
+                          if block.get("type") == "thinking"] or None
+        finish = data.get("stop_reason")
+    evidence = _reasoning_evidence(args.provider, data, reasoning_text)
+    return {"text": text, "usage": data.get("usage", {}),
+            "finish_reason": finish,
+            "truncated": finish in ("length", "max_tokens"),
+            "reasoning": reasoning_text,
+            "reasoning_evidence": evidence,
+            "reasoning_control_violation": (
+                reasoning["mode"] == "off" and evidence == "true"),
+            "system_fingerprint": data.get("system_fingerprint")}
+
+
+def dispatch_icl(args, messages, sampling, reasoning, dry_text=None,
+                 max_attempts=6):
+    """Retry transport failures only; never retry a returned model answer."""
+    if args.provider == "dry-run":
+        return {"text": dry_text, "usage": {}, "finish_reason": "dry_run",
+                "truncated": False, "reasoning": None,
+                "reasoning_evidence": "unknown",
+                "reasoning_control_violation": False,
+                "system_fingerprint": None, "network_retries": []}
+    retries, last_error = [], None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = _call_icl_provider_once(
+                args, messages, sampling, reasoning)
+            result["network_retries"] = retries
+            return result
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429, 500, 502, 503, 504):
+                raise
+            retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            delay = (float(retry_after) if retry_after else
+                     min(30.0, 2 ** (attempt - 1)))
+            detail = f"HTTP {exc.code}"
+            last_error = exc
+        except (urllib.error.URLError, TimeoutError, ConnectionError,
+                json.JSONDecodeError, KeyError) as exc:
+            delay = min(30.0, 2 ** (attempt - 1))
+            detail = f"{type(exc).__name__}: {exc}"
+            last_error = exc
+        retries.append({"attempt": attempt, "error": detail,
+                        "delay_s": delay})
+        if attempt == max_attempts:
+            raise last_error
+        time.sleep(delay)
+    raise AssertionError("unreachable")
+
+
+def _route_target_diagnostic(parsed_route, parsed_beliefs, target, goal):
+    route = parsed_route.get("route", [])
+    uses = any((step["node"], step["action"]) == target for step in route)
+    out = {"uses_intervention_target": uses,
+           "conflicts_with_target_belief": False,
+           "target_belief_status": "not_used"}
+    if not uses:
+        return out
+    beliefs = {(p["node"], p["action"]): p
+               for p in parsed_beliefs.get("pairs", [])}
+    belief = beliefs.get(target)
+    if belief is None:
+        out.update({"conflicts_with_target_belief": None,
+                    "target_belief_status": "route_unresolvable"})
+        return out
+    index = next(i for i, step in enumerate(route)
+                 if (step["node"], step["action"]) == target)
+    route_destination = (route[index + 1]["node"]
+                         if index + 1 < len(route) else goal)
+    conflict = (not belief["available"] or belief["p_success"] is None
+                or belief["p_success"] <= 0
+                or belief["destination"] != route_destination)
+    out.update({"conflicts_with_target_belief": conflict,
+                "target_belief_status": ("route_inconsistent" if conflict
+                                         else "consistent")})
+    return out
+
+
+def score_icl_turn(record, parsed, queried, period, target, visible_stats,
+                   pre_beliefs=None):
+    beliefs = score_icl_beliefs(
+        record, parsed["beliefs"], queried, period, visible_stats)
+    route = (score_route_pre(record, parsed["route"])
+             if period == "pre" else
+             score_adaptation(record, parsed["route"]))
+    diagnostic = diagnose_route_beliefs(
+        parsed["route"], parsed["beliefs"], record["goal"])
+    result = {"beliefs": beliefs, "route": route,
+              "route_belief_diagnostic": diagnostic,
+              "route_target_diagnostic": _route_target_diagnostic(
+                  parsed["route"], parsed["beliefs"], target, record["goal"])}
+    components_ok = beliefs["status"] == "ok" and parsed["route"]["status"] == "ok"
+    correct = beliefs["accuracy"] == 1.0 and route.get("is_optimal") is True
+    if period == "post":
+        dl = score_icl_localization(record, parsed["detection"],
+                                    parsed["localization"])
+        preservation = score_control_preservation(
+            record, pre_beliefs or {}, beliefs, queried, target)
+        result.update({"detection_localization": dl,
+                       "control_preservation": preservation})
+        components_ok = components_ok and all(
+            parsed[name]["status"] == "ok"
+            for name in ("detection", "localization"))
+        localization_ok = (dl["localization_correct"]
+                           if dl["localization_applicable"] else
+                           dl["null_changed_pair_correct"])
+        correct = (correct and dl["detection_correct"] and localization_ok
+                   and preservation["all_four_controls_correct"])
+    result["well_formed"] = bool(parsed["well_formed"] and components_ok)
+    result["correct"] = bool(result["well_formed"] and correct)
+    result["correct_given_well_formed"] = (
+        result["correct"] if result["well_formed"] else None)
+    return result
+
+
+def icl_level_order(repeat):
+    """Rotate the three levels across repeated outputs."""
+    if repeat not in (1, 2, 3):
+        raise ValueError("repeat must be 1, 2, or 3")
+    shift = repeat - 1
+    return ICL_LEVELS[shift:] + ICL_LEVELS[:shift]
+
+
+def _git_dirty():
+    result = subprocess.run(["git", "status", "--short"],
+                            capture_output=True, text=True, check=True)
+    return bool(result.stdout.strip())
+
+
+def _icl_run_identity(sc, deterministic, args, level, repeat,
+                      sampling, reasoning, prompt_a, prompt_b, queried):
+    return {
+        "protocol": "icl_two_response_v1",
+        "scenario": {key: sc[key] for key in
+                     ("name", "condition", "seed", "matched", "k",
+                      "evidence_seed", "budget")},
+        "deterministic": deterministic,
+        "level": level,
+        "repeat": repeat,
+        "sampling": sampling,
+        "provider": args.provider,
+        "model": args.model,
+        "endpoint": endpoint_provenance(args),
+        "temperature": args.temperature,
+        "max_tokens": args.max_tokens,
+        "reasoning": reasoning,
+        "git_commit": git_head(),
+        "queried_pairs": queried,
+        "prompt_a_sha256": sha256_text(prompt_a),
+        "prompt_b_sha256": sha256_text(prompt_b),
+    }
+
+
+def _icl_run_id(identity):
+    suffix = _canonical_sha256(identity)[:16]
+    mode = "det" if identity["deterministic"] else "sto"
+    return (f"icl_two_response_v1_seed{identity['scenario']['seed']}_{mode}_"
+            f"r{identity['repeat']}_{identity['level']}_"
+            f"s{identity['sampling']['sampling_seed']}_{suffix}")
+
+
+def _load_icl_artifact(path, run_id, identity_sha, prompt_a, prompt_b):
+    try:
+        with open(path) as fh:
+            artifact = json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"cannot safely resume {path}: {exc}") from exc
+    if artifact.get("run_id") != run_id:
+        raise RuntimeError(f"cannot safely resume {path}: run_id mismatch")
+    if artifact.get("identity_sha256") != identity_sha:
+        raise RuntimeError(f"cannot safely resume {path}: configuration mismatch")
+    turns = artifact.get("turns", {})
+    expected = {"A": sha256_text(prompt_a), "B": sha256_text(prompt_b)}
+    if any(turns.get(name, {}).get("prompt_sha256") != digest
+           for name, digest in expected.items()):
+        raise RuntimeError(f"cannot safely resume {path}: prompt mismatch")
+    state = artifact.get("state")
+    required_raw = {"turn_a_raw_saved": ("A",),
+                    "turn_a_complete": ("A",),
+                    "turn_b_raw_saved": ("A", "B"),
+                    "completed": ("A", "B")}
+    if state not in ("initialized", *required_raw):
+        raise RuntimeError(f"cannot safely resume {path}: unknown state {state!r}")
+    for name in required_raw.get(state, ()):
+        turn = turns.get(name, {})
+        raw = turn.get("raw_response")
+        if not isinstance(raw, str) or turn.get("response_sha256") != sha256_text(raw):
+            raise RuntimeError(f"cannot safely resume {path}: invalid Turn {name} raw data")
+    return artifact
+
+
+def _save_raw_turn(artifact, path, name, response,
+                   previous_response_sha256=None):
+    turn = artifact["turns"][name]
+    raw = response["text"]
+    turn.update({
+        "raw_response": raw,
+        "response_sha256": sha256_text(raw),
+        "previous_response_sha256": previous_response_sha256,
+        "provider_usage": response["usage"],
+        "provider_finish_reason": response["finish_reason"],
+        "truncated": response["truncated"],
+        "network_retries": response["network_retries"],
+        "provider_reasoning": response["reasoning"],
+        "reasoning_evidence": response["reasoning_evidence"],
+        "reasoning_control_violation":
+            response["reasoning_control_violation"],
+        "system_fingerprint": response["system_fingerprint"],
+    })
+    artifact["state"] = f"turn_{name.lower()}_raw_saved"
+    artifact["persistence_events"].append({
+        "event": artifact["state"], "created_utc": _utc_now()})
+    _write_json_atomic(path, artifact)
+
+
+def _final_icl_metrics(turn_a, turn_b):
+    scored = (turn_a["scored"], turn_b["scored"])
+    well_formed = sum(row["well_formed"] for row in scored)
+    correct = sum(row["correct"] for row in scored)
+    def combined_mae(name, count_name):
+        rows = [row["beliefs"] for row in scored
+                if row["beliefs"][name] is not None]
+        count = sum(row[count_name] for row in rows)
+        total = sum(row[name] * row[count_name] for row in rows)
+        return round(total / count, 4) if count else None
+
+    post = turn_b["scored"]
+    preservation = post["control_preservation"]
+    return {
+        "responses": 2,
+        "well_formed_count": well_formed,
+        "well_formed_rate": well_formed / 2,
+        "correct_count_over_all_responses": correct,
+        "correctness_over_all_responses": correct / 2,
+        "correctness_given_well_formed": (
+            correct / well_formed if well_formed else None),
+        "detection_accuracy": int(
+            post["detection_localization"]["detection_correct"]),
+        "localization_applicable":
+            post["detection_localization"]["localization_applicable"],
+        "exact_localization":
+            post["detection_localization"]["localization_correct"],
+        "null_changed_pair_correct":
+            post["detection_localization"]["null_changed_pair_correct"],
+        "destination_accuracy": {
+            "turn_a": scored[0]["beliefs"]["destination_accuracy"],
+            "turn_b": scored[1]["beliefs"]["destination_accuracy"],
+        },
+        "n_destination_scored": {
+            "turn_a": scored[0]["beliefs"]["n_destination_scored"],
+            "turn_b": scored[1]["beliefs"]["n_destination_scored"],
+        },
+        "p_mae_visible": combined_mae(
+            "p_mae_visible", "n_p_visible_scored"),
+        "p_mae_truth": combined_mae("p_mae_truth", "n_p_truth_scored"),
+        "primary_self_consistency_preservation": preservation,
+        "secondary_truth_control_preservation": {
+            "mean": preservation["truth_mean_control_preservation"],
+            "per_pair": preservation["per_pair"],
+        },
+        "routes": {"turn_a": scored[0]["route"],
+                   "turn_b": scored[1]["route"]},
+    }
+
+
+def write_icl_summary(outdir, results):
+    """Write the accuracy-independent operational gate summary."""
+    rows = []
+    for result in results:
+        with open(result["path"]) as fh:
+            artifact = json.load(fh)
+        turns = artifact.get("turns", {})
+        response_names = [name for name in ("A", "B")
+                          if isinstance(turns.get(name, {}).get("raw_response"),
+                                        str)]
+        exactly_two = len(response_names) == 2
+        raw_and_hashes = exactly_two and all(
+            turns[name].get("response_sha256") ==
+            sha256_text(turns[name]["raw_response"])
+            for name in response_names)
+        linked = (exactly_two and
+                  turns["B"].get("previous_response_sha256") ==
+                  turns["A"].get("response_sha256"))
+        truncated = any(turns.get(name, {}).get("truncated") is True
+                        for name in ("A", "B"))
+        control_violation = any(
+            turns.get(name, {}).get("reasoning_control_violation") is True
+            for name in ("A", "B"))
+        completed = artifact.get("state") == "completed"
+        operational_pass = (completed and exactly_two and raw_and_hashes
+                            and linked and not truncated
+                            and not control_violation)
+        rows.append({
+            "repeat": artifact["repeat"], "level": artifact["level"],
+            "run_id": artifact["run_id"], "completed": completed,
+            "exactly_two_responses": exactly_two,
+            "raw_responses_and_hashes_saved": raw_and_hashes,
+            "turn_b_links_to_turn_a": linked,
+            "truncated": truncated,
+            "reasoning_control_violation": control_violation,
+            "operational_pass": operational_pass,
+        })
+    expected = len(ICL_LEVELS) * 3
+    expected_level_repeats = {
+        (repeat, level) for repeat in (1, 2, 3) for level in ICL_LEVELS}
+    observed_level_repeats = [
+        (row["repeat"], row["level"]) for row in rows]
+    complete_matrix = (len(observed_level_repeats) == expected
+                       and set(observed_level_repeats) == expected_level_repeats)
+    completed = sum(row["completed"] for row in rows)
+    summary = {
+        "protocol": "icl_two_response_v1", "expected_runs": expected,
+        "completed_runs": completed,
+        "every_level_repeat_present": complete_matrix,
+        "every_run_has_exactly_two_responses": (
+            len(rows) == expected and
+            all(row["exactly_two_responses"] for row in rows)),
+        "every_run_saved_raw_responses_and_hashes": (
+            len(rows) == expected and
+            all(row["raw_responses_and_hashes_saved"] for row in rows)),
+        "every_turn_b_links_to_turn_a": (
+            len(rows) == expected and
+            all(row["turn_b_links_to_turn_a"] for row in rows)),
+        "any_response_truncated": any(row["truncated"] for row in rows),
+        "any_reasoning_control_violation": any(
+            row["reasoning_control_violation"] for row in rows),
+        "runs": rows,
+    }
+    summary["operational_gate_pass"] = (
+        completed == expected and complete_matrix
+        and all(row["operational_pass"] for row in rows))
+    path = os.path.join(outdir, "summary.json")
+    existing = None
+    if os.path.exists(path):
+        try:
+            with open(path) as fh:
+                existing = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            pass
+    if existing != summary:
+        _write_json_atomic(path, summary)
+    return summary, path
+
+
+def run_icl_two_response_once(record, view, sc, deterministic, args, level,
+                              repeat, sampling_seed, outdir):
+    """Run or safely resume one level/repeat; exactly two response calls."""
+    queried = queried_pairs_for_icl(record, sc)
+    target = protocol_target_pair(record, sc)
+    prompt_a = build_icl_prompt(view, level, "pre", queried)
+    prompt_b = build_icl_prompt(view, level, "post", queried)
+    visible_pre = visible_transition_stats(
+        raw_visible_rows(view, "pre"), view["legal_actions_pre"])
+    visible_post = visible_transition_stats(
+        raw_visible_rows(view, "post"), view["legal_actions_post"],
+        view["legal_actions_pre"])
+    sampling = sampling_seed_provenance(args, sampling_seed)
+    reasoning = reasoning_provenance(args)
+    identity = _icl_run_identity(sc, deterministic, args, level, repeat,
+                                 sampling, reasoning, prompt_a, prompt_b,
+                                 queried)
+    identity_sha = _canonical_sha256(identity)
+    run_id = _icl_run_id(identity)
+    path = os.path.join(outdir, run_id + ".json")
+    if os.path.exists(path):
+        artifact = _load_icl_artifact(
+            path, run_id, identity_sha, prompt_a, prompt_b)
+        if artifact["state"] == "completed":
+            return artifact, path, True
+    else:
+        artifact = {
+            "run_id": run_id,
+            "identity_sha256": identity_sha,
+            "state": "initialized",
+            "created_utc": _utc_now(),
+            "protocol": "icl_two_response_v1",
+            "level": level,
+            "repeat": repeat,
+            "repeated_output": True,
+            "level_order": list(icl_level_order(repeat)),
+            "level_order_position": list(icl_level_order(repeat)).index(level) + 1,
+            "tag": args.tag,
+            "env": {"schema_version": SCHEMA_VERSION,
+                    "frozen_sha": FROZEN_SHA, "git_commit": git_head(),
+                    "git_dirty": _git_dirty()},
+            "scenario": identity["scenario"],
+            "instance": {"graph_seed": sc["seed"],
+                         "condition": sc["condition"],
+                         "deterministic": deterministic,
+                         "matched": sc["matched"],
+                         "evidence_seed": sc["evidence_seed"],
+                         "evidence_seed_effective":
+                             record["evidence"]["evidence_seed_effective"],
+                         "k_per_pair": sc["k"],
+                         "budget_per_pair": sc["budget"]},
+            "model": {"provider": args.provider, "model": args.model,
+                      **endpoint_provenance(args),
+                      "temperature": args.temperature,
+                      **sampling,
+                      "max_tokens": args.max_tokens,
+                      "timeout_s": args.timeout,
+                      "reasoning_provenance": reasoning},
+            "cost": _cost_provenance(args),
+            "visible_data": {
+                "prompt_view_sha256": _canonical_sha256(view),
+                "realized": view["realized"]},
+            "menus": {"pre": view["legal_actions_pre"],
+                      "post": view["legal_actions_post"]},
+            "queried_pairs": queried,
+            "evaluator_only": {
+                "intervention_target": {"node": target[0],
+                                        "action": target[1]}},
+            "turns": {
+                "A": {"prompt": prompt_a,
+                      "prompt_sha256": sha256_text(prompt_a)},
+                "B": {"prompt": prompt_b,
+                      "prompt_sha256": sha256_text(prompt_b)},
+            },
+            "persistence_events": [
+                {"event": "initialized", "created_utc": _utc_now()}],
+        }
+        _write_json_atomic(path, artifact)
+
+    if artifact["state"] == "initialized":
+        dry = _dry_run_icl_answer(record, queried, "pre")
+        response = dispatch_icl(args, [{"role": "user", "content": prompt_a}],
+                                sampling, reasoning, dry_text=dry)
+        _save_raw_turn(artifact, path, "A", response)
+
+    if artifact["state"] == "turn_a_raw_saved":
+        parsed = parse_icl_turn_a(artifact["turns"]["A"]["raw_response"])
+        artifact["turns"]["A"]["parsed"] = parsed
+        artifact["turns"]["A"]["scored"] = score_icl_turn(
+            record, parsed, queried, "pre", target, visible_pre)
+        artifact["state"] = "turn_a_complete"
+        artifact["persistence_events"].append(
+            {"event": "turn_a_complete", "created_utc": _utc_now()})
+        _write_json_atomic(path, artifact)
+
+    if artifact["state"] == "turn_a_complete":
+        raw_a = artifact["turns"]["A"]["raw_response"]
+        messages = [{"role": "user", "content": prompt_a},
+                    {"role": "assistant", "content": raw_a},
+                    {"role": "user", "content": prompt_b}]
+        dry = _dry_run_icl_answer(record, queried, "post")
+        response = dispatch_icl(args, messages, sampling, reasoning,
+                                dry_text=dry)
+        _save_raw_turn(artifact, path, "B", response,
+                       artifact["turns"]["A"]["response_sha256"])
+
+    if artifact["state"] == "turn_b_raw_saved":
+        parsed = parse_icl_turn_b(artifact["turns"]["B"]["raw_response"])
+        artifact["turns"]["B"]["parsed"] = parsed
+        artifact["turns"]["B"]["scored"] = score_icl_turn(
+            record, parsed, queried, "post", target, visible_post,
+            pre_beliefs=artifact["turns"]["A"]["scored"]["beliefs"])
+        artifact["metrics"] = _final_icl_metrics(
+            artifact["turns"]["A"], artifact["turns"]["B"])
+        artifact["conversation"] = [
+            {"role": "user", "content": prompt_a},
+            {"role": "assistant",
+             "content": artifact["turns"]["A"]["raw_response"]},
+            {"role": "user", "content": prompt_b},
+            {"role": "assistant",
+             "content": artifact["turns"]["B"]["raw_response"]},
+        ]
+        artifact["state"] = "completed"
+        artifact["completed_utc"] = _utc_now()
+        artifact["persistence_events"].append(
+            {"event": "completed", "created_utc": artifact["completed_utc"]})
+        _write_json_atomic(path, artifact)
+    return artifact, path, False
+
+
+def run_icl_two_response_suite(sc, deterministic, args, outdir):
+    if args.pilot_type != "passive":
+        raise ValueError("icl_two_response_v1 is a passive protocol")
+    if args.repeats != 3 or len(args.sampling_seeds) != 3:
+        raise ValueError("icl_two_response_v1 requires three repeats and three sampling seeds")
+    if not 0.0 <= args.temperature <= 2.0:
+        raise ValueError("temperature must be between 0 and 2")
+    if args.provider != "dry-run" and _git_dirty():
+        raise ValueError("real protocol runs require a clean committed worktree")
+    reasoning_provenance(args)
+    for sampling_seed in args.sampling_seeds:
+        sampling_seed_provenance(args, sampling_seed)
+    if deterministic:
+        gate = deterministic_gate(sc["seed"])
+        if not gate["eligible"]:
+            raise ValueError(f"seed {sc['seed']} fails deterministic gate: "
+                             f"{', '.join(gate['reasons'])}")
+    record = build_record(sc, deterministic)
+    view = prompt_view(record, rendering="F2_shuffled",
+                       periods=("pre", "post"),
+                       budget_per_pair=sc["budget"], budget_seed=0)
+    results = []
+    for repeat, sampling_seed in enumerate(args.sampling_seeds, start=1):
+        for level in icl_level_order(repeat):
+            artifact, path, skipped = run_icl_two_response_once(
+                record, view, sc, deterministic, args, level, repeat,
+                sampling_seed, outdir)
+            outcome = "already completed; unchanged" if skipped else \
+                artifact["state"]
+            print(f"{artifact['run_id']}: {outcome} -> {path}")
+            results.append({"run_id": artifact["run_id"], "path": path,
+                            "skipped": skipped})
+    summary, path = write_icl_summary(outdir, results)
+    print(f"operational gate: "
+          f"{'PASS' if summary['operational_gate_pass'] else 'FAIL'} -> {path}")
+    return results
+
+
 # ------------------------------------------------------------------- pilot
 
 
@@ -933,6 +1915,10 @@ def run_pilot_active(sc, deterministic, args):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--protocol", default="legacy", choices=list(PROTOCOLS),
+                    help="legacy keeps existing behavior; "
+                         "icl_two_response_v1 runs the additive 3-level "
+                         "two-response protocol")
     # what is asked
     ap.add_argument("--scenario", default="seed7_silent_break")
     ap.add_argument("--list-scenarios", action="store_true")
@@ -969,6 +1955,28 @@ def main():
                     default="https://YOUR-RESOURCE.openai.azure.com")
     ap.add_argument("--api-version", default="2024-06-01")
     ap.add_argument("--max-tokens", type=int, default=4096)
+    ap.add_argument("--temperature", type=float, default=0.0,
+                    help="icl_two_response_v1 only; legacy remains at 0")
+    ap.add_argument("--sampling-seeds", type=int, nargs="+", default=[0, 1, 2],
+                    help="three matched provider sampling seeds for the "
+                         "three repeated outputs")
+    ap.add_argument("--sampling-seed-support",
+                    choices=["auto", "supported", "unsupported"],
+                    default="auto",
+                    help="seed capability for the selected endpoint; auto "
+                         "uses safe provider defaults")
+    ap.add_argument("--repeats", type=int, default=3,
+                    help="icl_two_response_v1 uses exactly three")
+    ap.add_argument("--reasoning-mode", choices=["unspecified", "off", "on"],
+                    default="unspecified",
+                    help="reasoning condition; real off/on runs require an "
+                         "explicit provider-specific control")
+    ap.add_argument("--reasoning-control-json", default=None,
+                    help="operator-supplied provider request fields for a "
+                         "real off/on run, as one JSON object")
+    ap.add_argument("--reasoning-control-source", default=None,
+                    help="short source describing how that control was "
+                         "verified for the selected provider and model")
     ap.add_argument("--timeout", type=int, default=120,
                     help="per-request seconds; local endpoints need ~900")
     ap.add_argument("--out", default="pilot_artifacts")
@@ -1022,6 +2030,10 @@ def main():
         raise SystemExit(f"scenario {sc['name']} is only defined for "
                          f"{'/'.join(sc['variants'])}; --mode {args.mode} "
                          f"leaves nothing to run")
+    if args.protocol == "icl_two_response_v1":
+        for det in [v == "det" for v in todo]:
+            run_icl_two_response_suite(sc, det, args, outdir)
+        return
     for det in [v == "det" for v in todo]:
         if args.pilot_type == "active":
             art = run_pilot_active(sc, det, args)

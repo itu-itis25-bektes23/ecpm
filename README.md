@@ -16,6 +16,7 @@ own judgment.
   `prompt_view()`, oracle
 - `ecpm_parser.py`: frozen parser and probe scoring (INTERFACE.md §7)
 - `test_resource_mdp.py`, `test_ecpm_parser.py`: tests, stdlib only
+- `test_run_pilot.py`: protocol, prompt, persistence, and resume tests
 - `parser_fixtures.json`: format-level parser cases
 - `adversarial_review.py`, `ecpm_reply_verification.py`: review tooling
   used for the freeze sign-off
@@ -111,6 +112,53 @@ python3 run_pilot.py --scenario seed7_degradation --turn-mode two_turn
 
 Artifacts from before v2.2 remain valid for the single-turn baseline;
 `irrelevant` and `degradation` instances must be regenerated.
+
+## ICL two-response protocol
+
+`--protocol icl_two_response_v1` adds a passive, two-response comparison
+while `legacy` remains the default. Each run uses one of three prompt levels:
+an empirical table derived from visible observations, explained shuffled logs,
+or minimally described shuffled logs. The latter two contain identical rows in
+identical order.
+
+Turn A shows Period A and requests five transition beliefs plus a route. Turn B
+keeps that exchange in context, reveals Period B as a system that may or may
+not differ, and requests detection, nullable localization, five updated
+beliefs, and a route. The five pairs are the intervention target and four
+deterministically selected unchanged controls; prompts do not label their
+roles. Under `no_change`, the target comes from the matched silent-break
+sibling.
+
+The deterministic gate searches seeds 1–1000 for a matched silent-break pair
+with unique pre/post optima and a changed optimal route. Its first eligible
+seed is 8. A complete dry gate run is:
+
+```bash
+python3 -B run_pilot.py \
+  --protocol icl_two_response_v1 \
+  --scenario icl_det_gate_seed8 \
+  --mode det \
+  --repeats 3 \
+  --sampling-seeds 0 1 2 \
+  --reasoning-mode off \
+  --provider dry-run \
+  --tag icl_gate_det_off_dry
+```
+
+This writes one resumable JSON artifact per level and repeated output, plus an
+accuracy-independent operational `summary.json`, under
+`pilot_artifacts/icl_gate_det_off_dry/`. Completed run IDs are not overwritten.
+Responses are unconstrained text and are parsed only after their raw form has
+been persisted.
+
+Provider sampling seeds are sent when supported. Unsupported providers still
+run and record `sampling_seed_status: unsupported`; their results are repeated
+outputs, not reproducible samples. Real `off` or `on` runs require an explicit
+provider-specific object through `--reasoning-control-json` and a short
+verification source through `--reasoning-control-source`. The runner records
+the exact control but does not establish its provider-specific semantics. With
+`--reasoning-mode unspecified`, no reasoning-control field is sent. Dry runs
+record that neither sampling nor reasoning controls were applied.
 
 ## Pilot status (23 Aug 2026)
 

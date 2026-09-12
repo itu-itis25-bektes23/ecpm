@@ -228,3 +228,55 @@ Audit: `python3 ecpm_pre_freeze_audit.py` (Pavlos, round 1),
 `python3 adversarial_review.py [seeds]` (Pavlos, round 2; committed with
 v2.1.1 adaptations), and `python3 ecpm_reply_verification.py`
 (regression numbers; against v2.0 it reproduced the review findings).
+
+## 9. Additive ICL two-response protocol
+
+`run_pilot.py --protocol icl_two_response_v1` is additive. It does not alter
+the schema 2.1 single-probe parsers, scorers, prompts, or active-exploration
+path.
+
+Each run has exactly two responses in one conversation. Turn A contains only
+Period A and returns `pairs` plus `route`. Turn B retains that exchange,
+reveals only Period B with the statement that it may or may not differ, and
+returns `changed`, nullable `changed_pair`, `pairs`, and `route`. Both `pairs`
+arrays must cover the same ordered five queried pairs exactly once.
+
+Turn A pair fields are `node`, `action`, `available`, `destination`, and
+`p_success`. Turn B adds the boolean `changed`. An unavailable action requires
+`available=false`, `destination=null`, and `p_success=null`; a listed silent
+break remains available with probability zero. `changed_pair` is null when
+`changed` is false. The prompt never identifies pair roles or states that a
+change occurred.
+
+The additive parsers `parse_icl_turn_a` and `parse_icl_turn_b` parse beliefs
+and routes independently. Belief statuses include `unknown_pair`,
+`duplicate_pair`, `missing_pair`, `invalid_unavailable`, and `out_of_range`.
+Route truth scoring reuses `score_route_pre` and `score_adaptation` unchanged.
+`route_inconsistent` and `route_unresolvable` are diagnostic comparisons with
+reported beliefs and do not alter route parsing or truth-side grading.
+
+Reported metrics include response well-formedness, correctness over all
+responses, correctness conditional on well-formedness, detection, nullable
+exact localization, availability accuracy, destination accuracy over truly
+available pairs, probability MAE against both visible frequencies and
+evaluator truth, primary self-consistency preservation for the four controls,
+secondary truth-based preservation, and the existing route
+validity/cost/regret/optimality fields. Period B also records
+intervention-target route use and conflict with the reported target belief.
+
+Artifacts are keyed by a stable `run_id`. Raw responses are persisted before
+parsing; prompts and responses carry SHA-256 hashes, Turn B links to the Turn A
+response hash, and provider usage, finish reason, truncation, sampling,
+reasoning provenance, endpoint/API fingerprint, menus, queried pairs, protocol,
+level, and commit are recorded. A deterministic `summary.json` reports the
+accuracy-independent operational gate, including completion, response count,
+hash linkage, truncation, and reasoning-control violations. Completed runs are
+left unchanged on resume; inconsistent partial runs stop with an error.
+
+Sampling seeds are sent only when the endpoint is declared to support them;
+otherwise artifacts record `sampling_seed_status: unsupported` and identify
+the calls as repeated outputs. A real `off` or `on` reasoning condition requires
+an explicit provider-specific request object and a short operator-supplied
+verification source. The exact control is recorded without claiming that the
+runner verifies provider semantics. `unspecified` sends no reasoning control,
+and dry runs record that no control was applied or verified.
