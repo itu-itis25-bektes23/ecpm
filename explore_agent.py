@@ -319,7 +319,7 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
     assert (act_fn is None) != (node_policy is None), \
         "give exactly one of act_fn, node_policy"
     menu_cache = legal_actions(mdp, labels)   # node -> legal 'aK' labels, computed once
-    inv = invert_labels(labels)               # (node, 'aK') -> destination node
+    inv = invert_labels(labels, mdp)          # (node, "aK") -> destination node in THIS world
     prev = {"label": None, "target": None}    # last action taken, used to detect success/failure next call
     first_call = [True]                       # whether initial_note still needs to be shown
 
