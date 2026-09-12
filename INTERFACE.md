@@ -275,8 +275,10 @@ left unchanged on resume; inconsistent partial runs stop with an error.
 
 Sampling seeds are sent only when the endpoint is declared to support them;
 otherwise artifacts record `sampling_seed_status: unsupported` and identify
-the calls as repeated outputs. A real `off` or `on` reasoning condition requires
-an explicit provider-specific request object and a short operator-supplied
-verification source. The exact control is recorded without claiming that the
-runner verifies provider semantics. `unspecified` sends no reasoning control,
-and dry runs record that no control was applied or verified.
+the calls as repeated outputs. Optional `top_p` and `top_k` values are sent only
+when configured; both values are recorded in artifacts and run identity, with
+`null` representing the provider default. A real `off` or `on` reasoning
+condition requires an explicit provider-specific request object and a short
+operator-supplied verification source. The exact control is recorded without
+claiming that the runner verifies provider semantics. `unspecified` sends no
+reasoning control, and dry runs record that no control was applied or verified.
