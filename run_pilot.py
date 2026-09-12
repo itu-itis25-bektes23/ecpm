@@ -225,7 +225,9 @@ ASKS = {
         'exactly one JSON object of the form {{"route": [{{"node": "...", '
         '"action": "..."}}, ...]}}: at most 32 steps, the first step\'s '
         'node must be {start}, each next step\'s node must be where the '
-        'previous action leads, and the route must end at {goal}. No other '
+        'previous action leads, and the destination of the last action '
+        'must be {goal}. Do NOT include a step at {goal} itself. '
+        'No other '
         'text.'),
     "belief_pre": (
         'For EACH of the following (node, action) pairs, state what you '
@@ -265,7 +267,8 @@ ASKS = {
         '{{"route": [{{"node": "...", "action": "..."}}, ...]}}: at most '
         '32 steps, the first step\'s node must be {start}, each next '
         'step\'s node must be where the previous action leads, and the '
-        'route must end at {goal}. No other text.'),
+        'destination of the last action must be {goal}. Do NOT include a '
+        'step at {goal} itself. No other text.'),
 }
 
 # Same 4 probes, worded for the active-exploration pilot: the model refers
@@ -295,7 +298,8 @@ ASKS_ACTIVE = {
         'JSON object of the form {{"route": [{{"node": "...", "action": '
         '"..."}}, ...]}}: at most 32 steps, the first step\'s node must '
         'be {start}, each next step\'s node must be where the previous '
-        'action leads, and the route must end at {goal}. No other '
+        'action leads, and the destination of the last action must be '
+        '{goal}. Do NOT include a step at {goal} itself. No other '
         'text.'),
 }
 
@@ -997,6 +1001,14 @@ def main():
                          "only: greater than 0 enables Claude Extended "
                          "Thinking with this token budget (requires "
                          "--max-tokens greater than this value)")
+    ap.add_argument("--samples", type=int, default=1,
+                    help="independent samples per instance (default 1). "
+                         "Model stochasticity is otherwise recorded as "
+                         "'the model failed', and no later rerun recovers "
+                         "samples that were never taken. Each sample "
+                         "writes a _sNN suffixed artifact; the instance, "
+                         "seeds and prompts are identical across samples, "
+                         "only the model's sampling differs.")
     args = ap.parse_args()
 
     if args.list_scenarios:
@@ -1022,32 +1034,44 @@ def main():
         raise SystemExit(f"scenario {sc['name']} is only defined for "
                          f"{'/'.join(sc['variants'])}; --mode {args.mode} "
                          f"leaves nothing to run")
+    if args.samples < 1:
+        raise SystemExit("--samples must be at least 1")
+    if args.samples > 1 and args.provider == "dry-run":
+        print("note: --samples > 1 with the dry-run provider repeats a "
+              "deterministic answerer, so every sample is identical; it "
+              "exercises the plumbing only.\n")
+
     for det in [v == "det" for v in todo]:
-        if args.pilot_type == "active":
-            art = run_pilot_active(sc, det, args)
-        else:
-            art = run_pilot(sc, det, args)
-        parts = ["pilot_deterministic" if det else "pilot_stochastic"]
-        if args.pilot_type == "active":
-            parts.append("active")
-        elif args.turn_mode != "single":
-            parts.append(args.turn_mode)
-        if args.provider == "dry-run":
-            parts.append("dryrun")
-        path = os.path.join(outdir, "_".join(parts) + ".json")
-        with open(path, "w") as fh:
-            json.dump(art, fh, indent=2)
-        mf = art.get("metrics_final")
-        if mf is None:
-            em = art.get("explore", {}).get("metrics", {})
-            print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
-                  f"opt_rate m0={em.get('optimal_action_rate_m0'):.2f} "
-                  f"m1={em.get('optimal_action_rate_m1'):.2f} "
-                  f"lag={em.get('adaptation_lag_steps')}\n")
-        else:
-            print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
-                  f"final={mf['per_phase_score']} "
-                  f"mean={mf['score_mean']}\n")
+        for sample in range(1, args.samples + 1):
+            if args.pilot_type == "active":
+                art = run_pilot_active(sc, det, args)
+            else:
+                art = run_pilot(sc, det, args)
+            art["sample"] = sample
+            art["samples_total"] = args.samples
+            parts = ["pilot_deterministic" if det else "pilot_stochastic"]
+            if args.pilot_type == "active":
+                parts.append("active")
+            elif args.turn_mode != "single":
+                parts.append(args.turn_mode)
+            if args.provider == "dry-run":
+                parts.append("dryrun")
+            if args.samples > 1:
+                parts.append(f"s{sample:02d}")
+            path = os.path.join(outdir, "_".join(parts) + ".json")
+            with open(path, "w") as fh:
+                json.dump(art, fh, indent=2)
+            mf = art.get("metrics_final")
+            if mf is None:
+                em = art.get("explore", {}).get("metrics", {})
+                print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
+                      f"opt_rate m0={em.get('optimal_action_rate_m0'):.2f} "
+                      f"m1={em.get('optimal_action_rate_m1'):.2f} "
+                      f"lag={em.get('adaptation_lag_steps')}\n")
+            else:
+                print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
+                      f"final={mf['per_phase_score']} "
+                      f"mean={mf['score_mean']}\n")
 
 
 if __name__ == "__main__":
