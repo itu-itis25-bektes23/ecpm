@@ -17,8 +17,6 @@ Covers:
     identically
 """
 
-import json
-
 from ecpm_parser import extract_json_object
 from explore_agent import (ExploreConfig, LiveStep, dry_run_policy,
                            extract_last_json_object, parse_step_action,

@@ -1,4 +1,4 @@
-# Security policy
+﻿# Security policy
 
 ## What this repository is
 
@@ -37,20 +37,29 @@ not evaluate model output as code. If that changes, it is worth a look.
 A model answering badly. A scorer disagreeing with your expectation. A run
 costing more than expected. Those are issues or pull requests.
 
-## What is switched on
+## Scanning
 
-| feature | state | note |
-| --- | --- | --- |
-| Secret scanning | on | backs up the credential rule above: a pushed key is flagged |
-| Security advisories | on | |
-| Code scanning | on | CodeQL, `.github/workflows/codeql.yml`, weekly and on pull requests |
-| Dependabot | actions only | `.github/dependabot.yml`. The tree is stdlib only, so the workflows are the only dependencies |
-| Private vulnerability reporting | see below | |
+None. Code scanning, Scorecard and bandit were all removed on 2026-09-13.
 
-Private vulnerability reporting is a repository setting rather than a file. If
-it is enabled, use it in preference to email, because it opens a private
-thread on the repository instead of relying on one inbox. If it is not, email
-is the route.
+They were switched on, produced about 2,600 alerts, and none of those were
+defects in this code. The two that were real, a substring URL match in a test
+stub and a handful of empty except blocks, were found and fixed by reading the
+code rather than by the tools. The rest was a linter suite reporting `assert`
+statements in an assert-driven test suite, scanners for languages this
+repository does not contain, and supply-chain criteria written for widely
+depended-upon open source.
+
+The cost was not the alerts. It was thousands of Actions minutes, a flooded
+inbox for everyone watching the repository, and a Security tab nobody could
+read, which is worse than no Security tab because it hides anything real.
+
+Secret scanning stays on, because it is free, silent until it fires, and
+guards the one thing here that genuinely matters: an API key reaching an
+artifact or a commit.
+
+The six test suites remain the real check on correctness, and
+`test_ecpm_parser.py` keeps the parser fuzz test, which was the one genuinely
+useful thing to come out of the exercise.
 
 ## Supported versions
 

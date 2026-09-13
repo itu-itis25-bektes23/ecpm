@@ -16,8 +16,19 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege at the top, widened per job only where a job needs more.
+# Without this the workflow inherits the repository default, which can be
+# write-all. Scorecard's Token-Permissions check flags exactly that.
+permissions:
+  contents: read
+
 jobs:
   suites:
+    # Explicit name so the reported check is stable. GitHub names a
+    # check after the job, and with a matrix it becomes 'suites (3.11)'.
+    # A ruleset requiring 'tests' would wait forever for a check that
+    # nothing reports.
+    name: tests ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -25,8 +36,8 @@ jobs:
         # 3.11 is what the team runs locally; 3.12 catches deprecations early.
         python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: ${{ matrix.python-version }}
 

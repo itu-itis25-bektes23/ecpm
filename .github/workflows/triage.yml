@@ -19,12 +19,18 @@ on:
   pull_request_target:
     types: [opened, reopened]
 
+# Least privilege at the top, widened per job only where a job needs more.
+# Without this the workflow inherits the repository default, which can be
+# write-all. Scorecard's Token-Permissions check flags exactly that.
+permissions:
+  contents: read
+
 jobs:
   add:
     if: vars.PROJECT_URL != ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/add-to-project@v1
+      - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
         with:
           project-url: ${{ vars.PROJECT_URL }}
           github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
