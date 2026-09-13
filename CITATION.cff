@@ -23,8 +23,8 @@ authors:
 
   - given-names: Christian
     family-names: Henne
-    # affiliation: YOUR INSTITUTION
-    # email: YOUR EMAIL
+    affiliation: Technical University Munich
+    email: christian.henne@tum.de
     # orcid: https://orcid.org/0000-0000-0000-0000
 
   - given-names: Pavlos
