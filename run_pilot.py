@@ -1461,10 +1461,6 @@ def run_pilot(sc, deterministic, args):
         messages = messages + [{"role": "user", "content": user_msg}]
 
         t0 = time.time()
-        # The active pilot has always called providers through with_retry;
-        # this passive path called dispatch() directly, so a dropped
-        # connection killed the whole run instead of backing off. Azure
-        # closed 6 of 23 connections in one session on 2026-09-13.
         raw, usage = with_retry(dispatch, args, record, probe, queried,
                                 messages)
         latency = round(time.time() - t0, 3)
