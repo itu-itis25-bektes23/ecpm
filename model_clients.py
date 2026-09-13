@@ -23,11 +23,6 @@ _ANTHROPIC_NO_SAMPLING = {
 class TransientLLMError(Exception):
     """Empty/unparseable LLM response body, treated as retryable by
     run_pilot.with_retry, same spirit as a network error.
-
-    Moved above the passive clients so they can raise it too. Reasoning
-    models make empty bodies common: gpt-5-mini spent 960 reasoning
-    tokens and emitted no content on 2026-09-13, which the parser scored
-    as a malformed answer, indistinguishable from a wrong one.
     """
 
 
