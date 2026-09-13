@@ -6,29 +6,37 @@ import json
 import os
 import tempfile
 from types import SimpleNamespace
+from urllib.parse import urlparse
 
 import run_pilot
 from ecpm_parser import (diagnose_route_beliefs, parse_icl_turn_a,
                          parse_icl_turn_b, score_icl_beliefs,
                          score_icl_localization)
 from resource_mdp import prompt_view
-from run_pilot import (COST_STATUSES, ICL_LEVELS, SCENARIO_DEFAULTS, SCENARIOS,
-                       _call_icl_provider_once, _cost_provenance,
-                       _dry_run_icl_answer, _icl_run_id, _icl_run_identity,
-                       _reasoning_evidence, build_icl_prompt, build_record,
-                       context_block, context_block_a, deterministic_gate,
-                       empirical_table_from_visible, endpoint_provenance,
-                       first_deterministic_gate_seed, icl_level_order,
-                       protocol_target_pair, queried_pairs_for,
-                       queried_pairs_for_icl, raw_visible_rows,
-                       reasoning_provenance, sampling_seed_provenance,
-                       reveal_block_b, run_icl_two_response_once,
-                       run_icl_two_response_suite, score_any,
-                       visible_transition_stats, write_icl_summary)
+
+
+EXPECTED_ICL_BELIEF_DEFINITION = (
+    "destination is the non-current node reached on a successful attempt. "
+    "A destination is always different from the current node. Count an "
+    "observation as a success exactly when its next node differs from its "
+    "current node. p_success is the fraction of visible observations counted "
+    "as successes. If an available action has no successful observations in "
+    "the current period, keep its most recent earlier destination estimate if "
+    "one exists; otherwise use null."
+)
+
+
+def assert_icl_belief_definition(prompts):
+    assert run_pilot.ICL_BELIEF_DEFINITIONS == \
+        EXPECTED_ICL_BELIEF_DEFINITION
+    for level in run_pilot.ICL_LEVELS:
+        for period in ("pre", "post"):
+            assert prompts[level][period].count(
+                EXPECTED_ICL_BELIEF_DEFINITION) == 1
 
 
 def scenario(seed=8, condition="silent_break", k=10, budget=10):
-    sc = dict(SCENARIO_DEFAULTS)
+    sc = dict(run_pilot.SCENARIO_DEFAULTS)
     sc.update({"name": "icl_det_gate_seed8", "seed": seed,
                "condition": condition, "k": k, "budget": budget})
     if condition == "no_change":
@@ -50,7 +58,7 @@ def args(tag="test"):
 
 def record_and_view(sc=None):
     sc = sc or scenario()
-    record = build_record(sc, deterministic=True)
+    record = run_pilot.build_record(sc, deterministic=True)
     view = prompt_view(record, rendering="F2_shuffled",
                        periods=("pre", "post"),
                        budget_per_pair=sc["budget"], budget_seed=0)
@@ -58,10 +66,10 @@ def record_and_view(sc=None):
 
 
 def test_legacy_prompt_and_scorer_regression():
-    sc = dict(SCENARIO_DEFAULTS)
-    sc.update(SCENARIOS["seed7_silent_break"])
+    sc = dict(run_pilot.SCENARIO_DEFAULTS)
+    sc.update(run_pilot.SCENARIOS["seed7_silent_break"])
     sc["name"] = "seed7_silent_break"
-    record = build_record(sc, deterministic=True)
+    record = run_pilot.build_record(sc, deterministic=True)
     view = prompt_view(record, rendering=sc["rendering"],
                        periods=("pre", "post"),
                        budget_per_pair=sc["budget"])
@@ -71,11 +79,11 @@ def test_legacy_prompt_and_scorer_regression():
         "42b4b00a315944b96f750a75abd21e792fffde210e957014d854bfda5fb01bf8",
     )
     actual = tuple(hashlib.sha256(text.encode()).hexdigest() for text in
-                   (context_block(view), context_block_a(view),
-                    reveal_block_b(view)))
+                   (run_pilot.context_block(view), run_pilot.context_block_a(view),
+                    run_pilot.reveal_block_b(view)))
     assert actual == expected
-    queried = queried_pairs_for(record, sc)
-    scored = score_any(record, "adaptation",
+    queried = run_pilot.queried_pairs_for(record, sc)
+    scored = run_pilot.score_any(record, "adaptation",
                        run_pilot.dry_run_answer(record, "adaptation", queried),
                        queried)["scored"]
     assert scored["status"] == "valid_finite"
@@ -85,20 +93,18 @@ def test_legacy_prompt_and_scorer_regression():
 
 def test_levels_share_visible_evidence_and_raw_order():
     sc, record, view = record_and_view()
-    queried = queried_pairs_for_icl(record, sc)
-    prompts = {level: {period: build_icl_prompt(
+    queried = run_pilot.queried_pairs_for_icl(record, sc)
+    prompts = {level: {period: run_pilot.build_icl_prompt(
         view, level, period, queried) for period in ("pre", "post")}
-        for level in ICL_LEVELS}
+        for level in run_pilot.ICL_LEVELS}
+    assert_icl_belief_definition(prompts)
     for period in ("pre", "post"):
-        raw = "\n".join(raw_visible_rows(view, period))
+        raw = "\n".join(run_pilot.raw_visible_rows(view, period))
         assert raw in prompts["explained_logs"][period]
         assert raw in prompts["minimal_logs"][period]
     assert "Each action has one destination" in prompts["empirical_table"]["pre"]
     assert "Each action has one destination" in prompts["explained_logs"]["pre"]
-    for level in ICL_LEVELS:
-        assert "destination is the node the action is estimated to reach" in \
-            prompts[level]["pre"]
-        assert "p_success is the estimated probability" in prompts[level]["pre"]
+    for level in run_pilot.ICL_LEVELS:
         for period in ("pre", "post"):
             assert ("A route lists actions only. Its first item must be at "
                     "Start. The successful destination of its final action "
@@ -106,16 +112,37 @@ def test_levels_share_visible_evidence_and_raw_order():
                     "arrival.") in prompts[level][period]
             assert "finish at Goal" not in prompts[level][period]
     minimal = prompts["minimal_logs"]["pre"]
-    assert "failed attempt" not in minimal and "retried" not in minimal
+    assert "failed attempt" not in minimal
+    assert "retried" not in minimal
     print("PASS all levels share evidence; Levels 2/3 have byte-identical rows")
+
+
+def test_icl_belief_definition_guard_catches_injected_defect():
+    original = run_pilot.ICL_BELIEF_DEFINITIONS
+    try:
+        run_pilot.ICL_BELIEF_DEFINITIONS = "damaged definition"
+        sc, record, view = record_and_view()
+        queried = run_pilot.queried_pairs_for_icl(record, sc)
+        prompts = {level: {period: run_pilot.build_icl_prompt(
+            view, level, period, queried) for period in ("pre", "post")}
+            for level in run_pilot.ICL_LEVELS}
+        try:
+            assert_icl_belief_definition(prompts)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError("damaged ICL belief definition was accepted")
+    finally:
+        run_pilot.ICL_BELIEF_DEFINITIONS = original
+    print("PASS injected ICL belief-definition defect is detected")
 
 
 def test_icl_route_terminal_action_contract():
     sc, record, _ = record_and_view()
-    queried = queried_pairs_for_icl(record, sc)
+    queried = run_pilot.queried_pairs_for_icl(record, sc)
     for period, parser in (("pre", parse_icl_turn_a),
                            ("post", parse_icl_turn_b)):
-        payload = json.loads(_dry_run_icl_answer(record, queried, period))
+        payload = json.loads(run_pilot._dry_run_icl_answer(record, queried, period))
         parsed = parser(json.dumps(payload))
         route = parsed["route"]["route"]
         final = route[-1]
@@ -133,20 +160,20 @@ def test_empirical_table_uses_visible_inputs_only():
     rows = ["[A, a1, B]", "[A, a1, A]", "[A, a1, B]"]
     current = {"A": ["a1"], "B": []}
     prior = {"A": ["a1", "a2"], "B": []}
-    table = empirical_table_from_visible(rows, current, prior)
+    table = run_pilot.empirical_table_from_visible(rows, current, prior)
     assert '3 | {"A": 1, "B": 2} | {"A": 0.3333, "B": 0.6667}' in table
     assert "A | a2 | false | 0 | {} | {}" in table
     assert "oracle" not in table and "true_p" not in table
-    stats = visible_transition_stats(rows, current, prior)
+    stats = run_pilot.visible_transition_stats(rows, current, prior)
     assert stats[("A", "a1")]["p_success"] == 2 / 3
     print("PASS empirical table is derived only from visible rows and menus")
 
 
 def test_period_boundary_and_prompt_neutrality():
     sc, record, view = record_and_view()
-    queried = queried_pairs_for_icl(record, sc)
-    first = build_icl_prompt(view, "explained_logs", "pre", queried)
-    later = build_icl_prompt(view, "explained_logs", "post", queried)
+    queried = run_pilot.queried_pairs_for_icl(record, sc)
+    first = run_pilot.build_icl_prompt(view, "explained_logs", "pre", queried)
+    later = run_pilot.build_icl_prompt(view, "explained_logs", "post", queried)
     assert "Period B" not in first
     assert "may or may not differ" in later
     for forbidden in ("change occurred", "has changed", "target", "control",
@@ -155,7 +182,7 @@ def test_period_boundary_and_prompt_neutrality():
     sentinel = json.loads(json.dumps(view))
     sentinel["evidence"]["post"] = "(SECRET, a9, SECRET)"
     sentinel["legal_actions_post"] = {"SECRET": ["a9"]}
-    assert "SECRET" not in build_icl_prompt(
+    assert "SECRET" not in run_pilot.build_icl_prompt(
         sentinel, "explained_logs", "pre", queried)
     assert len(queried) == 5 and len({(q["node"], q["action"])
                                      for q in queried}) == 5
@@ -164,17 +191,19 @@ def test_period_boundary_and_prompt_neutrality():
 
 def test_five_pairs_stable_and_no_change_counterfactual():
     sc, record, _ = record_and_view()
-    expected = queried_pairs_for_icl(record, sc)
+    expected = run_pilot.queried_pairs_for_icl(record, sc)
     assert len(expected) == 5
-    for _repeat in range(3):
-        for _level in ICL_LEVELS:
-            assert queried_pairs_for_icl(record, sc) == expected
-    target = protocol_target_pair(record, sc)
+    # Selection is level-independent by construction: run_pilot.queried_pairs_for_icl
+    # takes (record, sc) and no level. Repeating it checks determinism, which
+    # is the part that could regress if hidden state crept in.
+    for _ in range(3):
+        assert run_pilot.queried_pairs_for_icl(record, sc) == expected
+    target = run_pilot.protocol_target_pair(record, sc)
     assert sum((q["node"], q["action"]) == target for q in expected) == 1
 
     nc_sc, nc_record, _ = record_and_view(scenario(condition="no_change"))
-    nc_target = protocol_target_pair(nc_record, nc_sc)
-    sibling = build_record(scenario(), deterministic=True)
+    nc_target = run_pilot.protocol_target_pair(nc_record, nc_sc)
+    sibling = run_pilot.build_record(scenario(), deterministic=True)
     sibling_target = (sibling["change"]["edge"]["from"],
                       sibling["change"]["action"])
     assert nc_target == sibling_target
@@ -184,16 +213,16 @@ def test_five_pairs_stable_and_no_change_counterfactual():
 def test_availability_and_no_change_dry_answers():
     hard_sc, hard, hard_view = record_and_view(
         scenario(condition="hard_removal"))
-    queried = queried_pairs_for_icl(hard, hard_sc)
-    target = protocol_target_pair(hard, hard_sc)
-    answer = json.loads(_dry_run_icl_answer(hard, queried, "post"))
+    queried = run_pilot.queried_pairs_for_icl(hard, hard_sc)
+    target = run_pilot.protocol_target_pair(hard, hard_sc)
+    answer = json.loads(run_pilot._dry_run_icl_answer(hard, queried, "post"))
     row = next(row for row in answer["pairs"]
                if (row["node"], row["action"]) == target)
     assert row["available"] is False
     assert row["destination"] is None and row["p_success"] is None
     parsed = parse_icl_turn_b(json.dumps(answer))
-    visible = visible_transition_stats(
-        raw_visible_rows(hard_view, "post"),
+    visible = run_pilot.visible_transition_stats(
+        run_pilot.raw_visible_rows(hard_view, "post"),
         hard["legal_actions_post"], hard["legal_actions_pre"])
     scored = score_icl_beliefs(
         hard, parsed["beliefs"], queried, "post", visible)
@@ -201,21 +230,45 @@ def test_availability_and_no_change_dry_answers():
     assert scored["n_destination_scored"] == 4
     assert scored["destination_accuracy"] == 1.0
 
-    silent_sc, silent, _ = record_and_view()
-    queried = queried_pairs_for_icl(silent, silent_sc)
-    target = protocol_target_pair(silent, silent_sc)
-    answer = json.loads(_dry_run_icl_answer(silent, queried, "post"))
+    silent_sc, silent, silent_view = record_and_view()
+    queried = run_pilot.queried_pairs_for_icl(silent, silent_sc)
+    target = run_pilot.protocol_target_pair(silent, silent_sc)
+    pre_answer = json.loads(run_pilot._dry_run_icl_answer(
+        silent, queried, "pre"))
+    post_answer = json.loads(run_pilot._dry_run_icl_answer(
+        silent, queried, "post"))
+    pre_row = next(row for row in pre_answer["pairs"]
+                   if (row["node"], row["action"]) == target)
+    post_row = next(row for row in post_answer["pairs"]
+                    if (row["node"], row["action"]) == target)
+    assert post_row["available"] is True
+    assert post_row["destination"] == pre_row["destination"]
+    assert post_row["p_success"] == 0.0
+    visible = run_pilot.visible_transition_stats(
+        run_pilot.raw_visible_rows(silent_view, "post"),
+        silent["legal_actions_post"], silent["legal_actions_pre"])
+    assert visible[target]["p_success"] == 0.0
+
+    redirect_sc, redirect, _ = record_and_view(
+        scenario(seed=1, condition="redirect"))
+    queried = run_pilot.queried_pairs_for_icl(redirect, redirect_sc)
+    target = run_pilot.protocol_target_pair(redirect, redirect_sc)
+    answer = json.loads(run_pilot._dry_run_icl_answer(
+        redirect, queried, "post"))
     row = next(row for row in answer["pairs"]
                if (row["node"], row["action"]) == target)
-    assert row["available"] is True and row["p_success"] == 0.0
+    assert row["available"] is True
+    assert row["destination"] == redirect["change"]["new_edge"]["to"]
+    assert row["destination"] != row["node"]
+    assert row["p_success"] == 1.0
 
     nc_sc, no_change, _ = record_and_view(scenario(condition="no_change"))
-    queried = queried_pairs_for_icl(no_change, nc_sc)
-    parsed = parse_icl_turn_b(_dry_run_icl_answer(
+    queried = run_pilot.queried_pairs_for_icl(no_change, nc_sc)
+    parsed = parse_icl_turn_b(run_pilot._dry_run_icl_answer(
         no_change, queried, "post"))
     assert parsed["detection"]["changed"] is False
     assert parsed["localization"]["changed_pair"] is None
-    print("PASS silent/removal availability and no-change null localization")
+    print("PASS silent, redirect, removal, and no-change belief semantics")
 
 
 def _truth_pair(record, query, period, changed=False):
@@ -327,12 +380,12 @@ def test_nullable_localization_and_route_belief_diagnostics():
 
 
 def test_gate_and_rotation():
-    gate_scenario = SCENARIOS["icl_det_gate_seed8"]
+    gate_scenario = run_pilot.SCENARIOS["icl_det_gate_seed8"]
     assert gate_scenario == {
         "condition": "silent_break", "seed": 8, "k": 10, "budget": 10,
         "variants": ("det",)}
-    rejected = deterministic_gate(1)
-    accepted = deterministic_gate(8)
+    rejected = run_pilot.deterministic_gate(1)
+    accepted = run_pilot.deterministic_gate(8)
     assert not rejected["eligible"]
     assert "pre_optimum_unique" in rejected["reasons"]
     assert accepted["eligible"]
@@ -340,19 +393,19 @@ def test_gate_and_rotation():
     assert accepted["post_route"] == ["G", "B", "H", "D"]
     assert accepted["target"] == {"node": "G", "action": "a1",
                                   "destination": "E"}
-    assert first_deterministic_gate_seed()["seed"] == 8
-    assert icl_level_order(1) == ICL_LEVELS
-    assert icl_level_order(2) == ICL_LEVELS[1:] + ICL_LEVELS[:1]
-    assert icl_level_order(3) == ICL_LEVELS[2:] + ICL_LEVELS[:2]
+    assert run_pilot.first_deterministic_gate_seed()["seed"] == 8
+    assert run_pilot.icl_level_order(1) == run_pilot.ICL_LEVELS
+    assert run_pilot.icl_level_order(2) == run_pilot.ICL_LEVELS[1:] + run_pilot.ICL_LEVELS[:1]
+    assert run_pilot.icl_level_order(3) == run_pilot.ICL_LEVELS[2:] + run_pilot.ICL_LEVELS[:2]
     print("PASS deterministic gate selects seed 8 and level order rotates")
 
 
 def test_provider_sampling_and_reasoning_controls():
     dry = args()
-    sampling = sampling_seed_provenance(dry, 7)
+    sampling = run_pilot.sampling_seed_provenance(dry, 7)
     assert sampling["sampling_seed_status"] == "not_applied_dry_run"
     assert sampling["top_p"] is None and sampling["top_k"] is None
-    provenance = reasoning_provenance(dry)
+    provenance = run_pilot.reasoning_provenance(dry)
     assert provenance["status"] == "not_applied_dry_run"
     assert provenance["request_fields"] == {}
 
@@ -361,14 +414,14 @@ def test_provider_sampling_and_reasoning_controls():
     openai.model = "test-model"
     openai.base_url = "https://api.openai.com/v1"
     openai.reasoning_mode = "unspecified"
-    sampling = sampling_seed_provenance(openai, 7)
+    sampling = run_pilot.sampling_seed_provenance(openai, 7)
     assert sampling["sampling_seed_status"] == "supported"
 
     anthropic = args()
     anthropic.provider = "anthropic"
     anthropic.model = "test-model"
     anthropic.reasoning_mode = "unspecified"
-    unsupported = sampling_seed_provenance(anthropic, 7)
+    unsupported = run_pilot.sampling_seed_provenance(anthropic, 7)
     assert unsupported["sampling_seed_status"] == "unsupported"
 
     azure = args()
@@ -376,35 +429,35 @@ def test_provider_sampling_and_reasoning_controls():
     azure.model = "deployment"
     azure.azure_endpoint = "https://example.openai.azure.com"
     azure.reasoning_mode = "unspecified"
-    assert sampling_seed_provenance(
+    assert run_pilot.sampling_seed_provenance(
         azure, 7)["sampling_seed_status"] == "unsupported"
     azure.sampling_seed_support = "supported"
-    azure_sampling = sampling_seed_provenance(azure, 7)
+    azure_sampling = run_pilot.sampling_seed_provenance(azure, 7)
     assert azure_sampling["sampling_seed_status"] == "supported"
 
     compatible = args()
     compatible.provider = "openai"
     compatible.reasoning_mode = "unspecified"
-    assert sampling_seed_provenance(
+    assert run_pilot.sampling_seed_provenance(
         compatible, 7)["sampling_seed_status"] == "unsupported"
 
     real_off = args()
     real_off.provider = "openai"
     try:
-        reasoning_provenance(real_off)
+        run_pilot.reasoning_provenance(real_off)
         raise AssertionError("real off must require an explicit control")
     except ValueError as exc:
         assert "reasoning-control-json" in str(exc)
     real_off.reasoning_control_json = '{"reasoning_effort":"none"}'
     try:
-        reasoning_provenance(real_off)
+        run_pilot.reasoning_provenance(real_off)
         raise AssertionError("real off must require a control source")
     except ValueError as exc:
         assert "reasoning-control-source" in str(exc)
     real_off.reasoning_control_source = "OpenAI Chat API documentation"
     real_off.top_p = 0.95
     real_off.top_k = 64
-    real_off_control = reasoning_provenance(real_off)
+    real_off_control = run_pilot.reasoning_provenance(real_off)
     assert real_off_control["request_fields"] == {
         "reasoning_effort": "none"}
     assert real_off_control["operator_json"] == \
@@ -412,7 +465,7 @@ def test_provider_sampling_and_reasoning_controls():
     assert real_off_control["semantics_verified_by_runner"] is False
     real_off.reasoning_control_json = '{"model":"override"}'
     try:
-        reasoning_provenance(real_off)
+        run_pilot.reasoning_provenance(real_off)
         raise AssertionError("control must not override request identity")
     except ValueError as exc:
         assert "cannot override" in str(exc)
@@ -424,7 +477,7 @@ def test_provider_sampling_and_reasoning_controls():
     local.reasoning_control_json = \
         '{"chat_template_kwargs":{"enable_thinking":false}}'
     local.reasoning_control_source = "LM Studio model configuration"
-    local_control = reasoning_provenance(local)
+    local_control = run_pilot.reasoning_provenance(local)
     assert local_control["source"] == "LM Studio model configuration"
     assert local_control["request_fields"]["chat_template_kwargs"] == {
         "enable_thinking": False}
@@ -450,7 +503,7 @@ def test_provider_sampling_and_reasoning_controls():
     def fake_urlopen(request, timeout):
         body = json.loads(request.data)
         captured.append(body)
-        if "anthropic.com" in request.full_url:
+        if urlparse(request.full_url).hostname == "api.anthropic.com":
             return FakeResponse({"content": [{"type": "text", "text": "{}"}],
                                  "stop_reason": "end_turn", "usage": {}})
         return FakeResponse({"choices": [{"message": {"content": "{}"},
@@ -460,22 +513,22 @@ def test_provider_sampling_and_reasoning_controls():
 
     try:
         run_pilot.urllib.request.urlopen = fake_urlopen
-        controlled = _call_icl_provider_once(
+        controlled = run_pilot._call_icl_provider_once(
             real_off, [{"role": "user", "content": "x"}],
-            sampling_seed_provenance(real_off, 7), real_off_control)
+            run_pilot.sampling_seed_provenance(real_off, 7), real_off_control)
         assert controlled["reasoning_evidence"] == "true"
         assert controlled["reasoning_control_violation"] is True
-        _call_icl_provider_once(
+        run_pilot._call_icl_provider_once(
             openai, [{"role": "user", "content": "x"}], sampling,
-            reasoning_provenance(openai))
+            run_pilot.reasoning_provenance(openai))
         os.environ["ANTHROPIC_API_KEY"] = "test-only"
-        _call_icl_provider_once(
+        run_pilot._call_icl_provider_once(
             anthropic, [{"role": "user", "content": "x"}], unsupported,
-            reasoning_provenance(anthropic))
+            run_pilot.reasoning_provenance(anthropic))
         os.environ["AZURE_OPENAI_API_KEY"] = "test-only"
-        _call_icl_provider_once(
+        run_pilot._call_icl_provider_once(
             azure, [{"role": "user", "content": "x"}], azure_sampling,
-            reasoning_provenance(azure))
+            run_pilot.reasoning_provenance(azure))
         run_pilot.call_openai(
             "legacy-model", [{"role": "user", "content": "x"}], 17,
             "http://localhost:1234/v1", 120)
@@ -514,69 +567,71 @@ def test_provider_sampling_and_reasoning_controls():
         invalid = args()
         setattr(invalid, field, value)
         try:
-            sampling_seed_provenance(invalid, 0)
+            run_pilot.sampling_seed_provenance(invalid, 0)
+        except ValueError as exc:
+            assert field in str(exc) or "invalid" in str(exc).lower(), \
+                f"wrong error for an invalid {field}: {exc}"
+        else:
             raise AssertionError(f"invalid {field} must be rejected")
-        except ValueError:
-            pass
-    assert _reasoning_evidence("openai", {"usage": {
+    assert run_pilot._reasoning_evidence("openai", {"usage": {
         "completion_tokens_details": {"reasoning_tokens": 0}}}, None) == \
         "false"
-    assert _reasoning_evidence("openai", {"usage": {}}, None) == "unknown"
+    assert run_pilot._reasoning_evidence("openai", {"usage": {}}, None) == "unknown"
     print("PASS supported/unsupported seeds and explicit reasoning controls")
 
 
 def test_cost_and_endpoint_provenance():
-    assert COST_STATUSES == ("exact", "estimated", "unavailable",
+    assert run_pilot.COST_STATUSES == ("exact", "estimated", "unavailable",
                              "local_unpriced")
     dry = args()
-    assert _cost_provenance(dry) == {
+    assert run_pilot._cost_provenance(dry) == {
         "status": "unavailable", "amount": None,
         "reason": "dry_run_no_provider_call"}
     local = args()
     local.provider = "openai"
-    assert _cost_provenance(local)["status"] == "local_unpriced"
+    assert run_pilot._cost_provenance(local)["status"] == "local_unpriced"
     external = args()
     external.provider = "openai"
     external.base_url = "https://api.openai.com/v1"
     external.reasoning_mode = "unspecified"
-    assert _cost_provenance(external)["status"] == "unavailable"
+    assert run_pilot._cost_provenance(external)["status"] == "unavailable"
 
     sc, record, view = record_and_view()
-    queried = queried_pairs_for_icl(record, sc)
-    prompt_a = build_icl_prompt(view, "minimal_logs", "pre", queried)
-    prompt_b = build_icl_prompt(view, "minimal_logs", "post", queried)
-    sampling = sampling_seed_provenance(external, 0)
-    reasoning = reasoning_provenance(external)
-    identity_a = _icl_run_identity(
+    queried = run_pilot.queried_pairs_for_icl(record, sc)
+    prompt_a = run_pilot.build_icl_prompt(view, "minimal_logs", "pre", queried)
+    prompt_b = run_pilot.build_icl_prompt(view, "minimal_logs", "post", queried)
+    sampling = run_pilot.sampling_seed_provenance(external, 0)
+    reasoning = run_pilot.reasoning_provenance(external)
+    identity_a = run_pilot._icl_run_identity(
         sc, True, external, "minimal_logs", 1, sampling, reasoning,
         prompt_a, prompt_b, queried)
     with_top_p = SimpleNamespace(**vars(external))
     with_top_p.top_p = 0.95
-    identity_top_p = _icl_run_identity(
+    identity_top_p = run_pilot._icl_run_identity(
         sc, True, with_top_p, "minimal_logs", 1,
-        sampling_seed_provenance(with_top_p, 0),
-        reasoning_provenance(with_top_p), prompt_a, prompt_b, queried)
+        run_pilot.sampling_seed_provenance(with_top_p, 0),
+        run_pilot.reasoning_provenance(with_top_p), prompt_a, prompt_b, queried)
     with_top_k = SimpleNamespace(**vars(external))
     with_top_k.top_k = 64
-    identity_top_k = _icl_run_identity(
+    identity_top_k = run_pilot._icl_run_identity(
         sc, True, with_top_k, "minimal_logs", 1,
-        sampling_seed_provenance(with_top_k, 0),
-        reasoning_provenance(with_top_k), prompt_a, prompt_b, queried)
+        run_pilot.sampling_seed_provenance(with_top_k, 0),
+        run_pilot.reasoning_provenance(with_top_k), prompt_a, prompt_b, queried)
     assert identity_a != identity_top_p != identity_top_k
-    assert _icl_run_id(identity_a) != _icl_run_id(identity_top_p)
-    assert _icl_run_id(identity_a) != _icl_run_id(identity_top_k)
+    assert run_pilot._icl_run_id(identity_a) != run_pilot._icl_run_id(identity_top_p)
+    assert run_pilot._icl_run_id(identity_a) != run_pilot._icl_run_id(identity_top_k)
     other = SimpleNamespace(**vars(external))
     other.base_url = "https://example.com/v1"
-    identity_b = _icl_run_identity(
+    identity_b = run_pilot._icl_run_identity(
         sc, True, other, "minimal_logs", 1,
-        sampling_seed_provenance(other, 0), reasoning_provenance(other),
+        run_pilot.sampling_seed_provenance(other, 0), run_pilot.reasoning_provenance(other),
         prompt_a, prompt_b, queried)
     assert identity_a["endpoint"] != identity_b["endpoint"]
     azure = args()
     azure.provider = "azure"
-    first = endpoint_provenance(azure)
+    first = run_pilot.endpoint_provenance(azure)
     azure.api_version = "2025-01-01"
-    assert endpoint_provenance(azure) != first
+    assert run_pilot.endpoint_provenance(azure) != first
     print("PASS cost statuses and endpoint/API identity provenance")
 
 
@@ -611,7 +666,7 @@ def test_two_calls_persistence_hashes_and_safe_resume():
         run_pilot.dispatch_icl = counted
         run_pilot.parse_icl_turn_a = checked_parser
         try:
-            artifact, path, skipped = run_icl_two_response_once(
+            artifact, path, skipped = run_pilot.run_icl_two_response_once(
                 record, view, sc, True, args(), "empirical_table", 1, 0,
                 outdir)
             assert not skipped and call_count == 2 and saw_raw_before_parse
@@ -632,18 +687,19 @@ def test_two_calls_persistence_hashes_and_safe_resume():
             assert artifact["turns"]["B"]["provider_finish_reason"] == \
                 "length"
             assert artifact["turns"]["B"]["truncated"] is True
-            summary, _ = write_icl_summary(
+            summary, _ = run_pilot.write_icl_summary(
                 outdir, [{"run_id": artifact["run_id"], "path": path,
                           "skipped": False}])
             assert summary["any_response_truncated"] is True
             assert summary["operational_gate_pass"] is False
-            assert call_count == 2
+            calls_before_resume = call_count
             with open(path, "rb") as fh:
                 before = fh.read()
-            _, _, skipped = run_icl_two_response_once(
+            _, _, skipped = run_pilot.run_icl_two_response_once(
                 record, view, sc, True, args(), "empirical_table", 1, 0,
                 outdir)
-            assert skipped and call_count == 2
+            assert skipped and call_count == calls_before_resume, \
+                "a resumed cell must not issue another request"
             with open(path, "rb") as fh:
                 assert fh.read() == before
 
@@ -658,7 +714,7 @@ def test_two_calls_persistence_hashes_and_safe_resume():
             partial["persistence_events"] = partial["persistence_events"][:3]
             with open(path, "w") as fh:
                 json.dump(partial, fh)
-            resumed, _, skipped = run_icl_two_response_once(
+            resumed, _, skipped = run_pilot.run_icl_two_response_once(
                 record, view, sc, True, args(), "empirical_table", 1, 0,
                 outdir)
             assert not skipped and call_count == 3
@@ -670,7 +726,7 @@ def test_two_calls_persistence_hashes_and_safe_resume():
             with open(path, "w") as fh:
                 json.dump(broken, fh)
             try:
-                run_icl_two_response_once(
+                run_pilot.run_icl_two_response_once(
                     record, view, sc, True, args(), "empirical_table", 1, 0,
                     outdir)
                 raise AssertionError("unsafe partial run must stop")
@@ -688,7 +744,7 @@ def test_summary_generation_and_safe_replay():
     runner_args.top_p = 0.95
     runner_args.top_k = 64
     with tempfile.TemporaryDirectory() as outdir:
-        run_icl_two_response_suite(sc, True, runner_args, outdir)
+        run_pilot.run_icl_two_response_suite(sc, True, runner_args, outdir)
         summary_path = os.path.join(outdir, "summary.json")
         with open(summary_path, "rb") as fh:
             before = fh.read()
@@ -704,8 +760,8 @@ def test_summary_generation_and_safe_replay():
             model = json.load(fh)["model"]
         assert model["top_p"] == 0.95 and model["top_k"] == 64
         assert {(row["repeat"], row["level"]) for row in summary["runs"]} == {
-            (repeat, level) for repeat in (1, 2, 3) for level in ICL_LEVELS}
-        results = run_icl_two_response_suite(sc, True, runner_args, outdir)
+            (repeat, level) for repeat in (1, 2, 3) for level in run_pilot.ICL_LEVELS}
+        results = run_pilot.run_icl_two_response_suite(sc, True, runner_args, outdir)
         with open(summary_path, "rb") as fh:
             assert fh.read() == before
 
@@ -715,13 +771,13 @@ def test_summary_generation_and_safe_replay():
         first["turns"]["A"]["reasoning_control_violation"] = True
         with open(first_path, "w") as fh:
             json.dump(first, fh)
-        violated, _ = write_icl_summary(outdir, results)
+        violated, _ = run_pilot.write_icl_summary(outdir, results)
         assert violated["any_reasoning_control_violation"] is True
         assert violated["operational_gate_pass"] is False
         first["turns"]["A"]["reasoning_control_violation"] = False
         with open(first_path, "w") as fh:
             json.dump(first, fh)
-        replayed, _ = write_icl_summary(outdir, results)
+        replayed, _ = run_pilot.write_icl_summary(outdir, results)
         assert replayed == summary
     print("PASS deterministic operational summary and safe replay")
 
@@ -729,6 +785,7 @@ def test_summary_generation_and_safe_replay():
 if __name__ == "__main__":
     test_legacy_prompt_and_scorer_regression()
     test_levels_share_visible_evidence_and_raw_order()
+    test_icl_belief_definition_guard_catches_injected_defect()
     test_icl_route_terminal_action_contract()
     test_empirical_table_uses_visible_inputs_only()
     test_period_boundary_and_prompt_neutrality()

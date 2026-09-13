@@ -18,10 +18,10 @@ Covers the handoff checklist:
 
 import json
 import random
-import resource_mdp as R
 
 from resource_mdp import (CONDITIONS, RoutingMDP,
                           breakable_route_links, broken_link_usage,
+                          invert_labels,
                           edges_off_all_optimal_routes,
                           fixed_policy, legal_actions, make_pair,
                           optimal_policy, pair_to_json, paired_evidence,
@@ -31,17 +31,40 @@ from resource_mdp import (CONDITIONS, RoutingMDP,
 INF = float("inf")
 
 
+def matched_irrelevant(seed):
+    """The det/sto irrelevant pair for a seed, or None if it cannot build.
+
+    Returning None keeps the caller free of an empty except: a seed that
+    cannot build this condition is skipped, not counted against the
+    invariant.
+    """
+    try:
+        return (make_pair(seed, "irrelevant", deterministic=True,
+                          matched=True),
+                make_pair(seed, "irrelevant", deterministic=False,
+                          matched=True))
+    except ValueError:
+        return None
+
+
 def eligible_seeds(n_wanted=6, det=False):
     """First seeds that admit an eligible (reachability-preserving) break."""
     out, s = [], 0
-    while len(out) < n_wanted and s < 200:
+    def buildable(seed):
+        """True when this seed admits an eligible break.
+
+        Eligibility is a property of the graph, so a ValueError here is an
+        answer rather than a failure.
+        """
         try:
-            make_pair(s, "silent_break", deterministic=det)
-            out.append(s)
+            make_pair(seed, "silent_break", deterministic=det)
         except ValueError:
-            # Ineligible seed, skip it. Not `continue`: the increment below
-            # is inside this loop and skipping it would hang.
-            pass
+            return False
+        return True
+
+    while len(out) < n_wanted and s < 200:
+        if buildable(s):
+            out.append(s)
         s += 1
     assert len(out) == n_wanted, "could not find enough eligible seeds"
     return out
@@ -391,9 +414,11 @@ def test_v21_prompt_view():
         "budget=None reproduces the stored rendering"
     try:
         prompt_view(record, rendering="F3_stats", budget_per_pair=5)
+    except ValueError as exc:
+        assert "0 < B <= k" in str(exc), \
+            f"wrong error for a budget above k: {exc}"
+    else:
         raise AssertionError("B > k must be rejected")
-    except ValueError:
-        pass
     one = prompt_view(record, rendering="F2_shuffled", periods=("post",),
                       budget_per_pair=4)
     assert "legal_actions_pre" not in one and "pre" not in one["evidence"]
@@ -424,18 +449,12 @@ def test_v211_matched_mode():
         assert d.oracle["post"]["solvable"] and s.oracle["post"]["solvable"]
         rec = json.loads(json.dumps(pair_to_json(d)))
         assert rec["params"]["matched"] is True
-        try:
-            di = make_pair(seed, "irrelevant", deterministic=True,
-                           matched=True)
-            si = make_pair(seed, "irrelevant", deterministic=False,
-                           matched=True)
+        pair = matched_irrelevant(seed)
+        if pair is not None:
+            di, si = pair
             assert di.start == si.start
             assert di.change["edge"] == si.change["edge"], \
                 "matched irrelevant target"
-        except ValueError:
-            # A seed that cannot build this condition is skipped, not
-            # counted against the invariant below.
-            pass
     assert eligible >= 10, f"matched yield too low in 40 seeds ({eligible})"
     # matched records rebuild and project cleanly
     ev = paired_evidence(first, k=3, evidence_seed=1)
@@ -471,8 +490,8 @@ def test_v21_examples_in_sync():
 def test_redirect_keeps_the_menu_identical():
     """The defining property: nothing visible changes except where
     attempts land. A menu diff must reveal nothing."""
-    inst = R.make_pair(7, "redirect", matched=True)
-    rec = R.pair_to_json(inst, R.paired_evidence(inst, k=5))
+    inst = make_pair(7, "redirect", matched=True)
+    rec = pair_to_json(inst, paired_evidence(inst, k=5))
     assert rec["legal_actions_pre"] == rec["legal_actions_post"], (
         "redirect leaked through the action menu")
     ch = rec["change"]
@@ -490,8 +509,8 @@ def test_redirect_shares_the_break_target():
     conditions are not comparable."""
     for seed in (7, 1, 4):
         try:
-            a = R.make_pair(seed, "silent_break", matched=True)
-            b = R.make_pair(seed, "redirect", matched=True)
+            a = make_pair(seed, "silent_break", matched=True)
+            b = make_pair(seed, "redirect", matched=True)
         except ValueError:
             continue
         assert a.change["edge"] == b.change["edge"], (
@@ -502,7 +521,7 @@ def test_redirect_shares_the_break_target():
 
 def test_redirect_moves_the_optimal_route():
     """It is a route-changing condition, not a control."""
-    inst = R.make_pair(7, "redirect", matched=True)
+    inst = make_pair(7, "redirect", matched=True)
     pre, post = inst.oracle["pre"], inst.oracle["post"]
     assert pre["optimal_route"] != post["optimal_route"]
     assert post["solvable"], "goal must stay reachable"
@@ -514,12 +533,12 @@ def test_label_inversion_is_period_scoped():
     """Under redirect one action label has two edges. A period-blind
     inversion resolves a period A route with the period B destination,
     which both mis-scores and leaks the change."""
-    inst = R.make_pair(7, "redirect", matched=True)
+    inst = make_pair(7, "redirect", matched=True)
     u, v = inst.change["edge"]
     w = inst.change["new_edge"][1]
     lab = inst.labels[(u, v)]
-    assert R.invert_labels(inst.labels, inst.m0)[(u, lab)] == v
-    assert R.invert_labels(inst.labels, inst.m1)[(u, lab)] == w
+    assert invert_labels(inst.labels, inst.m0)[(u, lab)] == v
+    assert invert_labels(inst.labels, inst.m1)[(u, lab)] == w
     # and the unscoped form is genuinely ambiguous, which is why callers
     # must pass a world
     assert inst.labels[(u, v)] == inst.labels[(u, w)]
@@ -527,8 +546,8 @@ def test_label_inversion_is_period_scoped():
 
 
 def test_redirect_is_deterministic_per_seed():
-    inst1 = R.make_pair(7, "redirect", matched=True)
-    inst2 = R.make_pair(7, "redirect", matched=True)
+    inst1 = make_pair(7, "redirect", matched=True)
+    inst2 = make_pair(7, "redirect", matched=True)
     assert inst1.change == inst2.change
     print("PASS redirect is reproducible for a fixed seed")
 

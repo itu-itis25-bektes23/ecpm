@@ -342,12 +342,13 @@ and the dry-run pilots on every pull request.
 `SECURITY.md` covers credential leaks and evaluator leaks, which are the two
 risks this repository actually has.
 
-Four workflows run in `.github/workflows/`: `tests.yml` runs the six suites,
-the dry-run pilots and a link check; `codeql.yml` is code scanning;
-`labels.yml` syncs the label set from `.github/labels.yml`, applies
-path-based labels from `.github/labeler.yml`, and refuses an unlabelled pull
-request; `triage.yml` adds new issues to a project board and is inert until
-one exists.
+Three workflows run in `.github/workflows/`: `tests.yml` runs the six suites,
+the dry-run pilots and a link check; `labels.yml` syncs the label set from
+`.github/labels.yml`, applies path-based labels from `.github/labeler.yml`,
+and refuses an unlabelled pull request; `triage.yml` adds new issues to a
+project board and is inert until one exists.
+
+Code scanning was tried and removed; `SECURITY.md` says why.
 
 Opening an issue or a pull request gives you a template. The pull request
 checklist is the conventions that have actually been broken here, not a

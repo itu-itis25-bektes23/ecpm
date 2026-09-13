@@ -49,6 +49,20 @@ EPS = 1e-9
 # --------------------------------------------------------------------------
 
 
+def _json_object_or_none(text):
+    """Parse `text` as a JSON object, or return None.
+
+    Keeps the callers below free of an empty except: a slice that is not a
+    JSON object is an answer, not an error. Models wrapping their reply in
+    prose is the normal case.
+    """
+    try:
+        obj = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return obj if isinstance(obj, dict) else None
+
+
 def extract_json_object(text):
     """First balanced, parseable {...} object in `text`, else None."""
     if not isinstance(text, str):
@@ -72,16 +86,9 @@ def extract_json_object(text):
             elif c == "}":
                 depth -= 1
                 if depth == 0:
-                    try:
-                        obj = json.loads(text[i:j + 1])
-                        if isinstance(obj, dict):
-                            return obj
-                    except json.JSONDecodeError:
-                        # This slice is not a JSON object. The break below
-                        # moves to the next candidate opening brace; a model
-                        # wrapping its answer in prose is the normal case,
-                        # not an error.
-                        pass
+                    obj = _json_object_or_none(text[i:j + 1])
+                    if obj is not None:
+                        return obj
                     break
         i = text.find("{", i + 1)
     return None

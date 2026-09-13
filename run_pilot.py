@@ -92,8 +92,11 @@ from ecpm_parser import (PARSERS, belief_self_consistency,
                          score_control_preservation, score_icl_beliefs,
                          score_icl_localization, score_adaptation,
                          score_route_pre)
-from model_clients import *
-from prompts import *
+from model_clients import (TransientLLMError, call_anthropic,
+                           call_anthropic_chat, call_azure, call_azure_chat,
+                           call_openai, call_openai_chat)
+from prompts import (ASKS_ACTIVE, ask_block, context_block, context_block_a,
+                     reveal_block_b)
 from resource_mdp import (CONDITIONS, PROMPT_RENDERINGS, SCHEMA_VERSION,
                           make_pair, pair_to_json, paired_evidence,
                           prompt_view)
@@ -236,9 +239,13 @@ ICL_MINIMAL_MECHANICS = (
 )
 
 ICL_BELIEF_DEFINITIONS = (
-    "destination is the node the action is estimated to reach when it "
-    "succeeds. p_success is the estimated probability that one attempt "
-    "reaches that destination."
+    "destination is the non-current node reached on a successful attempt. "
+    "A destination is always different from the current node. Count an "
+    "observation as a success exactly when its next node differs from its "
+    "current node. p_success is the fraction of visible observations counted "
+    "as successes. If an available action has no successful observations in "
+    "the current period, keep its most recent earlier destination estimate if "
+    "one exists; otherwise use null."
 )
 
 ICL_ROUTE_INSTRUCTION = (
@@ -532,6 +539,8 @@ def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
     raises immediately. Stdlib only -- reimplements the retry pattern seen
     in reference material, no third-party dependency added, matching this
     repo's stdlib-only convention."""
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
     last_exc = None
     for attempt in range(1, max_attempts + 1):
         try:
@@ -553,6 +562,10 @@ def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
         print(f"retryable error (attempt {attempt}/{max_attempts}), "
               f"retrying in {delay:.1f}s: {last_exc}")
         time.sleep(delay)
+    # Unreachable: max_attempts >= 1 is checked above and the final attempt
+    # raises. Not `raise last_exc`, which would raise None if it ever were
+    # reached; an AssertionError names the broken invariant instead.
+    raise AssertionError("with_retry fell through its loop")
 
 
 def dry_run_answer(record, probe, queried):
@@ -632,6 +645,20 @@ def _canonical_sha256(value):
 def _utc_now():
     return datetime.datetime.now(
         datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _read_json_or_none(path):
+    """Read a JSON file, or return None if it is missing or unreadable.
+
+    Used to decide whether summary.json already holds what we are about to
+    write. An unreadable file is an answer (rewrite it), not an error, which
+    is why the handler returns rather than passing.
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
 
 
 def _write_json_atomic(path, value):
@@ -873,6 +900,13 @@ def _call_icl_provider_once(args, messages, sampling, reasoning):
         reasoning_text = [block for block in data["content"]
                           if block.get("type") == "thinking"] or None
         finish = data.get("stop_reason")
+    else:
+        # Unreachable while argparse restricts --provider, and that is the
+        # point: a fifth provider should fail here, naming itself, rather
+        # than leaving text and finish unbound for a later line to trip on.
+        raise ValueError(
+            f"_call_icl_provider_once has no branch for provider "
+            f"{args.provider!r}")
     evidence = _reasoning_evidence(args.provider, data, reasoning_text)
     return {"text": text, "usage": data.get("usage", {}),
             "finish_reason": finish,
@@ -1203,13 +1237,7 @@ def write_icl_summary(outdir, results):
         completed == expected and complete_matrix
         and all(row["operational_pass"] for row in rows))
     path = os.path.join(outdir, "summary.json")
-    existing = None
-    if os.path.exists(path):
-        try:
-            with open(path) as fh:
-                existing = json.load(fh)
-        except (OSError, json.JSONDecodeError):
-            pass
+    existing = _read_json_or_none(path)
     if existing != summary:
         _write_json_atomic(path, summary)
     return summary, path
