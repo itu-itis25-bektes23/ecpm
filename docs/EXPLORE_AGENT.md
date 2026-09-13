@@ -180,7 +180,7 @@ not supposed to contain any reasoning at all). `run_pilot.py` drives the
 loop by providing `act_fn`, and passes the returned episodes on to
 `explore_metrics.py` for scoring.
 
-![interfaces](explore_agent_interfaces.svg)
+![interfaces](diagrams/explore_agent_interfaces.svg)
 
 ## Sequence diagram
 
@@ -191,4 +191,4 @@ step inside `rollout()` calls the recording policy, which renders the
 current observation, calls `act_fn`, parses the reply, and steps the real
 MDP. Retrying on an illegal action up to `max_retries_per_step` times.
 
-![sequence diagram](Explore_agent_sequence_diagram.svg)
+![sequence diagram](diagrams/explore_agent_sequence.svg)

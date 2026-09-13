@@ -100,7 +100,7 @@ flowchart TD
 
 - `resource_mdp.py` environment: paired generator, evidence collection,
   `prompt_view()`, oracle
-- `ecpm_parser.py` frozen parser and probe scoring (INTERFACE.md section 7)
+- `ecpm_parser.py` frozen parser and probe scoring (docs/INTERFACE.md section 7)
 - `prompts.py` prompt templates and block builders
 - `model_clients.py` provider calls, including reasoning-model compatibility
 - `run_pilot.py` pilot harness; pins the freeze SHA into every artifact
@@ -111,8 +111,8 @@ flowchart TD
 - `experiments/summarize_run.py` run artifacts to the reported statistics
 - `experiments/azure_budget.py` run costing from measured token usage
 - `experiments/run_two_turn_azure.sh` the two-turn run, resumable
-- `docs/PAPER_SPINE.md` proposed claim, hypotheses, readiness, budget
-- `docs/SEED_SELECTION.md` seed criteria and the restraint cases
+- `docs/` interface contract, paper spine, seed criteria, diagrams
+- `archive/` freeze sign-off tooling, kept for provenance, not maintained
 - `runs/` artifacts, one directory per run
 - `exploratory/` prompt-safe packets, oracle packets, probability scorer
 
@@ -204,7 +204,7 @@ Supply optional `--top-p` and `--top-k` values only after verifying that the
 endpoint supports them.
 
 Agentic exploration, where the model picks its own actions instead of reading
-a collected log (see `EXPLORE_AGENT.md`):
+a collected log (see `docs/EXPLORE_AGENT.md`):
 
     python3 run_pilot.py --pilot-type active --scenario seed7_silent_break
 
@@ -298,7 +298,7 @@ Stated explicitly rather than left implicit.
   `docs/SEED_SELECTION.md`.
 - Every cell of the current model evidence is n = 1. The findings are
   demonstrations of a phenomenon, not estimates of a rate.
-- `INTERFACE.md` is titled v2.2 but declares schema version 2.1 internally.
+- `docs/INTERFACE.md` is titled v2.2 but declares schema version 2.1 internally.
   The declaration is correct; the title is a document revision number.
 
 ## Write-up

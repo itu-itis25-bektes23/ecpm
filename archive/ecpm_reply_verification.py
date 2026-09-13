@@ -28,6 +28,16 @@ Checks:
 
 from __future__ import annotations
 
+import os
+import sys
+
+# Moved to archive/ on 2026-09-13. These scripts import the environment
+# modules, which live at the repository root, so put the root on the path
+# rather than requiring a particular working directory.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+
 import argparse
 import collections
 import json

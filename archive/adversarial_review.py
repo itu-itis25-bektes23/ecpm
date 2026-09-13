@@ -9,6 +9,14 @@ smoke-tested quickly (default remains 1000 -> 9000 instances).
 Expected v2.1.1 preservation statuses: incomplete_response /
 duplicate_pair (was accuracy=1.0 with a movable denominator)."""
 
+import os
+import sys
+
+# Moved to archive/ on 2026-09-13. These scripts import the environment
+# modules, which live at the repository root, so put the root on the path
+# rather than requiring a particular working directory.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import sys
 
 import json
