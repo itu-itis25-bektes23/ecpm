@@ -44,9 +44,10 @@ SIBLINGS = ("../ecpm-efe", "../ecpm-main", "../ecpm")
 def load_frozen(repo=None, pilot_from=None):
     """Import run_pilot from this repository.
 
-    The repo and pilot_from arguments are accepted and ignored so existing
-    call sites and command lines keep working. Before the merge they pointed
-    at a separate checkout.
+    The repo and pilot_from arguments are accepted and ignored, so existing
+    call sites and command lines keep working after the merge. Before the
+    merge they pointed at a separate checkout; now run_pilot, resource_mdp
+    and ecpm_parser all live at the repository root.
     """
     import run_pilot as rp  # noqa: PLC0415
     return rp
@@ -62,8 +63,16 @@ def build_for_seed(rp, seed, deterministic, k):
     record = json.loads(json.dumps(rp.pair_to_json(inst, ev)))
     view = rp.prompt_view(record, rendering="F2_shuffled",
                           periods=("pre", "post"), budget_per_pair=k)
-    queried = rp.queried_pairs_for(record)
-    prompts = {p: rp.build_prompt(record, view, p, queried)
+    # queried_pairs_for gained an sc parameter after 2026-08-27. It is
+    # used only for sc["seed"], which seeds the shuffle that picks the
+    # unchanged control pairs, so passing the graph seed reproduces the
+    # original probe set exactly. Verified by regenerating every payload
+    # and diffing against the 27 August originals.
+    queried = rp.queried_pairs_for(record, {"seed": seed})
+    # build_prompt was split when the prompt layer moved to prompts.py:
+    # the full probe prompt is now the context block plus the ask block.
+    # Verified to reproduce the 27 August payloads byte for byte.
+    prompts = {p: rp.context_block(view) + "\n" + rp.ask_block(view, p, queried)
                for p in ("detection", "localization", "preservation",
                          "adaptation")}
     prefix = os.path.commonprefix(list(prompts.values()))
