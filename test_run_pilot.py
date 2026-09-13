@@ -99,9 +99,34 @@ def test_levels_share_visible_evidence_and_raw_order():
         assert "destination is the node the action is estimated to reach" in \
             prompts[level]["pre"]
         assert "p_success is the estimated probability" in prompts[level]["pre"]
+        for period in ("pre", "post"):
+            assert ("A route lists actions only. Its first item must be at "
+                    "Start. The successful destination of its final action "
+                    "must be Goal. Do not add a route item for Goal after "
+                    "arrival.") in prompts[level][period]
+            assert "finish at Goal" not in prompts[level][period]
     minimal = prompts["minimal_logs"]["pre"]
     assert "failed attempt" not in minimal and "retried" not in minimal
     print("PASS all levels share evidence; Levels 2/3 have byte-identical rows")
+
+
+def test_icl_route_terminal_action_contract():
+    sc, record, _ = record_and_view()
+    queried = queried_pairs_for_icl(record, sc)
+    for period, parser in (("pre", parse_icl_turn_a),
+                           ("post", parse_icl_turn_b)):
+        payload = json.loads(_dry_run_icl_answer(record, queried, period))
+        parsed = parser(json.dumps(payload))
+        route = parsed["route"]["route"]
+        final = route[-1]
+        truth = {(edge["from"], edge["action"]): edge["to"]
+                 for edge in record[f"world_{period}"]["edges"]}
+        assert truth[(final["node"], final["action"])] == record["goal"]
+
+        payload["route"].append({"node": record["goal"], "action": None})
+        rejected = parser(json.dumps(payload))["route"]
+        assert rejected == {"status": "invalid_object", "route": []}
+    print("PASS ICL routes end with the arrival action; Goal items stay invalid")
 
 
 def test_empirical_table_uses_visible_inputs_only():
@@ -704,6 +729,7 @@ def test_summary_generation_and_safe_replay():
 if __name__ == "__main__":
     test_legacy_prompt_and_scorer_regression()
     test_levels_share_visible_evidence_and_raw_order()
+    test_icl_route_terminal_action_contract()
     test_empirical_table_uses_visible_inputs_only()
     test_period_boundary_and_prompt_neutrality()
     test_five_pairs_stable_and_no_change_counterfactual()

@@ -241,6 +241,12 @@ ICL_BELIEF_DEFINITIONS = (
     "reaches that destination."
 )
 
+ICL_ROUTE_INSTRUCTION = (
+    "A route lists actions only. Its first item must be at Start. The "
+    "successful destination of its final action must be Goal. Do not add a "
+    "route item for Goal after arrival."
+)
+
 ICL_TURN_A_SCHEMA = """Return exactly one JSON object with exactly five pairs:
 {
   "pairs": [
@@ -250,8 +256,8 @@ ICL_TURN_A_SCHEMA = """Return exactly one JSON object with exactly five pairs:
   "route": [{"node": "<node>", "action": "<action>"}]
 }
 For each listed pair, available means that the action appears in the current
-menu; it does not mean the action works. The route must start at Start, use
-state-action steps, and finish at Goal. Do not include other text."""
+menu; it does not mean the action works. """ + ICL_ROUTE_INSTRUCTION + \
+""" Do not include other text."""
 
 ICL_TURN_B_SCHEMA = """Return exactly one JSON object with exactly five pairs:
 {
@@ -268,8 +274,8 @@ If changed is false, changed_pair must be null. If changed is true,
 changed_pair must name the one pair judged to have changed. For each listed
 pair, available means that the action appears in the Period B menu; it does
 not mean the action works. If an action is unavailable, use available=false,
-destination=null, and p_success=null. The route must start at Start, use
-state-action steps, and finish at Goal. Do not include other text."""
+destination=null, and p_success=null. """ + ICL_ROUTE_INSTRUCTION + \
+""" Do not include other text."""
 
 
 def parse_visible_rows(text):
