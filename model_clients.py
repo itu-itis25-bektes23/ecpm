@@ -11,12 +11,43 @@ import json
 import os
 import urllib.request
 
+
 # Claude models that run with thinking on by default and reject explicit
 # sampling params (temperature/top_p/top_k).
 _ANTHROPIC_NO_SAMPLING = {
     "claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-mythos-5",
     "claude-opus-4-8", "claude-opus-4-7",
 }
+
+
+class TransientLLMError(Exception):
+    """Empty/unparseable LLM response body, treated as retryable by
+    run_pilot.with_retry, same spirit as a network error.
+
+    Moved above the passive clients so they can raise it too. Reasoning
+    models make empty bodies common: gpt-5-mini spent 960 reasoning
+    tokens and emitted no content on 2026-09-13, which the parser scored
+    as a malformed answer, indistinguishable from a wrong one.
+    """
+
+
+
+def _content_or_retry(data):
+    """Pull the assistant text out of an OpenAI-shaped response.
+
+    Raises TransientLLMError when the content is absent or blank, so the
+    caller's retry handles it. The reasoning-token count goes in the
+    message because it is the useful diagnostic: a large count with empty
+    content means the model thought and then said nothing.
+    """
+    content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+    if content and content.strip():
+        return content
+    det = (data.get("usage") or {}).get("completion_tokens_details") or {}
+    raise TransientLLMError(
+        "empty completion (reasoning_tokens="
+        f"{det.get('reasoning_tokens')}, finish_reason="
+        f"{(data.get('choices') or [{}])[0].get('finish_reason')!r})")
 
 
 def _is_gpt_reasoning(model):
@@ -70,7 +101,7 @@ def call_azure(deployment, messages, max_tokens, endpoint, api_version,
                  "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
-    return data["choices"][0]["message"]["content"], data.get("usage", {})
+    return _content_or_retry(data), data.get("usage", {})
 
 
 def call_openai(model, messages, max_tokens, base_url, timeout):
@@ -91,12 +122,7 @@ def call_openai(model, messages, max_tokens, base_url, timeout):
                      f"Bearer {os.environ.get('OPENAI_API_KEY', 'local')}"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
-    return data["choices"][0]["message"]["content"], data.get("usage", {})
-
-
-class TransientLLMError(Exception):
-    """Empty/unparseable LLM response body, treated as retryable by
-    run_pilot.with_retry, same spirit as a network error."""
+    return _content_or_retry(data), data.get("usage", {})
 
 
 # --------------------------------------------------------------------
