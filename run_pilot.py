@@ -1489,7 +1489,8 @@ def run_pilot(sc, deterministic, args):
         messages = messages + [{"role": "user", "content": user_msg}]
 
         t0 = time.time()
-        raw, usage = dispatch(args, record, probe, queried, messages)
+        raw, usage = with_retry(dispatch, args, record, probe, queried,
+                                messages)
         latency = round(time.time() - t0, 3)
         messages = messages + [{"role": "assistant", "content": raw}]
 
