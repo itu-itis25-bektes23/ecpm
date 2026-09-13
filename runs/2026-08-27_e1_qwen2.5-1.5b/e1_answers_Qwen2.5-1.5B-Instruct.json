@@ -1,0 +1,228 @@
+{
+ "model": "Qwen/Qwen2.5-1.5B-Instruct",
+ "evidence_sha1": "4bef76e36645aaeae820f1f49a472bd04738e976",
+ "icl": {
+  "detection": {
+   "raw": "{\"changed\": false}",
+   "parsed": {
+    "changed": false
+   },
+   "status": "valid",
+   "correct": false
+  },
+  "localization": {
+   "raw": "{\"node\": \"B\", \"action\": \"a1\"}",
+   "parsed": {
+    "node": "B",
+    "action": "a1"
+   },
+   "status": "valid",
+   "correct": false
+  },
+  "preservation": {
+   "raw": "```json\n{\n  \"pairs\": [\n    {\n      \"node\": \"H\",\n      \"action\": \"a2\",\n      \"changed\": false\n    },\n    {\n      \"node\": \"D\",\n      \"action\": \"a2\",\n      \"changed\": true\n    },\n    {\n      \"node\": \"D\",\n      \"action\": \"a1\",\n      \"changed\": false\n    },\n    {\n      \"node\": \"C\",\n      \"action\": \"a1\",\n      \"changed\": true\n    }\n  ]\n}\n```",
+   "parsed": {
+    "pairs": [
+     {
+      "node": "H",
+      "action": "a2",
+      "changed": false
+     },
+     {
+      "node": "D",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a1",
+      "changed": false
+     },
+     {
+      "node": "C",
+      "action": "a1",
+      "changed": true
+     }
+    ]
+   },
+   "status": "valid",
+   "correct": false,
+   "hits": "3/4"
+  },
+  "adaptation": {
+   "raw": "{\"route\": [{\"node\": \"E\", \"action\": \"a1\"}, {\"node\": \"C\", \"action\": \"a1\"}, {\"node\": \"A\", \"action\": \"a1\"}, {\"node\": \"G\", \"action\": \"a1\"}, {\"node\": \"H\", \"action\": \"a1\"}, {\"node\": \"B\", \"action\": \"a1\"}, {\"node\": \"F\", \"action\": \"a1\"}]}",
+   "parsed": {
+    "route": [
+     {
+      "node": "E",
+      "action": "a1"
+     },
+     {
+      "node": "C",
+      "action": "a1"
+     },
+     {
+      "node": "A",
+      "action": "a1"
+     },
+     {
+      "node": "G",
+      "action": "a1"
+     },
+     {
+      "node": "H",
+      "action": "a1"
+     },
+     {
+      "node": "B",
+      "action": "a1"
+     },
+     {
+      "node": "F",
+      "action": "a1"
+     }
+    ]
+   },
+   "status": "discontinuous",
+   "correct": false
+  }
+ },
+ "ft": {
+  "detection": {
+   "raw": "{\"changed\": false}",
+   "parsed": {
+    "changed": false
+   },
+   "status": "valid",
+   "correct": false
+  },
+  "localization": {
+   "raw": "{\"node\": \"A\", \"action\": \"move_to_B\"}",
+   "parsed": {
+    "node": "A",
+    "action": "move_to_B"
+   },
+   "status": "valid",
+   "correct": false
+  },
+  "preservation": {
+   "raw": "{\"pairs\":[{\"node\":\"H\",\"action\":\"a2\",\"changed\":true},{\"node\":\"D\",\"action\":\"a2\",\"changed\":true},{\"node\":\"D\",\"action\":\"a1\",\"changed\":false},{\"node\":\"C\",\"action\":\"a1\",\"changed\":false}]}",
+   "parsed": {
+    "pairs": [
+     {
+      "node": "H",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a1",
+      "changed": false
+     },
+     {
+      "node": "C",
+      "action": "a1",
+      "changed": false
+     }
+    ]
+   },
+   "status": "valid",
+   "correct": false,
+   "hits": "3/4"
+  },
+  "adaptation": {
+   "raw": "{\"route\": [{\"node\": \"B\", \"action\": \"go\"}, {\"node\": \"C\", \"action\": \"go\"}, {\"node\": \"D\", \"action\": \"go\"}, {\"node\": \"F\", \"action\": \"arrive\"}]}",
+   "parsed": {
+    "route": [
+     {
+      "node": "B",
+      "action": "go"
+     },
+     {
+      "node": "C",
+      "action": "go"
+     },
+     {
+      "node": "D",
+      "action": "go"
+     },
+     {
+      "node": "F",
+      "action": "arrive"
+     }
+    ]
+   },
+   "status": "discontinuous",
+   "correct": false
+  }
+ },
+ "combo": {
+  "detection": {
+   "raw": "{\"changed\": false}",
+   "parsed": {
+    "changed": false
+   },
+   "status": "valid",
+   "correct": false
+  },
+  "localization": {
+   "raw": "{\"node\": \"C\", \"action\": \"a1\"}",
+   "parsed": {
+    "node": "C",
+    "action": "a1"
+   },
+   "status": "valid",
+   "correct": false
+  },
+  "preservation": {
+   "raw": "{\"pairs\":[{\"node\":\"H\",\"action\":\"a2\",\"changed\":true},{\"node\":\"D\",\"action\":\"a2\",\"changed\":false},{\"node\":\"C\",\"action\":\"a1\",\"changed\":false}]}\"",
+   "parsed": {
+    "pairs": [
+     {
+      "node": "H",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a2",
+      "changed": false
+     },
+     {
+      "node": "C",
+      "action": "a1",
+      "changed": false
+     }
+    ]
+   },
+   "status": "invalid_pairs",
+   "correct": false
+  },
+  "adaptation": {
+   "raw": "{\"route\": [{\"node\": \"E\", \"action\": \"a1\"}, {\"node\": \"B\", \"action\": \"a2\"}, {\"node\": \"F\", \"action\": \"a2\"}]}",
+   "parsed": {
+    "route": [
+     {
+      "node": "E",
+      "action": "a1"
+     },
+     {
+      "node": "B",
+      "action": "a2"
+     },
+     {
+      "node": "F",
+      "action": "a2"
+     }
+    ]
+   },
+   "status": "discontinuous",
+   "correct": false
+  }
+ }
+}

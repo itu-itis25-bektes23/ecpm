@@ -1,0 +1,27 @@
+{"run_id": "adaptive", "phase": "pre", "episode": 0, "t": 1, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": ""}
+{"run_id": "adaptive", "phase": "pre", "episode": 0, "t": 2, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": ""}
+{"run_id": "adaptive", "phase": "pre", "episode": 0, "t": 3, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": ""}
+{"run_id": "adaptive", "phase": "pre", "episode": 0, "t": 4, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": ""}
+{"run_id": "adaptive", "phase": "pre", "episode": 1, "t": 5, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": ""}
+{"type": "belief", "run_id": "adaptive", "phase": "pre", "episode": 1, "t": 5, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 1.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "adaptive", "phase": "pre", "episode": 1, "t": 6, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": ""}
+{"run_id": "adaptive", "phase": "pre", "episode": 1, "t": 7, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": ""}
+{"run_id": "adaptive", "phase": "pre", "episode": 1, "t": 8, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 9, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 10, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": ""}
+{"type": "belief", "run_id": "adaptive", "phase": "post", "episode": 0, "t": 10, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 1.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 11, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "DROP", "next_node": "D", "cost": 3, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 12, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "DROP", "next_node": "D", "cost": 4, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 13, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "DROP", "next_node": "D", "cost": 5, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 14, "node": "D", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "A", "cost": 6, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 15, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 7, "reason": ""}
+{"type": "belief", "run_id": "adaptive", "phase": "post", "episode": 0, "t": 15, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 0.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 16, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 8, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 17, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 9, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 0, "t": 18, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 10, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 1, "t": 19, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 1, "t": 20, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": ""}
+{"type": "belief", "run_id": "adaptive", "phase": "post", "episode": 1, "t": 20, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 0.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "adaptive", "phase": "post", "episode": 1, "t": 21, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 1, "t": 22, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": ""}
+{"run_id": "adaptive", "phase": "post", "episode": 1, "t": 23, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": ""}

@@ -13,5 +13,16 @@ run directly and writes an artifact under `runs/`.
   carry claims.
 - `azure_budget.py` costs a run matrix from measured token usage rather than
   estimates.
+
+The in-context versus finetuning comparison, grafted from a separate
+repository:
+
+- `gen_payloads.py` builds prompt payloads from the frozen generator.
+  Output is regenerated rather than committed.
+- `e1_batch.py` runs the three arms for one model on a GPU. Carries its
+  author's note that this exact file has not executed on one.
+- `rescore_e1.py` scores saved replies through the frozen parser, so a
+  scorer change can be re-applied without re-running the model.
+- `notebooks/` the Colab notebooks the batch script mirrors.
 - `run_two_turn_azure.sh` the two-turn run, resumable, refusing to start
   without credentials.

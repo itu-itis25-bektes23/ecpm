@@ -130,6 +130,8 @@ flowchart TD
 - `experiments/seed_eligibility.py` the three eligibility criteria, recomputed
 - `experiments/summarize_run.py` run artifacts to the reported statistics
 - `experiments/azure_budget.py` run costing from measured token usage
+- `experiments/gen_payloads.py`, `e1_batch.py`, `rescore_e1.py` the
+  in-context versus finetuning comparison
 - `experiments/run_two_turn_azure.sh` the two-turn run, resumable
 - `docs/` interface contract, paper spine, seed criteria, diagrams, figures
 - `CONTRIBUTING.md` the freeze rule, test conventions, writing rules
@@ -139,7 +141,8 @@ flowchart TD
 - `.github/` CI, code scanning, label rules, issue and pull request templates
 - `.editorconfig`, `.gitattributes` line endings and indentation, enforced
   before git sees the file
-- `archive/` freeze sign-off tooling, kept for provenance, not maintained
+- `archive/` freeze sign-off tooling and a superseded agentic arm, kept
+  for provenance, not maintained
 - `runs/` artifacts, one directory per run
 - `experiments/exploratory/` prompt-safe packets, oracle packets, probability
   scorer
