@@ -3,6 +3,10 @@
 Analysis and run scripts. Nothing here is imported by the harness; each is
 run directly and writes an artifact under `runs/`.
 
+- [summarize_icl.py](summarize_icl.py) reports saved two-response ICL scores,
+  including malformed components, with per-level and pooled results.
+  See [the results index](../runs/icl/README.md) for reproduction commands
+  and [test_summarize_icl.py](test_summarize_icl.py) for offline failure checks.
 - `seed_eligibility.py` recomputes the three seed criteria from the code and
   writes `runs/seed_eligibility.json`. The run script reads its seed list
   from that file, so the two cannot drift.

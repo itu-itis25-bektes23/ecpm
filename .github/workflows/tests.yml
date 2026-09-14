@@ -63,6 +63,9 @@ jobs:
           python test_explore_agent.py
           python test_run_pilot.py
 
+      - name: ICL saved-score reporting
+        run: python experiments/test_summarize_icl.py
+
       # Dry-run providers make no API calls, so the pilots are runnable in CI.
       # This catches breakage in the harness that the suites do not reach.
       - name: Dry-run pilots

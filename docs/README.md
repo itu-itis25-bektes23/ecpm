@@ -1,5 +1,6 @@
 # docs
 
+- [ICL.md](ICL.md) the three assistance levels, code links and final results.
 - `INTERFACE.md` the frozen answer contract and record schema. Section 7 is
   what `ecpm_parser.py` implements.
 - `EXPLORE_AGENT.md` the agentic exploration arm.

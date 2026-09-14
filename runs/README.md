@@ -1,5 +1,10 @@
 # runs
 
+The [ICL results index](icl/README.md) links the final matched comparison
+and earlier development attempts. Its [offline summarizer](../experiments/summarize_icl.py)
+keeps malformed components in the relevant all-response denominators;
+do not use the legacy summarizer below for these ICL artifacts.
+
 One directory per run, named `YYYY-MM-DD_model_variant`. Artifacts record
 `frozen_sha`, `git_head` and `pinned_to_freeze`, so a run can always be
 traced to the environment tree that produced it.

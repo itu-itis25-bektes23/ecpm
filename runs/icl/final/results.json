@@ -1,0 +1,3126 @@
+{
+  "format": "icl_saved_scores_v1",
+  "experiment_commit": "25d9d49af16a07939cb49ad0ba6e4101cc994ef7",
+  "archive": {"archive": "full-evidence.zip", "sha256": "6a3d9e47cec11a35640d7fa2a5525c7f27433f3d0110d68abcb1dff335a53a65", "bytes": 2593291, "evidence_files": 387, "zip_integrity": "PASS", "all_member_hashes": "PASS", "reviewed_commit": "2b2949b80afdb9079a4781986a5b3965cefbdfe7"},
+  "scope": "One graph seed, three repeated outputs per level. Descriptive, not independent graph samples.",
+  "scoring_policy": "Saved first-object parsing and scoring only. Five queried pairs per response; malformed components remain failures. No response reparse or rescore.",
+  "expected_aggregates_sha256": "4d3e6bb4aadc3e17c9d18a5768550d7c6f72225318d3c698e0d1c93aabc92b9e",
+  "settings": {
+    "off": {
+      "model": {
+        "api_version": "openai-compatible-v1",
+        "endpoint_config_sha256": "597cc2e7de614628ec5c642fbe4d0eb21f74b27ad48d625fe75c27fad7d3591e",
+        "max_tokens": 8192,
+        "model": "sunil-pathak/gemma-4-e4b-it",
+        "provider": "openai",
+        "reasoning_provenance": {
+          "mode": "off",
+          "operator_json": "{\"reasoning\":\"off\"}",
+          "request_fields": {"reasoning": "off"},
+          "semantics_verified_by_runner": false,
+          "source": "Bionic 1.1.2+11; app Thinking OFF, reasoning budget disabled, and app response-length limit disabled verified; fresh aligned OFF preflight passed; max_tokens=8192",
+          "status": "explicit_provider_control"
+        },
+        "sampling_seed_status": "supported",
+        "sampling_seed_status_source": "cli",
+        "temperature": 1.0,
+        "timeout_s": 900,
+        "top_k": 64,
+        "top_p": 0.95
+      },
+      "scenario": {"budget": 10, "condition": "silent_break", "evidence_seed": 0, "k": 10, "matched": true, "name": "icl_det_gate_seed8", "seed": 8},
+      "instance": {"budget_per_pair": 10, "condition": "silent_break", "deterministic": true, "evidence_seed": 0, "evidence_seed_effective": 0, "graph_seed": 8, "k_per_pair": 10, "matched": true},
+      "queried_pairs": [
+        {"action": "a2", "node": "B"},
+        {"action": "a1", "node": "F"},
+        {"action": "a2", "node": "F"},
+        {"action": "a1", "node": "G"},
+        {"action": "a2", "node": "H"}
+      ]
+    },
+    "on": {
+      "model": {
+        "api_version": "openai-compatible-v1",
+        "endpoint_config_sha256": "597cc2e7de614628ec5c642fbe4d0eb21f74b27ad48d625fe75c27fad7d3591e",
+        "max_tokens": 8192,
+        "model": "sunil-pathak/gemma-4-e4b-it",
+        "provider": "openai",
+        "reasoning_provenance": {
+          "mode": "on",
+          "operator_json": "{\"reasoning\":\"on\"}",
+          "request_fields": {"reasoning": "on"},
+          "semantics_verified_by_runner": false,
+          "source": "Bionic 1.1.2+11; app Thinking ON, reasoning budget disabled, and app response-length limit disabled verified; fresh aligned ON preflight passed; max_tokens=8192",
+          "status": "explicit_provider_control"
+        },
+        "sampling_seed_status": "supported",
+        "sampling_seed_status_source": "cli",
+        "temperature": 1.0,
+        "timeout_s": 900,
+        "top_k": 64,
+        "top_p": 0.95
+      },
+      "scenario": {"budget": 10, "condition": "silent_break", "evidence_seed": 0, "k": 10, "matched": true, "name": "icl_det_gate_seed8", "seed": 8},
+      "instance": {"budget_per_pair": 10, "condition": "silent_break", "deterministic": true, "evidence_seed": 0, "evidence_seed_effective": 0, "graph_seed": 8, "k_per_pair": 10, "matched": true},
+      "queried_pairs": [
+        {"action": "a2", "node": "B"},
+        {"action": "a1", "node": "F"},
+        {"action": "a2", "node": "F"},
+        {"action": "a1", "node": "G"},
+        {"action": "a2", "node": "H"}
+      ]
+    }
+  },
+  "runs": [
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r1_empirical_table_s0_46bb0a31b0912f67",
+      "level": "empirical_table",
+      "repeat": 1,
+      "sampling_seed": 0,
+      "source_artifact_sha256": "22ad6da4e8df996aa7c96eb6b8f0a5cb402f5692b274079b4b51a7d2b67b9a90",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r1_empirical_table_s0_46bb0a31b0912f67.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 2.0, "path": null, "regret": null, "status": "unknown_reference"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "D", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"},
+                {"action": "a2", "node": "D"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 341,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 905,
+            "total_tokens": 1246
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "0869266a1503dea1ffcc6a6971e1b19a3d089028d8eaef0a2c66928d2bb6cb87",
+          "response_sha256": "b33f61fa96d62968fcafa4132aae55c4cf018c0d2a124c0454b4a1833cbec32d",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "67851fb4561b7f15fb1186144d12128e136a72fac7b0c549b551220ad40de0a2"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "B", "route_destination": "H", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a2", "node": "B"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 407,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 2255,
+            "total_tokens": 2662
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "3956374ebbe29520c0aa1122301955a15041b494fafffb78b9314bd93104df59",
+          "response_sha256": "97470712df9fade9bf841b32f9102ea332626d2f6553074c1c0711e276e08b30",
+          "previous_response_sha256": "b33f61fa96d62968fcafa4132aae55c4cf018c0d2a124c0454b4a1833cbec32d",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "d90bec3f99e6c90f48469ce15992a48ddbbe115297bae2cee7927bc82e9881dc"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r2_empirical_table_s1_795ef3af91dd1cd3",
+      "level": "empirical_table",
+      "repeat": 2,
+      "sampling_seed": 1,
+      "source_artifact_sha256": "36778e10810a62ad8c8331ceb0c3a02abf92a0ea7b914761ddac91194208eab1",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r2_empirical_table_s1_795ef3af91dd1cd3.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "pre",
+              "status": "invalid_object"
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 2.0, "path": null, "regret": null, "status": "invalid_object"},
+            "route_belief_diagnostic": {
+              "pairs": [],
+              "status": "not_scored"
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 1915,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 905,
+            "total_tokens": 2820
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "0869266a1503dea1ffcc6a6971e1b19a3d089028d8eaef0a2c66928d2bb6cb87",
+          "response_sha256": "134bbc81510463446531e1631bd005638e49d225b56b9215a52ff8a9376e2a9b",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "route": {"status": "invalid_object"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "a78782e4f4106dcd8d0a7b9f15bb4d916de4ad9ac5f8d6687da8f5e778d30d92"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": false,
+              "detection_status": "invalid_object",
+              "localization_applicable": true,
+              "localization_correct": false,
+              "localization_status": "invalid_object",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": null,
+              "predicted_changed_pair": null,
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 3.0, "path": null, "regret": null, "status": "invalid_object"},
+            "route_belief_diagnostic": {
+              "pairs": [],
+              "status": "not_scored"
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 1363,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 3829,
+            "total_tokens": 5192
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "3956374ebbe29520c0aa1122301955a15041b494fafffb78b9314bd93104df59",
+          "response_sha256": "7d5210bbda16a9eebb0fca712245c878e7834ba589ee8bbfc62592f4d3aa92ba",
+          "previous_response_sha256": "134bbc81510463446531e1631bd005638e49d225b56b9215a52ff8a9376e2a9b",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"status": "invalid_object"},
+            "localization": {"changed_pair": null, "status": "invalid_object"},
+            "route": {"status": "invalid_object"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "f4927c09de424212ea540116fd3ac00d433d5580f320a01e6ae029ca2bfe0e88"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r3_empirical_table_s2_d3ec1912e9156b8a",
+      "level": "empirical_table",
+      "repeat": 3,
+      "sampling_seed": 2,
+      "source_artifact_sha256": "50da571d8e219f67d00f31f92a9b972ee1f4105cd0517adc9ffbb3e571802752",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r3_empirical_table_s2_d3ec1912e9156b8a.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 2.0, "path": null, "regret": null, "status": "unknown_reference"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "D", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"},
+                {"action": "a2", "node": "D"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 341,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 905,
+            "total_tokens": 1246
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "0869266a1503dea1ffcc6a6971e1b19a3d089028d8eaef0a2c66928d2bb6cb87",
+          "response_sha256": "b33f61fa96d62968fcafa4132aae55c4cf018c0d2a124c0454b4a1833cbec32d",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "67851fb4561b7f15fb1186144d12128e136a72fac7b0c549b551220ad40de0a2"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "B", "route_destination": "H", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a2", "node": "B"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 407,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 2255,
+            "total_tokens": 2662
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "3956374ebbe29520c0aa1122301955a15041b494fafffb78b9314bd93104df59",
+          "response_sha256": "97470712df9fade9bf841b32f9102ea332626d2f6553074c1c0711e276e08b30",
+          "previous_response_sha256": "b33f61fa96d62968fcafa4132aae55c4cf018c0d2a124c0454b4a1833cbec32d",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "d90bec3f99e6c90f48469ce15992a48ddbbe115297bae2cee7927bc82e9881dc"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r1_explained_logs_s0_f17c2661310fed15",
+      "level": "explained_logs",
+      "repeat": 1,
+      "sampling_seed": 0,
+      "source_artifact_sha256": "94b7dab0157e52dd779f185cde98371e9cca8038319b1a459d598d0934c6d61d",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r1_explained_logs_s0_f17c2661310fed15.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.2,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.1392,
+              "p_mae_visible": 0.1392,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.07692307692307687, "p_error_visible": 0.07692307692307687, "p_success": 0.9230769230769231, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.33333333333333337, "p_error_visible": 0.33333333333333337, "p_success": 0.6666666666666666, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.1428571428571429, "p_error_visible": 0.1428571428571429, "p_success": 0.8571428571428571, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.1428571428571429, "p_error_visible": 0.1428571428571429, "p_success": 0.8571428571428571, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 2.0, "path": null, "regret": null, "status": "unknown_reference"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"},
+                {"action": "N/A", "belief_destination": null, "node": "D", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"},
+                {"action": "N/A", "node": "D"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 425,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 1859,
+            "total_tokens": 2284
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "e05f58a5f2e58b5198b032462dc5f10e05a922a43d89d4443322bbc6089fb346",
+          "response_sha256": "e708f02993a2a979abbdd99630016f6e32d9a4ac7dc04978b64c59d8b5be69ed",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "4bde5f18270bf7dde4b89c84cef26c314e53a7edd40cef6285bd3c29bd77f269"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 3.0, "path": null, "regret": null, "status": "unknown_reference"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "B", "route_destination": "H", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"},
+                {"action": "N/A", "belief_destination": null, "node": "D", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a2", "node": "B"},
+                {"action": "a1", "node": "H"},
+                {"action": "N/A", "node": "D"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 477,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 4247,
+            "total_tokens": 4724
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "134bcee56435dc9833c5b01adbbff1070971209a41c23b57bf3155fbf94b33cf",
+          "response_sha256": "6364a390dd0223dc1aa24acf8a2e2022b2c0f71bc86db54f3f33bc3a6370c881",
+          "previous_response_sha256": "e708f02993a2a979abbdd99630016f6e32d9a4ac7dc04978b64c59d8b5be69ed",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "16b94d048f3e0f9c253a77eccc74a884762064b308bf36bff45f7840f06cb444"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r2_explained_logs_s1_af438c6aedbbfa7d",
+      "level": "explained_logs",
+      "repeat": 2,
+      "sampling_seed": 1,
+      "source_artifact_sha256": "54097474e17d549e5694f05e30767b610b9bc0be6a199557bb390ff1ec0dc754",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r2_explained_logs_s1_af438c6aedbbfa7d.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": false,
+              "optimal_cost": 2.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 1.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1522,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 1859,
+            "total_tokens": 3381
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "e05f58a5f2e58b5198b032462dc5f10e05a922a43d89d4443322bbc6089fb346",
+          "response_sha256": "564ce74f4612c0cb81303660d8c97ca8043fa4ff3fea6de7d7c67ee95dd91729",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "2e51056ec84f11fad8b418511135174a35096af9b3adff2d78ac7862da7d6db5"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 1.0,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": true, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 0.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": true,
+              "mean_control_preservation": 1.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": true, "node": "B", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 1.0
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1670,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 5344,
+            "total_tokens": 7014
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "134bcee56435dc9833c5b01adbbff1070971209a41c23b57bf3155fbf94b33cf",
+          "response_sha256": "256e422d0a02d56dda53adc6b7a212a540f3a0e10bcefba01493a0703a28aa50",
+          "previous_response_sha256": "564ce74f4612c0cb81303660d8c97ca8043fa4ff3fea6de7d7c67ee95dd91729",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "ccdf763be3b51370e78225389127ea2856502f6bdaf7472bf7d11db1477dd14d"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r3_explained_logs_s2_d29ec7dd9706be5b",
+      "level": "explained_logs",
+      "repeat": 3,
+      "sampling_seed": 2,
+      "source_artifact_sha256": "e2f4043cb8027a78b2f4d3ef38ed82080187f08d6eba3d22f414c0e0cfb01ec1",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r3_explained_logs_s2_d29ec7dd9706be5b.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.4,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.2,
+              "p_mae_visible": 0.2,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.19999999999999996, "p_error_visible": 0.19999999999999996, "p_success": 0.8, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.4666666666666667, "p_error_visible": 0.4666666666666667, "p_success": 0.5333333333333333, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.33333333333333337, "p_error_visible": 0.33333333333333337, "p_success": 0.6666666666666666, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 2.0, "path": null, "regret": null, "status": "unknown_reference"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "D", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"},
+                {"action": "a2", "node": "D"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 371,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 1859,
+            "total_tokens": 2230
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "e05f58a5f2e58b5198b032462dc5f10e05a922a43d89d4443322bbc6089fb346",
+          "response_sha256": "b65f93b321d44c3e57248ef003951d1a2dafeae6042897e1c896536840a3ae65",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "684a04902b47c67ecadb18788ecec1df3b74a77ad30c823dd31bafe33fa910fe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 3.0, "path": null, "regret": null, "status": "unknown_reference"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "B", "route_destination": "H", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "D", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a2", "node": "B"},
+                {"action": "a1", "node": "H"},
+                {"action": "a1", "node": "D"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 445,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 4193,
+            "total_tokens": 4638
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "134bcee56435dc9833c5b01adbbff1070971209a41c23b57bf3155fbf94b33cf",
+          "response_sha256": "2a5ab4b59941c79263410aaa5c56d339c04979a82e7770ad302f225f1a665d16",
+          "previous_response_sha256": "b65f93b321d44c3e57248ef003951d1a2dafeae6042897e1c896536840a3ae65",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "113f20ed3437434b455ac66d465c8e42564d57e7aac56bd885696bf3c4fb6e10"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r1_minimal_logs_s0_bf9e49b31d53d991",
+      "level": "minimal_logs",
+      "repeat": 1,
+      "sampling_seed": 0,
+      "source_artifact_sha256": "864c695325b1f3e414cc0df9c702bd178339dceb840aa5c70dce248520322e12",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r1_minimal_logs_s0_bf9e49b31d53d991.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.4333,
+              "p_mae_visible": 0.4333,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.6666666666666667, "p_error_visible": 0.6666666666666667, "p_success": 0.3333333333333333, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.33333333333333337, "p_error_visible": 0.33333333333333337, "p_success": 0.6666666666666666, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.5, "p_error_visible": 0.5, "p_success": 0.5, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.33333333333333337, "p_error_visible": 0.33333333333333337, "p_success": 0.6666666666666666, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.33333333333333337, "p_error_visible": 0.33333333333333337, "p_success": 0.6666666666666666, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 2.0, "path": null, "regret": null, "status": "incomplete_route"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 355,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 1872,
+            "total_tokens": 2227
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "64a0a2bae2b5235effcd58d0c50ca8a5c7fae8b4fa850754b40f4b3c7a20bd30",
+          "response_sha256": "6db5b90ef5737084c3e7a0697501f55a5f98e2bb22948c616e2720c9921a3807",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "c777dc80e930a46a217ac23f51dbd00587b4cf24df68e03fb517e085961790bd"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {"expected_cost": null, "is_optimal": false, "optimal_cost": 3.0, "path": null, "regret": null, "status": "incomplete_route"},
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 391,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 4203,
+            "total_tokens": 4594
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "9ff49bc011972c1955892e4594e87726cec69ec21c0059a259a930a4e71554fd",
+          "response_sha256": "240e5a0c28c624d1537d43a808cb6dce0e056a80bc293dc996f7371ff8a4d507",
+          "previous_response_sha256": "6db5b90ef5737084c3e7a0697501f55a5f98e2bb22948c616e2720c9921a3807",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "3b418f31cf62935d5f466b3217dba1f35aaab212fc89220805a78aa75c5a75e6"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r2_minimal_logs_s1_729c4fa845aa2dd9",
+      "level": "minimal_logs",
+      "repeat": 2,
+      "sampling_seed": 1,
+      "source_artifact_sha256": "0dc6d2db5f15c22ed01dbcb6d539e0f1131ff8707bbf99982997ee9fcec772ad",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r2_minimal_logs_s1_729c4fa845aa2dd9.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 2197,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 1872,
+            "total_tokens": 4069
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "64a0a2bae2b5235effcd58d0c50ca8a5c7fae8b4fa850754b40f4b3c7a20bd30",
+          "response_sha256": "8e4645bf3705a130713335c4c2de0ab1dbac2489e36f9346ca0e445c2e745dcc",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 1.0,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": true, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 0.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": true,
+              "mean_control_preservation": 1.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": true, "node": "B", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 1.0
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": null,
+              "is_optimal": false,
+              "optimal_cost": 3.0,
+              "path": ["G", "E", "D"],
+              "regret": null,
+              "status": "silent_broken_edge"
+            },
+            "route_belief_diagnostic": {
+              "conflicting_pairs": [
+                {"action": "a1", "node": "G"}
+              ],
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "inconsistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_inconsistent",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": true, "target_belief_status": "route_inconsistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1845,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 6045,
+            "total_tokens": 7890
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "9ff49bc011972c1955892e4594e87726cec69ec21c0059a259a930a4e71554fd",
+          "response_sha256": "a67f137f02ac571904e3f2ec1703aaf5e49923d7bd0a525d4d1490a58bbc84a2",
+          "previous_response_sha256": "8e4645bf3705a130713335c4c2de0ab1dbac2489e36f9346ca0e445c2e745dcc",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e0d7f42d487b97ef929f0ee238374a3d60aa7942ed7c47f6a9748c036bc410ed"
+        }
+      }
+    },
+    {
+      "condition": "off",
+      "tag": "icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r3_minimal_logs_s2_f57793f9c29382ed",
+      "level": "minimal_logs",
+      "repeat": 3,
+      "sampling_seed": 2,
+      "source_artifact_sha256": "5b26c8d30dc5eb39ab16ebf66e361570bd0ced01fc23027fc095037f8886f611",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_off_belief_mt8192_v1/icl_two_response_v1_seed8_det_r3_minimal_logs_s2_f57793f9c29382ed.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.4,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.175,
+              "p_mae_visible": 0.175,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.25, "p_error_visible": 0.25, "p_success": 0.75, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.375, "p_error_visible": 0.375, "p_success": 0.625, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": false, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.25, "p_error_visible": 0.25, "p_success": 0.75, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": false,
+              "optimal_cost": 2.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 1.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 345,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 1872,
+            "total_tokens": 2217
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "64a0a2bae2b5235effcd58d0c50ca8a5c7fae8b4fa850754b40f4b3c7a20bd30",
+          "response_sha256": "7b73fc08a959124a7d3bf5971205a35db1c588c9694a3c6572c17026942fa608",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "46138a5ebc71d76567ef797b2d2f0a20d0fa9f4febd9baa863318888f6901a6e"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "B", "route_destination": "H", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a2", "node": "B"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 422,
+            "completion_tokens_details": {"reasoning_tokens": 0},
+            "prompt_tokens": 4193,
+            "total_tokens": 4615
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "9ff49bc011972c1955892e4594e87726cec69ec21c0059a259a930a4e71554fd",
+          "response_sha256": "f38f428732bd9024da39997b1e8baea40c822e65651b2f87c5b6443cbb312659",
+          "previous_response_sha256": "7b73fc08a959124a7d3bf5971205a35db1c588c9694a3c6572c17026942fa608",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "d90bec3f99e6c90f48469ce15992a48ddbbe115297bae2cee7927bc82e9881dc"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r1_empirical_table_s0_33bb9607779a9aae",
+      "level": "empirical_table",
+      "repeat": 1,
+      "sampling_seed": 0,
+      "source_artifact_sha256": "40ffe242e1f67efcae9491e79c5269bae306441f0c7a72c0fbe333ea8346fd2e",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r1_empirical_table_s0_33bb9607779a9aae.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1905,
+            "completion_tokens_details": {"reasoning_tokens": 1583},
+            "prompt_tokens": 912,
+            "total_tokens": 2817
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "0869266a1503dea1ffcc6a6971e1b19a3d089028d8eaef0a2c66928d2bb6cb87",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 1.0,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": true, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 0.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": true,
+              "mean_control_preservation": 1.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": true, "node": "B", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 1.0
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1450,
+            "completion_tokens_details": {"reasoning_tokens": 1035},
+            "prompt_tokens": 2239,
+            "total_tokens": 3689
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "3956374ebbe29520c0aa1122301955a15041b494fafffb78b9314bd93104df59",
+          "response_sha256": "6ba233c4598f0c9955d2cb7238071505a19bfbf96534d39d69ea9eba197ad521",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "ccdf763be3b51370e78225389127ea2856502f6bdaf7472bf7d11db1477dd14d"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r2_empirical_table_s1_5aa56d76dcf84aa5",
+      "level": "empirical_table",
+      "repeat": 2,
+      "sampling_seed": 1,
+      "source_artifact_sha256": "1b93a378b92bc6a6bcc6f9cc67cfcc2ab9719e693e90fe5fccc2127350dd5ed8",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r2_empirical_table_s1_5aa56d76dcf84aa5.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 2324,
+            "completion_tokens_details": {"reasoning_tokens": 2002},
+            "prompt_tokens": 912,
+            "total_tokens": 3236
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "0869266a1503dea1ffcc6a6971e1b19a3d089028d8eaef0a2c66928d2bb6cb87",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.8,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 0.8,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.2,
+              "p_mae_visible": 0.2,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": false, "changed": false, "correct": false, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 1.0, "p_error_visible": 1.0, "p_success": 1.0, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": true,
+              "mean_control_preservation": 1.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": true, "node": "B", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 1.0
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "detection_localization": {
+              "detection_correct": false,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": false,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": true,
+              "null_changed_pair_correct": true,
+              "predicted_changed": false,
+              "predicted_changed_pair": null,
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": null,
+              "is_optimal": false,
+              "optimal_cost": 3.0,
+              "path": ["G", "E", "D"],
+              "regret": null,
+              "status": "silent_broken_edge"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1432,
+            "completion_tokens_details": {"reasoning_tokens": 1059},
+            "prompt_tokens": 2239,
+            "total_tokens": 3671
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "3956374ebbe29520c0aa1122301955a15041b494fafffb78b9314bd93104df59",
+          "response_sha256": "8bbb38c409bf70ff197524a6651a68a0b463e66040b05a683ce8bdb77f9b9aee",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": false, "status": "ok"},
+            "localization": {"changed_pair": null, "status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "d81df201702527d016c8991450b927885c080b58567ae9efe282b9df65c8e5f0"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r3_empirical_table_s2_bb0b5206e8bd5cd8",
+      "level": "empirical_table",
+      "repeat": 3,
+      "sampling_seed": 2,
+      "source_artifact_sha256": "886f2673a0d3b94fbadbc85fcb914a4e10dd0cdf191cf9604ed5a4481d8d293d",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r3_empirical_table_s2_bb0b5206e8bd5cd8.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1949,
+            "completion_tokens_details": {"reasoning_tokens": 1627},
+            "prompt_tokens": 912,
+            "total_tokens": 2861
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "0869266a1503dea1ffcc6a6971e1b19a3d089028d8eaef0a2c66928d2bb6cb87",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.8,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 0.8,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.2,
+              "p_mae_visible": 0.2,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": false, "changed": false, "correct": false, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 1.0, "p_error_visible": 1.0, "p_success": 1.0, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": true,
+              "mean_control_preservation": 1.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": true, "node": "B", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 1.0
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "detection_localization": {
+              "detection_correct": false,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": false,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": true,
+              "null_changed_pair_correct": true,
+              "predicted_changed": false,
+              "predicted_changed_pair": null,
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": null,
+              "is_optimal": false,
+              "optimal_cost": 3.0,
+              "path": ["G", "E", "D"],
+              "regret": null,
+              "status": "silent_broken_edge"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 1797,
+            "completion_tokens_details": {"reasoning_tokens": 1424},
+            "prompt_tokens": 2239,
+            "total_tokens": 4036
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "3956374ebbe29520c0aa1122301955a15041b494fafffb78b9314bd93104df59",
+          "response_sha256": "8bbb38c409bf70ff197524a6651a68a0b463e66040b05a683ce8bdb77f9b9aee",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": false, "status": "ok"},
+            "localization": {"changed_pair": null, "status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "d81df201702527d016c8991450b927885c080b58567ae9efe282b9df65c8e5f0"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r1_explained_logs_s0_7fceb9c93cd51b94",
+      "level": "explained_logs",
+      "repeat": 1,
+      "sampling_seed": 0,
+      "source_artifact_sha256": "b82fccfcc9342032eaf267a6d545f0eda95e698eb6af82cecdc3ae77e10062d5",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r1_explained_logs_s0_7fceb9c93cd51b94.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 2171,
+            "completion_tokens_details": {"reasoning_tokens": 1849},
+            "prompt_tokens": 1866,
+            "total_tokens": 4037
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "e05f58a5f2e58b5198b032462dc5f10e05a922a43d89d4443322bbc6089fb346",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.2,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 0.2,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.3333,
+              "p_mae_visible": 0.3333,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": false, "changed": true, "correct": false, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.16666666666666663, "p_error_visible": 0.16666666666666663, "p_success": 0.8333333333333334, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": false, "changed": true, "correct": false, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.41666666666666674, "p_error_visible": 0.41666666666666674, "p_success": 0.5833333333333333, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": false, "changed": true, "correct": false, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.5, "p_error_visible": 0.5, "p_success": 0.5, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": true, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 0.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": false, "changed": true, "correct": false, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.5833333333333333, "p_error_visible": 0.5833333333333333, "p_success": 0.4166666666666667, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": false, "node": "B", "reported_unchanged": false, "self_consistent": false, "truth_correct": false},
+                {"action": "a1", "belief_preserved": false, "node": "F", "reported_unchanged": false, "self_consistent": false, "truth_correct": false},
+                {"action": "a2", "belief_preserved": false, "node": "F", "reported_unchanged": false, "self_consistent": false, "truth_correct": false},
+                {"action": "a2", "belief_preserved": false, "node": "H", "reported_unchanged": false, "self_consistent": false, "truth_correct": false}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": false,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a2", "node": "B"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 3956,
+            "completion_tokens_details": {"reasoning_tokens": 3496},
+            "prompt_tokens": 4147,
+            "total_tokens": 8103
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "134bcee56435dc9833c5b01adbbff1070971209a41c23b57bf3155fbf94b33cf",
+          "response_sha256": "309400145266390966f9df585e144ccfe0e6dd735f34c04576c01fccc06eb9d6",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a2", "node": "B"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "8d68a9ec7c7ffae76e9e57e04b8df925ad22e4c6f066013bbce29a97ee002ca9"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r2_explained_logs_s1_1f1bb56dc37e732f",
+      "level": "explained_logs",
+      "repeat": 2,
+      "sampling_seed": 1,
+      "source_artifact_sha256": "08825814359fd965b812742b2cdfe863379b7b2b3e4a566a4db626d885529fa2",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r2_explained_logs_s1_1f1bb56dc37e732f.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 3703,
+            "completion_tokens_details": {"reasoning_tokens": 3381},
+            "prompt_tokens": 1866,
+            "total_tokens": 5569
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "e05f58a5f2e58b5198b032462dc5f10e05a922a43d89d4443322bbc6089fb346",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "B", "route_destination": "H", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a2", "node": "B"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 3227,
+            "completion_tokens_details": {"reasoning_tokens": 2813},
+            "prompt_tokens": 4147,
+            "total_tokens": 7374
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "134bcee56435dc9833c5b01adbbff1070971209a41c23b57bf3155fbf94b33cf",
+          "response_sha256": "440e5e795479715cf27d13c1c67822b1da2fdc07735432692886a0fe158aa766",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "d90bec3f99e6c90f48469ce15992a48ddbbe115297bae2cee7927bc82e9881dc"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r3_explained_logs_s2_0040ff8c797e559e",
+      "level": "explained_logs",
+      "repeat": 3,
+      "sampling_seed": 2,
+      "source_artifact_sha256": "2dee1b020ab799a6d3f42b95eaf91d9d266945556c2cef1091a47f8e04aed894",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r3_explained_logs_s2_0040ff8c797e559e.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 5323,
+            "completion_tokens_details": {"reasoning_tokens": 5001},
+            "prompt_tokens": 1866,
+            "total_tokens": 7189
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "e05f58a5f2e58b5198b032462dc5f10e05a922a43d89d4443322bbc6089fb346",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.8,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 0.8,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.2,
+              "p_mae_visible": 0.2,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": false, "changed": false, "correct": false, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 1.0, "p_error_visible": 1.0, "p_success": 1.0, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": true,
+              "mean_control_preservation": 1.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": true, "node": "B", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 1.0
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "detection_localization": {
+              "detection_correct": false,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": false,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": true,
+              "null_changed_pair_correct": true,
+              "predicted_changed": false,
+              "predicted_changed_pair": null,
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": null,
+              "is_optimal": false,
+              "optimal_cost": 3.0,
+              "path": ["G", "E", "D"],
+              "regret": null,
+              "status": "silent_broken_edge"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 5153,
+            "completion_tokens_details": {"reasoning_tokens": 4780},
+            "prompt_tokens": 4147,
+            "total_tokens": 9300
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "134bcee56435dc9833c5b01adbbff1070971209a41c23b57bf3155fbf94b33cf",
+          "response_sha256": "8bbb38c409bf70ff197524a6651a68a0b463e66040b05a683ce8bdb77f9b9aee",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": false, "status": "ok"},
+            "localization": {"changed_pair": null, "status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "d81df201702527d016c8991450b927885c080b58567ae9efe282b9df65c8e5f0"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r1_minimal_logs_s0_b3c9c8dbfb59bd19",
+      "level": "minimal_logs",
+      "repeat": 1,
+      "sampling_seed": 0,
+      "source_artifact_sha256": "861611e672c8f2b2ab9dcd50a935425172e97c242bb689f2dd84e78127379f83",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r1_minimal_logs_s0_b3c9c8dbfb59bd19.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 2918,
+            "completion_tokens_details": {"reasoning_tokens": 2596},
+            "prompt_tokens": 1879,
+            "total_tokens": 4797
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "64a0a2bae2b5235effcd58d0c50ca8a5c7fae8b4fa850754b40f4b3c7a20bd30",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.8,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 0.8,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.1613,
+              "p_mae_visible": 0.1613,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": false, "changed": true, "correct": false, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.8065, "p_error_visible": 0.8065, "p_success": 0.1935, "probability_ok": false, "transition_correct": false, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": true, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 0.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.75,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": false, "node": "B", "reported_unchanged": false, "self_consistent": false, "truth_correct": false},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 0.75
+            },
+            "correct": false,
+            "correct_given_well_formed": false,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": false,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a2", "node": "B"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 2838,
+            "completion_tokens_details": {"reasoning_tokens": 2420},
+            "prompt_tokens": 4173,
+            "total_tokens": 7011
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "9ff49bc011972c1955892e4594e87726cec69ec21c0059a259a930a4e71554fd",
+          "response_sha256": "b0e493654c8a36920207e38111112eb97530a3cc6da0aa1b3859aa5c6ad8308f",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a2", "node": "B"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "4dceb2ee3301c0433d0da4478dfa21bc751944bd6e9db79b37d679b37f223980"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r2_minimal_logs_s1_980f599ba378380b",
+      "level": "minimal_logs",
+      "repeat": 2,
+      "sampling_seed": 1,
+      "source_artifact_sha256": "d440674588fdcc6195580ef73e360b000aaef4f2740b729a375e566037f156a5",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r2_minimal_logs_s1_980f599ba378380b.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 2356,
+            "completion_tokens_details": {"reasoning_tokens": 2034},
+            "prompt_tokens": 1879,
+            "total_tokens": 4235
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "64a0a2bae2b5235effcd58d0c50ca8a5c7fae8b4fa850754b40f4b3c7a20bd30",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 0.0,
+              "availability_accuracy": 0.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": null,
+              "n_destination_scored": 0,
+              "n_p_truth_scored": 0,
+              "n_p_visible_scored": 0,
+              "n_queried": 5,
+              "n_scored": 0,
+              "p_mae_truth": null,
+              "p_mae_visible": null,
+              "per_pair": [],
+              "period": "post",
+              "status": "invalid_object"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": false,
+              "mean_control_preservation": 0.0,
+              "n_controls": 4,
+              "per_pair": [],
+              "status": "unscored",
+              "truth_mean_control_preservation": 0.0
+            },
+            "correct": false,
+            "correct_given_well_formed": null,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": null, "node": "B", "route_destination": "H", "status": "unresolvable"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a2", "node": "B"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": false
+          },
+          "provider_usage": {
+            "completion_tokens": 4782,
+            "completion_tokens_details": {"reasoning_tokens": 4368},
+            "prompt_tokens": 4173,
+            "total_tokens": 8955
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "9ff49bc011972c1955892e4594e87726cec69ec21c0059a259a930a4e71554fd",
+          "response_sha256": "440e5e795479715cf27d13c1c67822b1da2fdc07735432692886a0fe158aa766",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "invalid_object"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "partial",
+            "well_formed": false
+          },
+          "source_scores_sha256": "d90bec3f99e6c90f48469ce15992a48ddbbe115297bae2cee7927bc82e9881dc"
+        }
+      }
+    },
+    {
+      "condition": "on",
+      "tag": "icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1",
+      "run_id": "icl_two_response_v1_seed8_det_r3_minimal_logs_s2_4adb0a0058188cd4",
+      "level": "minimal_logs",
+      "repeat": 3,
+      "sampling_seed": 2,
+      "source_artifact_sha256": "94d81d626f838638fdc4496e1f2549d4a48b15ff173db0e52956752e10311571",
+      "archive_member": "reviewed-pr/runs/icl/final/icl_gate_gemma4e4b_q6k_det_on_belief_mt8192_v1/icl_two_response_v1_seed8_det_r3_minimal_logs_s2_4adb0a0058188cd4.json",
+      "turns": {
+        "A": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": null,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": null, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "pre",
+              "status": "ok"
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "route": {
+              "expected_cost": 2.0,
+              "is_optimal": true,
+              "optimal_cost": 2.0,
+              "path": ["G", "E", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a1", "belief_destination": "E", "node": "G", "route_destination": "E", "status": "consistent"},
+                {"action": "a2", "belief_destination": null, "node": "E", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "E"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "consistent", "uses_intervention_target": true},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 4263,
+            "completion_tokens_details": {"reasoning_tokens": 3941},
+            "prompt_tokens": 1879,
+            "total_tokens": 6142
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "64a0a2bae2b5235effcd58d0c50ca8a5c7fae8b4fa850754b40f4b3c7a20bd30",
+          "response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "previous_response_sha256": null,
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "e991b8181276a8bed35e6bcf920556c4e5514d23c7106c8f0f25e285308d0cfe"
+        },
+        "B": {
+          "scored": {
+            "beliefs": {
+              "accuracy": 1.0,
+              "availability_accuracy": 1.0,
+              "change_label_accuracy": 1.0,
+              "destination_accuracy": 1.0,
+              "n_destination_scored": 5,
+              "n_p_truth_scored": 5,
+              "n_p_visible_scored": 5,
+              "n_queried": 5,
+              "n_scored": 5,
+              "p_mae_truth": 0.0,
+              "p_mae_visible": 0.0,
+              "per_pair": [
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "H", "destination_ok": true, "node": "B", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "H", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "A", "destination_ok": true, "node": "F", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "A", "true_p_success": 1.0, "visible_p_success": 1.0},
+                {"action": "a1", "availability_ok": true, "available": true, "change_label_ok": true, "changed": true, "correct": true, "destination": "E", "destination_ok": true, "node": "G", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 0.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "E", "true_p_success": 0.0, "visible_p_success": 0.0},
+                {"action": "a2", "availability_ok": true, "available": true, "change_label_ok": true, "changed": false, "correct": true, "destination": "C", "destination_ok": true, "node": "H", "p_error_truth": 0.0, "p_error_visible": 0.0, "p_success": 1.0, "probability_ok": true, "transition_correct": true, "true_available": true, "true_destination": "C", "true_p_success": 1.0, "visible_p_success": 1.0}
+              ],
+              "period": "post",
+              "status": "ok"
+            },
+            "control_preservation": {
+              "all_four_controls_correct": true,
+              "mean_control_preservation": 1.0,
+              "n_controls": 4,
+              "per_pair": [
+                {"action": "a2", "belief_preserved": true, "node": "B", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a1", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "F", "reported_unchanged": true, "self_consistent": true, "truth_correct": true},
+                {"action": "a2", "belief_preserved": true, "node": "H", "reported_unchanged": true, "self_consistent": true, "truth_correct": true}
+              ],
+              "status": "ok",
+              "truth_mean_control_preservation": 1.0
+            },
+            "correct": true,
+            "correct_given_well_formed": true,
+            "detection_localization": {
+              "detection_correct": true,
+              "detection_status": "ok",
+              "localization_applicable": true,
+              "localization_correct": true,
+              "localization_status": "ok",
+              "null_changed_pair_applicable": false,
+              "null_changed_pair_correct": null,
+              "predicted_changed": true,
+              "predicted_changed_pair": {"action": "a1", "node": "G"},
+              "truth_changed": true,
+              "truth_changed_pair": {"action": "a1", "node": "G"}
+            },
+            "route": {
+              "expected_cost": 3.0,
+              "is_optimal": true,
+              "optimal_cost": 3.0,
+              "path": ["G", "B", "H", "D"],
+              "regret": 0.0,
+              "status": "valid_finite"
+            },
+            "route_belief_diagnostic": {
+              "pairs": [
+                {"action": "a2", "belief_destination": null, "node": "G", "route_destination": "B", "status": "unresolvable"},
+                {"action": "a2", "belief_destination": "H", "node": "B", "route_destination": "H", "status": "consistent"},
+                {"action": "a1", "belief_destination": null, "node": "H", "route_destination": "D", "status": "unresolvable"}
+              ],
+              "status": "route_unresolvable",
+              "unresolved_pairs": [
+                {"action": "a2", "node": "G"},
+                {"action": "a1", "node": "H"}
+              ]
+            },
+            "route_target_diagnostic": {"conflicts_with_target_belief": false, "target_belief_status": "not_used", "uses_intervention_target": false},
+            "well_formed": true
+          },
+          "provider_usage": {
+            "completion_tokens": 5428,
+            "completion_tokens_details": {"reasoning_tokens": 5013},
+            "prompt_tokens": 4173,
+            "total_tokens": 9601
+          },
+          "provider_finish_reason": "stop",
+          "truncated": false,
+          "network_retries": [],
+          "prompt_sha256": "9ff49bc011972c1955892e4594e87726cec69ec21c0059a259a930a4e71554fd",
+          "response_sha256": "6ba233c4598f0c9955d2cb7238071505a19bfbf96534d39d69ea9eba197ad521",
+          "previous_response_sha256": "42ef3ffd280157a8b0ac74d14c486464570568225bfb15687bee4ac6978e97d7",
+          "parsed": {
+            "beliefs": {"status": "ok"},
+            "detection": {"changed": true, "status": "ok"},
+            "localization": {
+              "changed_pair": {"action": "a1", "node": "G"},
+              "status": "ok"
+            },
+            "route": {"status": "ok"},
+            "status": "ok",
+            "well_formed": true
+          },
+          "source_scores_sha256": "ccdf763be3b51370e78225389127ea2856502f6bdaf7472bf7d11db1477dd14d"
+        }
+      }
+    }
+  ],
+  "deployment_matching": {
+    "pass": true,
+    "saved_configuration_diff_only_thinking": true,
+    "effective_loaded_config_identical": true,
+    "backend_default_parameters_identical": true,
+    "runtime_build_identical": true,
+    "base_chat_template_identical": true,
+    "on_template_enable_thinking": true,
+    "off_template_enable_thinking": false,
+    "config": {"context_length": 16384, "eval_batch_size": 512, "physical_batch_size": 256, "parallel": 1, "flash_attention": true, "context_checkpoints": 32, "reasoning_budget_message": "", "speculative_draft_mtp": false, "speculative_draft_simple": false, "speculative_draft_model": "", "speculative_draft_max_tokens": 3, "speculative_draft_min_tokens": 0, "speculative_draft_min_continue_probability": 0, "offload_kv_cache_to_gpu": true},
+    "backend_build_info": "b1-8172e65"
+  },
+  "runtime": {"bionic_version": "1.1.2+11", "python": "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3"}
+}
