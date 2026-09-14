@@ -195,38 +195,22 @@ evidence rather than updating.
 
 Three-level ICL protocol, with repeats and provider sampling seeds:
 
+See [ICL: three assistance levels](docs/ICL.md) for the task and final results.
+
     python3 run_pilot.py --protocol icl_two_response_v1 \
       --scenario icl_det_gate_seed8 --mode det \
       --repeats 3 --sampling-seeds 0 1 2 --reasoning-mode off \
       --provider dry-run --tag icl_gate
 
-Audited local Gemma 4 E4B Instruct Q6_K (GGUF) gate:
+The final local Gemma 4 E4B Instruct Q6_K comparison has been run with
+`max_tokens=8192` in both conditions. App Thinking and API reasoning mode
+were aligned manually. Final ON had no separate reasoning budget.
+Effective Min P was about 0.05 in both conditions despite the unchecked
+app setting. This pilot uses one graph with three repeated outputs per level.
 
-Runtime: Bionic 1.1.2+11; `gemma-4-E4B-it-Q6_K.gguf`; context 16,384;
-evaluation/physical batch 512/256; parallel 1; Flash Attention and KV-cache
-offload enabled; repeat penalty 1.0; Min P and speculative decoding disabled.
-
-```bash
-python3 -B run_pilot.py \
-  --protocol icl_two_response_v1 \
-  --scenario icl_det_gate_seed8 \
-  --mode det \
-  --provider openai \
-  --model sunil-pathak/gemma-4-e4b-it \
-  --base-url http://localhost:1234/v1 \
-  --temperature 1.0 \
-  --top-p 0.95 \
-  --top-k 64 \
-  --repeats 3 \
-  --sampling-seeds 0 1 2 \
-  --sampling-seed-support supported \
-  --reasoning-mode off \
-  --reasoning-control-json '{"reasoning":"off"}' \
-  --reasoning-control-source 'Bionic 1.1.2+11; Q6_K local API audit: reasoning=off accepted, reasoning_tokens=0' \
-  --max-tokens 4096 \
-  --timeout 900 \
-  --tag icl_gate_gemma4e4b_q6k_det_off
-```
+The [saved scores and settings](runs/icl/final/results.json) cover every final run.
+The [results index](runs/icl/README.md) links the fixed examples and identifies
+the durable archive holding the full evidence and earlier attempts.
 
 Supply optional `--top-p` and `--top-k` values only after verifying that the
 endpoint supports them.
@@ -312,9 +296,9 @@ runs; they exercise the parser and scorer without an API call.
 Stated explicitly rather than left implicit.
 
 - No model has been run against `redirect`, `hard_removal` or `degradation`,
-  nor against the three-level ICL protocol, nor in deterministic mode under
-  the two-turn protocol. Those artifacts do not exist yet.
-- There is no cross-artifact aggregation. Contrasts between turn-1 and turn-2
+  nor in deterministic mode under the legacy two-turn protocol. The
+  three-level ICL results are available in [runs/icl](runs/icl/README.md).
+- Outside the ICL pilot, there is no cross-artifact aggregation. Contrasts between turn-1 and turn-2
   routes, between stated beliefs and chosen routes, and confidence intervals
   over conditions are all specified in `docs/PAPER_SPINE.md` and unbuilt. They
   are pure functions of stored artifacts, so runs done now remain usable.
@@ -324,8 +308,8 @@ Stated explicitly rather than left implicit.
   criteria, because integer hop costs make unique optima rare. Whether to
   relax the uniqueness criterion is an open decision; see
   `docs/SEED_SELECTION.md`.
-- Every cell of the current model evidence is n = 1. The findings are
-  demonstrations of a phenomenon, not estimates of a rate.
+- The ICL pilot has one graph with three repeated outputs per level, not
+  independent graph samples. It does not establish significance or generality.
 - `docs/INTERFACE.md` is titled v2.2 but declares schema version 2.1 internally.
   The declaration is correct; the title is a document revision number.
 
