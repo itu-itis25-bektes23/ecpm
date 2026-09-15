@@ -49,7 +49,12 @@ arm/finetuning:
           - experiments/gen_payloads.py
           - experiments/e1_batch.py
           - experiments/rescore_e1.py
+          - experiments/anchors_v22.py
+          - experiments/ecpm_eval.py
+          - experiments/ft_ceiling.py
+          - experiments/test_ft_arm.py
           - experiments/notebooks/**
+          - docs/FINETUNING_ARM.md
 
 arm/baseline:
   - changed-files:
