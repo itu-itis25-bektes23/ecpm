@@ -23,6 +23,16 @@ repository:
   author's note that this exact file has not executed on one.
 - `rescore_e1.py` scores saved replies through the frozen parser, so a
   scorer change can be re-applied without re-running the model.
-- `notebooks/` the Colab notebooks the batch script mirrors.
+- `anchors_v22.py` anchor worlds for phase 1, from the frozen generator at
+  seeds 1000 and above. Which conditions the anchors cover changes the
+  result; see `docs/FINETUNING_ARM.md`.
+- `ecpm_eval.py` runs an arm and scores it through `ecpm_parser`. The one
+  file here that is imported rather than run directly: the notebooks use it.
+- `ft_ceiling.py` the arm's own information ceiling. A second
+  implementation of what `ecpm_baseline.py` answers, kept separate because
+  the agreement between them is the point.
+- `test_ft_arm.py` scripted answerers and injected defects for the above.
+- `notebooks/` the Kaggle notebooks for the arm. Each writes an artifact
+  under `runs/`; see `notebooks/README.md`.
 - `run_two_turn_azure.sh` the two-turn run, resumable, refusing to start
   without credentials.

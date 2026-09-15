@@ -3,6 +3,9 @@
 - `INTERFACE.md` the frozen answer contract and record schema. Section 7 is
   what `ecpm_parser.py` implements.
 - `EXPLORE_AGENT.md` the agentic exploration arm.
+- `FINETUNING_ARM.md` the finetuning arm: prompt against weights as
+  delivery routes for the same evidence, the two training phases, and
+  the anchor confound that decides whether phase 1 works.
 - `PAPER_SPINE.md` proposed claim, hypotheses as a pre-registration,
   readiness audit, budget. For discussion, not settled.
 - `SEED_SELECTION.md` the three eligibility criteria, the 23-seed run set,

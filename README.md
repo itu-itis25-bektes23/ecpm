@@ -78,8 +78,10 @@ without either side knowing, the finetuning arm computed an information
 ceiling per condition from its own scoring.
 
 The two agree. Deterministic silent break is solved by counting and has no
-headroom; stochastic degradation at low K is the only condition where a
-model has meaningful room against the null.
+headroom. Among the rate-based interventions, stochastic degradation at low
+K is where a model has the most room against the null. `redirect` sits
+outside that comparison: it preserves every success rate, so both
+implementations are blind to it by construction, which is why it exists.
 
 Two implementations, two scorers, two people, one conclusion. That is worth
 more than either result alone, because the ceiling is the claim the rest of
@@ -132,8 +134,17 @@ flowchart TD
 - `experiments/azure_budget.py` run costing from measured token usage
 - `experiments/gen_payloads.py`, `e1_batch.py`, `rescore_e1.py` the
   in-context versus finetuning comparison
+- `experiments/anchors_v22.py` anchor worlds for the finetuning arm, drawn
+  from the frozen generator at seeds outside the graded range
+- `experiments/ecpm_eval.py` runner and scorer for that arm, resumable,
+  stamping provenance into every row
+- `experiments/ft_ceiling.py` the arm's own information ceiling, kept
+  separate from `ecpm_baseline.py` on purpose
+- `experiments/test_ft_arm.py` scripted answerers and injected defects for
+  the above
 - `experiments/run_two_turn_azure.sh` the two-turn run, resumable
-- `docs/` interface contract, paper spine, seed criteria, diagrams, figures
+- `docs/` interface contract, paper spine, seed criteria, arm documents,
+  diagrams, figures
 - `CONTRIBUTING.md` the freeze rule, test conventions, writing rules
 - `AGENTS.md` the same conventions in short form, for AI coding agents
 - `CODE_OF_CONDUCT.md` how evidence and each other's work are handled
@@ -141,15 +152,15 @@ flowchart TD
 - `.github/` CI, code scanning, label rules, issue and pull request templates
 - `.editorconfig`, `.gitattributes` line endings and indentation, enforced
   before git sees the file
-- `archive/` freeze sign-off tooling and a superseded agentic arm, kept
-  for provenance, not maintained
+- `archive/` freeze sign-off tooling, a superseded agentic arm and the
+  August finetuning notebooks, kept for provenance, not maintained
 - `runs/` artifacts, one directory per run
 - `experiments/exploratory/` prompt-safe packets, oracle packets, probability
   scorer
 
 Tests are stdlib only: `test_resource_mdp.py`, `test_ecpm_parser.py`,
 `test_explore_agent.py`, `test_ecpm_baseline.py`, `test_run_pilot.py`,
-`test_prompt_contract.py`.
+`test_prompt_contract.py`, and `experiments/test_ft_arm.py`.
 
 ## Freeze
 
@@ -327,8 +338,20 @@ Stated explicitly rather than left implicit.
   criteria, because integer hop costs make unique optima rare. Whether to
   relax the uniqueness criterion is an open decision; see
   `docs/SEED_SELECTION.md`.
-- Every cell of the current model evidence is n = 1. The findings are
-  demonstrations of a phenomenon, not estimates of a rate.
+- Every cell of the current model evidence is n = 1, with one exception:
+  the finetuning arm's phase-1 localization is three anchor draws per
+  condition. The rest are demonstrations of a phenomenon, not estimates of
+  a rate.
+- The finetuning arm has not been run against `redirect`, the one condition
+  an evidence-only method cannot solve at any K.
+- Its detection and preservation figures are at n = 8 where its
+  localization is at n = 32.
+- It evaluates on 32 deterministic seeds enumerated in its own notebooks
+  rather than the 23 matched stochastic seeds in
+  `runs/seed_eligibility.json`. Reconciling the two is open.
+- The premise-free localization probe has never been run, in any arm. The
+  question opens by asserting that the dynamics changed, which is what
+  detection cannot determine.
 - `docs/INTERFACE.md` is titled v2.2 but declares schema version 2.1 internally.
   The declaration is correct; the title is a document revision number.
 
