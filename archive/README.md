@@ -13,3 +13,7 @@ Both open the shipped example records by relative path, so if you ever need
 to run one, run it from the repository root:
 
     python3 archive/ecpm_reply_verification.py
+
+`superseded-agentic-arm/` holds a second agentic implementation, dropped by
+its author once `explore_agent.py` covered the same ground. Its runs are
+kept under `runs/2026-08-27_gemma3-4b_agentic/`.

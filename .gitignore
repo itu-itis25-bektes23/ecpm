@@ -21,3 +21,10 @@ patches/
 # Resume markers written by the run loops. Scratch state, not results.
 .done
 **/.done
+
+# Finetuning arm: LoRA adapters and payload folders are regenerated,
+# not committed. Adapters are ~74MB each.
+anchor_adapter_*/
+*.safetensors
+payloads_*/
+anchors.json

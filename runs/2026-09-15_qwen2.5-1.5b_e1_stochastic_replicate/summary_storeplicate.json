@@ -1,0 +1,104 @@
+[
+ {
+  "condition": "A_bespoke",
+  "draw": 1000,
+  "on_route": 4,
+  "off_route": 16,
+  "det": {
+   "localize": 31,
+   "node": 32,
+   "n": 32
+  },
+  "sto": {
+   "localize": 6,
+   "node": 7,
+   "n": 32
+  },
+  "final_loss": 0.04076593489873977
+ },
+ {
+  "condition": "C_offroute",
+  "draw": 1000,
+  "on_route": 4,
+  "off_route": 16,
+  "det": {
+   "localize": 24,
+   "node": 32,
+   "n": 32
+  },
+  "sto": {
+   "localize": 3,
+   "node": 6,
+   "n": 32
+  },
+  "final_loss": 0.049918960389636814
+ },
+ {
+  "condition": "A_bespoke",
+  "draw": 2000,
+  "on_route": 3,
+  "off_route": 17,
+  "det": {
+   "localize": 26,
+   "node": 32,
+   "n": 32
+  },
+  "sto": {
+   "localize": 4,
+   "node": 7,
+   "n": 32
+  },
+  "final_loss": 0.043810004279727026
+ },
+ {
+  "condition": "C_offroute",
+  "draw": 2000,
+  "on_route": 4,
+  "off_route": 16,
+  "det": {
+   "localize": 25,
+   "node": 31,
+   "n": 32
+  },
+  "sto": {
+   "localize": 5,
+   "node": 7,
+   "n": 32
+  },
+  "final_loss": 0.051830627804710754
+ },
+ {
+  "condition": "A_bespoke",
+  "draw": 3000,
+  "on_route": 2,
+  "off_route": 18,
+  "det": {
+   "localize": 28,
+   "node": 32,
+   "n": 32
+  },
+  "sto": {
+   "localize": 5,
+   "node": 9,
+   "n": 32
+  },
+  "final_loss": 0.04440286273048038
+ },
+ {
+  "condition": "C_offroute",
+  "draw": 3000,
+  "on_route": 4,
+  "off_route": 16,
+  "det": {
+   "localize": 26,
+   "node": 32,
+   "n": 32
+  },
+  "sto": {
+   "localize": 3,
+   "node": 6,
+   "n": 32
+  },
+  "final_loss": 0.04705129805065337
+ }
+]

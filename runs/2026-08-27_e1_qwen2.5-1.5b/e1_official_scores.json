@@ -1,0 +1,287 @@
+{
+ "icl": {
+  "detection": {
+   "parsed": {
+    "status": "ok",
+    "changed": false
+   },
+   "scored": {
+    "status": "ok",
+    "truth": true,
+    "predicted": false,
+    "correct": false
+   }
+  },
+  "localization": {
+   "parsed": {
+    "status": "ok",
+    "node": "B",
+    "action": "a1"
+   },
+   "scored": {
+    "status": "ok",
+    "applicable": true,
+    "correct": false,
+    "truth": {
+     "node": "D",
+     "action": "a2"
+    }
+   }
+  },
+  "preservation": {
+   "parsed": {
+    "status": "ok",
+    "pairs": [
+     {
+      "node": "H",
+      "action": "a2",
+      "changed": false
+     },
+     {
+      "node": "D",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a1",
+      "changed": false
+     },
+     {
+      "node": "C",
+      "action": "a1",
+      "changed": true
+     }
+    ]
+   },
+   "scored": {
+    "status": "ok",
+    "n_queried": 4,
+    "n_scored": 4,
+    "accuracy": 0.75
+   }
+  },
+  "adaptation": {
+   "parsed": {
+    "status": "ok",
+    "route": [
+     {
+      "node": "E",
+      "action": "a1"
+     },
+     {
+      "node": "C",
+      "action": "a1"
+     },
+     {
+      "node": "A",
+      "action": "a1"
+     },
+     {
+      "node": "G",
+      "action": "a1"
+     },
+     {
+      "node": "H",
+      "action": "a1"
+     },
+     {
+      "node": "B",
+      "action": "a1"
+     },
+     {
+      "node": "F",
+      "action": "a1"
+     }
+    ]
+   },
+   "scored": {
+    "status": "discontinuous_route",
+    "path": null,
+    "expected_cost": null,
+    "optimal_cost": 5.0,
+    "regret": null,
+    "is_optimal": false
+   }
+  }
+ },
+ "ft": {
+  "detection": {
+   "parsed": {
+    "status": "ok",
+    "changed": false
+   },
+   "scored": {
+    "status": "ok",
+    "truth": true,
+    "predicted": false,
+    "correct": false
+   }
+  },
+  "localization": {
+   "parsed": {
+    "status": "ok",
+    "node": "A",
+    "action": "move_to_B"
+   },
+   "scored": {
+    "status": "ok",
+    "applicable": true,
+    "correct": false,
+    "truth": {
+     "node": "D",
+     "action": "a2"
+    }
+   }
+  },
+  "preservation": {
+   "parsed": {
+    "status": "ok",
+    "pairs": [
+     {
+      "node": "H",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a1",
+      "changed": false
+     },
+     {
+      "node": "C",
+      "action": "a1",
+      "changed": false
+     }
+    ]
+   },
+   "scored": {
+    "status": "ok",
+    "n_queried": 4,
+    "n_scored": 4,
+    "accuracy": 0.75
+   }
+  },
+  "adaptation": {
+   "parsed": {
+    "status": "ok",
+    "route": [
+     {
+      "node": "B",
+      "action": "go"
+     },
+     {
+      "node": "C",
+      "action": "go"
+     },
+     {
+      "node": "D",
+      "action": "go"
+     },
+     {
+      "node": "F",
+      "action": "arrive"
+     }
+    ]
+   },
+   "scored": {
+    "status": "discontinuous_route",
+    "path": null,
+    "expected_cost": null,
+    "optimal_cost": 5.0,
+    "regret": null,
+    "is_optimal": false
+   }
+  }
+ },
+ "combo": {
+  "detection": {
+   "parsed": {
+    "status": "ok",
+    "changed": false
+   },
+   "scored": {
+    "status": "ok",
+    "truth": true,
+    "predicted": false,
+    "correct": false
+   }
+  },
+  "localization": {
+   "parsed": {
+    "status": "ok",
+    "node": "C",
+    "action": "a1"
+   },
+   "scored": {
+    "status": "ok",
+    "applicable": true,
+    "correct": false,
+    "truth": {
+     "node": "D",
+     "action": "a2"
+    }
+   }
+  },
+  "preservation": {
+   "parsed": {
+    "status": "ok",
+    "pairs": [
+     {
+      "node": "H",
+      "action": "a2",
+      "changed": true
+     },
+     {
+      "node": "D",
+      "action": "a2",
+      "changed": false
+     },
+     {
+      "node": "C",
+      "action": "a1",
+      "changed": false
+     }
+    ]
+   },
+   "scored": {
+    "status": "incomplete_response",
+    "n_queried": 4,
+    "n_scored": 0,
+    "accuracy": null
+   }
+  },
+  "adaptation": {
+   "parsed": {
+    "status": "ok",
+    "route": [
+     {
+      "node": "E",
+      "action": "a1"
+     },
+     {
+      "node": "B",
+      "action": "a2"
+     },
+     {
+      "node": "F",
+      "action": "a2"
+     }
+    ]
+   },
+   "scored": {
+    "status": "discontinuous_route",
+    "path": null,
+    "expected_cost": null,
+    "optimal_cost": 5.0,
+    "regret": null,
+    "is_optimal": false
+   }
+  }
+ }
+}

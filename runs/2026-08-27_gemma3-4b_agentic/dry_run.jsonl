@@ -1,0 +1,104 @@
+{"run_id": "lg-dry", "phase": "pre", "episode": 0, "t": 1, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 0, "t": 2, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 0, "t": 3, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 0, "t": 4, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 1, "t": 5, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 1, "t": 6, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 1, "t": 7, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 1, "t": 8, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 2, "t": 9, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "pre", "episode": 2, "t": 10, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 1.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "pre", "episode": 2, "t": 10, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 2, "t": 11, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 2, "t": 12, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 3, "t": 13, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 3, "t": 14, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 3, "t": 15, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 3, "t": 16, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 4, "t": 17, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 4, "t": 18, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 4, "t": 19, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "pre", "episode": 4, "t": 20, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 1.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "pre", "episode": 4, "t": 20, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 5, "t": 21, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 5, "t": 22, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 5, "t": 23, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 5, "t": 24, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 6, "t": 25, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 6, "t": 26, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 6, "t": 27, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 6, "t": 28, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 7, "t": 29, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "pre", "episode": 7, "t": 30, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 1.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "pre", "episode": 7, "t": 30, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 7, "t": 31, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 7, "t": 32, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 8, "t": 33, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 8, "t": 34, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 8, "t": 35, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 8, "t": 36, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 9, "t": 37, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 9, "t": 38, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "pre", "episode": 9, "t": 39, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "B", "cost": 3, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "pre", "episode": 9, "t": 40, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 1.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "pre", "episode": 9, "t": 40, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 41, "node": "E", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "C", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 42, "node": "C", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "D", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 43, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "DROP", "next_node": "D", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 44, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "DROP", "next_node": "D", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 45, "node": "D", "menu": ["a1", "a2"], "action": "a2", "status": "DROP", "next_node": "D", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 46, "node": "D", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "A", "cost": 6, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 47, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 7, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 48, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 8, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 49, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 9, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "post", "episode": 0, "t": 50, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 0.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "post", "episode": 0, "t": 50, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 10, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 1, "t": 51, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 1, "t": 52, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 1, "t": 53, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 1, "t": 54, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 1, "t": 55, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 2, "t": 56, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 2, "t": 57, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 2, "t": 58, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 2, "t": 59, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "post", "episode": 2, "t": 60, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 0.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "post", "episode": 2, "t": 60, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 3, "t": 61, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 3, "t": 62, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 3, "t": 63, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 3, "t": 64, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 3, "t": 65, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 4, "t": 66, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 4, "t": 67, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 4, "t": 68, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 4, "t": 69, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "post", "episode": 4, "t": 70, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 0.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "post", "episode": 4, "t": 70, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 5, "t": 71, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 5, "t": 72, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 5, "t": 73, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 5, "t": 74, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 5, "t": 75, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 6, "t": 76, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 6, "t": 77, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 6, "t": 78, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 6, "t": 79, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "post", "episode": 6, "t": 80, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 0.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "post", "episode": 6, "t": 80, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 7, "t": 81, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 7, "t": 82, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 7, "t": 83, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 7, "t": 84, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 7, "t": 85, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 8, "t": 86, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 8, "t": 87, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 8, "t": 88, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 8, "t": 89, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"type": "belief", "run_id": "lg-dry", "phase": "post", "episode": 8, "t": 90, "estimates": {"A a1": 1.0, "A a2": 1.0, "B a1": 1.0, "B a2": 1.0, "C a1": 1.0, "C a2": 1.0, "D a1": 1.0, "D a2": 0.0, "E a1": 1.0, "E a2": 1.0, "G a1": 1.0, "G a2": 1.0, "G a3": 1.0, "H a1": 1.0, "H a2": 1.0}}
+{"run_id": "lg-dry", "phase": "post", "episode": 8, "t": 90, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 9, "t": 91, "node": "E", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "A", "cost": 1, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 9, "t": 92, "node": "A", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "G", "cost": 2, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 9, "t": 93, "node": "G", "menu": ["a1", "a2", "a3"], "action": "a3", "status": "OK", "next_node": "H", "cost": 3, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 9, "t": 94, "node": "H", "menu": ["a1", "a2"], "action": "a1", "status": "OK", "next_node": "B", "cost": 4, "reason": "dry run"}
+{"run_id": "lg-dry", "phase": "post", "episode": 9, "t": 95, "node": "B", "menu": ["a1", "a2"], "action": "a2", "status": "OK", "next_node": "F", "cost": 5, "reason": "dry run"}
