@@ -1,0 +1,57 @@
+[
+ {
+  "arm": "arm_c",
+  "sens": "1/8 = 0.12",
+  "spec": "7/8 = 0.88",
+  "localize": "8/8 = 1.00",
+  "pres_parsed": "16/16 = 1.00",
+  "pres_acc": 0.875,
+  "pres_const": 0.875,
+  "target_recall": "0/8 = 0.00",
+  "route_valid": "6/16 = 0.38",
+  "route_optimal": "2/16 = 0.12",
+  "mean_regret": 1.5,
+  "route_status": {
+   "incomplete_route": 6,
+   "valid_finite": 6,
+   "silent_broken_edge": 2
+  },
+  "bare_json": "54/56 = 0.96"
+ },
+ {
+  "arm": "ft",
+  "sens": "0/8 = 0.00",
+  "spec": "8/8 = 1.00",
+  "localize": "0/8 = 0.00",
+  "pres_parsed": "15/16 = 0.94",
+  "pres_acc": 0.8167,
+  "pres_const": 0.875,
+  "target_recall": "0/7 = 0.00",
+  "route_valid": "0/16 = 0.00",
+  "route_optimal": "0/16 = 0.00",
+  "mean_regret": null,
+  "route_status": {
+   "unknown_reference": 16
+  },
+  "bare_json": "52/56 = 0.93"
+ },
+ {
+  "arm": "combined",
+  "sens": "0/8 = 0.00",
+  "spec": "8/8 = 1.00",
+  "localize": "4/8 = 0.50",
+  "pres_parsed": "15/16 = 0.94",
+  "pres_acc": 0.8833,
+  "pres_const": 0.875,
+  "target_recall": "0/7 = 0.00",
+  "route_valid": "3/16 = 0.19",
+  "route_optimal": "1/16 = 0.06",
+  "mean_regret": 2.0,
+  "route_status": {
+   "discontinuous_route": 9,
+   "valid_finite": 3,
+   "unknown_reference": 2
+  },
+  "bare_json": "48/56 = 0.86"
+ }
+]

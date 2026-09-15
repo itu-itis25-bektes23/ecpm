@@ -1,0 +1,36 @@
+{
+ "mix": [
+  "irrelevant",
+  "irrelevant",
+  "irrelevant",
+  "irrelevant",
+  "silent_break"
+ ],
+ "on_route": 4,
+ "off_route": 16,
+ "summary": {
+  "worlds": 40,
+  "examples": 140,
+  "changed_worlds": 20,
+  "deterministic_worlds": 40,
+  "stochastic_worlds": 0,
+  "conditions": {
+   "irrelevant": 16,
+   "no_change": 20,
+   "silent_break": 4
+  },
+  "examples_by_probe": {
+   "detection": 40,
+   "localization": 20,
+   "preservation": 40,
+   "adaptation": 40
+  },
+  "distinct_start_goal": 29,
+  "preservation_pair_positive_rate": 0.125,
+  "all_unchanged_would_score": 0.875,
+  "seed_range": [
+   1000,
+   1042
+  ]
+ }
+}
