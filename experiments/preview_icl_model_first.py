@@ -25,20 +25,20 @@ def plan(repeats=1, history_policy=design.HISTORY_POLICY):
     if type(repeats) is not int or repeats not in (1, 3):
         raise ValueError('one or three repeats required')
     branched = history_policy != design.HISTORY_POLICY
-    return {'protocol': design.PROTOCOL, 'history_policy': history_policy,
+    return {'protocol': design.PROTOCOL, 'preparation_policy': design.PREPARATION_POLICY, 'history_policy': history_policy,
             'status': 'offline only; deployment not ready',
             'first_graph_seed': 8, 'repeats_per_condition': repeats,
             'sampling_seed_labels': list(range(repeats)), 'reasoning': 'off',
             'blocks': [{'condition': arm, 'conversations': repeats,
-                        'requests': repeats * (6 if arm == 'model_first' else 4),
+                        'requests': repeats * 6,
                         'main_output_allowance': repeats * (16384 if branched else 24576),
                         'measurement_branch_output_allowance': repeats * (8192 if branched else 0),
                         'model_and_task_output_allowance': repeats * 16384,
                         'transition_report_output_allowance': repeats * 8192}
                        for arm in design.ARMS],
-            'conversations_per_model': 3 * repeats, 'requests_per_model': 14 * repeats,
+            'conversations_per_model': 3 * repeats, 'requests_per_model': 18 * repeats,
             'maximum_completion_tokens_per_model': 3 * repeats * 24576,
-            'all_three_worlds_if_later_authorized': {'conversations': 9 * repeats, 'requests': 42 * repeats},
+            'all_three_worlds_if_later_authorized': {'conversations': 9 * repeats, 'requests': 54 * repeats},
             'preflights': 'excluded; separately authorized only',
             'input_tokens': None, 'cost_usd': None, 'cost_status': 'unavailable',
             'assumptions': ['Completion counts are ceilings, not expected usage.',
@@ -88,8 +88,12 @@ def generate(out, history_policy=design.HISTORY_POLICY):
         history_checks.update(design.verify_histories(world, history_policy))
         answers = runner.synthetic_answers(world)
         locked_answers = {p + '_' + s: f'SYNTHETIC {p}_{s}; NOT A MODEL RESULT'
-                          for p in ('A', 'B') for s in ('model', 'task', 'readout')}
+                          for p in ('A', 'B') for s in ('prepare', 'task', 'readout')}
         for arm in design.ARMS:
+            if seed == 8:
+                # Reviewer export: one complete initial prompt per condition.
+                save(out / 'review_prompts' / f'{arm}.txt',
+                     design.prompts(world, 'A', arm)['prepare'] + '\n')
             for period in ('A', 'B'):
                 for stage, text in design.prompts(world, period, arm).items():
                     save(out / 'prompts' / f'seed_{seed}' / arm / f'{period}_{stage}.txt', text + '\n')
@@ -135,7 +139,7 @@ def generate(out, history_policy=design.HISTORY_POLICY):
                            'bundle_has_one_extra_trailing_LF' if extra_lf_match else 'unresolved',
                        'published_bytes': len(raw),
                        'bundle_bytes': len(raw) + 1 if extra_lf_match else len(raw) if expected == actual else None})
-    report = {'protocol': design.PROTOCOL, 'history_policy': history_policy,
+    report = {'protocol': design.PROTOCOL, 'preparation_policy': design.PREPARATION_POLICY, 'history_policy': history_policy,
               'model_calls': 0, 'deployment_ready': False,
               'base_commit': design.lock()['source_commit'], 'prompt_files_exact': len(manifest),
               'prompt_checks': manifest, 'reference_checks': checks,

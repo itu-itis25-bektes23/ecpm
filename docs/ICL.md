@@ -5,7 +5,8 @@ Beliefs, Route-finding, Detection, Localization and Preservation in small routin
 environments. Their prompts, histories and scores are not interchangeable.
 
 - [Model-first experiment](ICL_MODEL_FIRST.md): freely describe the system before
-  tasks, do tasks directly, or receive a graph. Transition reports either remain
+  tasks, prepare without an explicit model request, or prepare with a supplied
+  graph. All conditions have the same stages. Transition reports either remain
   in history or use separate post-task copies.
 - [Graph availability](ICL_GRAPH.md): receive a graph in both periods, only in A,
   or neither period. Each conversation has two answers.

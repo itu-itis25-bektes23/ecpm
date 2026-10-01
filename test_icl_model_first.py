@@ -18,6 +18,7 @@ from test_icl_graph import args as graph_args, config, envelope, local_config
 def args(arm='model_first', provider='dry-run', profile='gemma_e4b', history_policy=m.HISTORY_POLICY):
     a = graph_args(profile=profile, provider=provider)
     a.protocol = m.PROTOCOL
+    a.max_tokens = 4096
     a.graph_condition = None
     a.model_first_condition = arm
     a.off_reference = None
@@ -31,7 +32,8 @@ def wrapper(local=True, profile='gemma_e4b', history_policy=m.HISTORY_POLICY):
         c['pricing'] = {'input_per_million': 1, 'output_per_million': 2, 'source': 'SYNTHETIC TEST ONLY'}
     return {'deployment': c,
             'model_first': {'protocol': m.PROTOCOL, 'history_policy': history_policy,
-                            'output_allowances': [4096, 8192],
+                            'preparation_policy': m.PREPARATION_POLICY,
+                            'output_allowances': [4096],
                             'stage_limits_source': 'SYNTHETIC TEST ONLY',
                             'system_message_source': 'SYNTHETIC TEST ONLY',
                             'context_source': 'SYNTHETIC TEST ONLY'}}
@@ -50,12 +52,38 @@ def mock_count(body, c, *, output_tokens, allow_system):
 
 
 class ContractIntegration(unittest.TestCase):
-    def test_all_worlds_and_42_exact_prompts(self):
+    def test_previous_preparation_configuration_is_rejected(self):
+        good = wrapper()
+        runner.validate_config(good, 'gemma_e4b')
+        for value in (None, 'unmatched_turns'):
+            bad = copy.deepcopy(good)
+            if value is None:
+                del bad['model_first']['preparation_policy']
+            else:
+                bad['model_first']['preparation_policy'] = value
+            with self.assertRaises(ValueError):
+                runner.validate_config(bad, 'gemma_e4b')
+        bad = copy.deepcopy(good)
+        bad['model_first']['output_allowances'] = [4096,8192]
+        with self.assertRaises(ValueError):
+            runner.validate_config(bad, 'gemma_e4b')
+
+    def test_preparation_identity_cannot_be_relabelled(self):
+        with tempfile.TemporaryDirectory() as t:
+            a = runner.run_once(m.load(8), 'task_only', 1, args('task_only'), None, t)
+            self.assertTrue(all(runner.audit_artifact(a).values()))
+            before = compatible_identity(a)
+            a['identity']['preparation_policy'] = 'unmatched_turns'
+            a['identity_sha256'] = runner.canonical(a['identity'])
+            self.assertNotEqual(before, compatible_identity(a))
+            self.assertFalse(runner.audit_artifact(a)['identity'])
+
+    def test_all_worlds_and_54_exact_prompts(self):
         count = 0
         for seed in (8, 13, 25):
             w = m.verify_world(seed)
             count += len(m.verify_prompts(w))
-        self.assertEqual(count, 42)
+        self.assertEqual(count, 54)
 
     def test_defective_definition_and_fixture_fail(self):
         with patch.object(m, 'COMMON', m.COMMON + ' injected defect'):
@@ -113,8 +141,8 @@ class ContractIntegration(unittest.TestCase):
     def test_preview_counts_and_planning_unknowns(self):
         with tempfile.TemporaryDirectory() as t:
             r = generate(Path(t) / 'review')
-            self.assertEqual(r['prompt_files_exact'], 42)
-            self.assertEqual(len(list((Path(t) / 'review/prompts').rglob('*.txt'))), 42)
+            self.assertEqual(r['prompt_files_exact'], 54)
+            self.assertEqual(len(list((Path(t) / 'review/prompts').rglob('*.txt'))), 54)
             for name, expected in r['locked_history_checks'].items():
                 self.assertEqual(m.digest((Path(t) / 'review' / name).read_text()), expected)
             for arm in m.ARMS:
@@ -130,10 +158,10 @@ class ContractIntegration(unittest.TestCase):
                 self.assertFalse(source[name]['match'])
                 self.assertEqual(source[name]['relationship'], 'bundle_has_one_extra_trailing_LF')
                 self.assertEqual(source[name]['bundle_bytes'], source[name]['published_bytes'] + 1)
-        self.assertEqual(plan()['requests_per_model'], 14)
+        self.assertEqual(plan()['requests_per_model'], 18)
         self.assertEqual(plan()['conversations_per_model'], 3)
         self.assertEqual(plan()['maximum_completion_tokens_per_model'], 73728)
-        self.assertEqual(plan(3)['requests_per_model'], 42)
+        self.assertEqual(plan(3)['requests_per_model'], 54)
         self.assertEqual(plan(3)['conversations_per_model'], 9)
         self.assertEqual(plan(3)['maximum_completion_tokens_per_model'], 221184)
         self.assertIsNone(plan()['cost_usd'])
@@ -363,7 +391,7 @@ class ParserScorer(unittest.TestCase):
 class RunnerTests(unittest.TestCase):
     def test_one_and_three_repeat_suites_and_expected_counts(self):
         sc = {**pilot.SCENARIO_DEFAULTS, **pilot.SCENARIOS['icl_det_gate_seed8']}
-        for repeats, total in ((1, 14), (3, 42)):
+        for repeats, total in ((1, 18), (3, 54)):
             responses = conversations = 0
             with tempfile.TemporaryDirectory() as t:
                 for arm in m.ARMS:
@@ -375,7 +403,7 @@ class RunnerTests(unittest.TestCase):
                     self.assertTrue(result['operational_gate_pass'])
                     self.assertEqual(result['expected_conversations'], repeats)
                     self.assertEqual(result['completed_conversations'], repeats)
-                    expected_responses = repeats * (6 if arm == 'model_first' else 4)
+                    expected_responses = repeats * 6
                     self.assertEqual(result['saved_responses'], expected_responses)
                     self.assertEqual(result['prelaunch_cost_plan']['requests'], expected_responses)
                     self.assertEqual(result['prelaunch_cost_plan']['maximum_completion_tokens'], repeats * 24576)
@@ -442,7 +470,7 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(a['scores']['explicit_model']['status'], 'not_scored_by_design')
         with tempfile.TemporaryDirectory() as t:
             a, requests = self.run_mock(t, arm='task_only')
-            self.assertEqual([b['max_tokens'] for b in requests], [8192, 4096, 8192, 4096])
+            self.assertEqual([b['max_tokens'] for b in requests], [4096] * 6)
 
     def test_provider_raw_and_final_saved_before_answer_parsing(self):
         original = m.parse_task
@@ -465,7 +493,7 @@ class RunnerTests(unittest.TestCase):
                 self.run_mock(t, damage=blank)
             saved = json.loads(next(Path(t).glob('*.json')).read_text())
             self.assertEqual(len(saved['turns']), 1)
-            self.assertEqual(saved['turns']['A_model']['raw_response'], ' \n\t ')
+            self.assertEqual(saved['turns']['A_prepare']['raw_response'], ' \n\t ')
         malformed = ' \ncomplete malformed A text } {\t '
         def bad_task(name, env):
             if name == 'A_task':
@@ -483,10 +511,10 @@ class RunnerTests(unittest.TestCase):
                              ('provider_reasoning', 'wrong'), ('actual_response_model', 'wrong'),
                              ('raw_response', 'wrong')]:
             a = json.loads(json.dumps(original))
-            a['turns']['A_model'][field] = value
+            a['turns']['A_prepare'][field] = value
             self.assertFalse(runner.audit_artifact(a)['responses'])
         a = json.loads(json.dumps(original))
-        turn = a['turns']['A_model']
+        turn = a['turns']['A_prepare']
         turn['provider_response']['choices'][0]['finish_reason'] = 'length'
         turn['provider_response_raw'] = json.dumps(turn['provider_response'])
         turn['provider_response_sha256'] = runner.canonical(turn['provider_response'])
@@ -496,7 +524,7 @@ class RunnerTests(unittest.TestCase):
     def test_identity_context_and_retained_report_tamper(self):
         with tempfile.TemporaryDirectory() as t:
             original, _ = self.run_mock(t)
-        for key in ('B_model', 'B_task', 'B_readout'):
+        for key in ('B_prepare', 'B_task', 'B_readout'):
             # Even internally rehashed histories must retain both A report messages.
             for role in ('user', 'assistant'):
                 a = json.loads(json.dumps(original))
@@ -510,7 +538,7 @@ class RunnerTests(unittest.TestCase):
                 t['request_sha256'] = runner.canonical(t['request_body'])
                 self.assertFalse(runner.audit_artifact(a)['history'])
         a = json.loads(json.dumps(original))
-        a['turns']['A_model']['context_check']['identity']['build_info'] = 'changed'
+        a['turns']['A_prepare']['context_check']['identity']['build_info'] = 'changed'
         self.assertFalse(runner.audit_artifact(a)['responses'])
 
     def test_malformed_reports_retained_and_private_reasoning_excluded(self):
@@ -561,9 +589,9 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(a['state'], 'incomplete')
             self.assertIn('raw_response', a['turns']['A_task'])
             self.assertIn('raw_response', a['turns']['A_readout'])
-            messages = a['turns']['B_model']['request_body']['messages']
+            messages = a['turns']['B_prepare']['request_body']['messages']
             self.assertIn({'role': 'assistant', 'content': a['turns']['A_readout']['raw_response']}, messages)
-            self.assertNotIn('provider_response_raw', a['turns']['B_model'])
+            self.assertNotIn('provider_response_raw', a['turns']['B_prepare'])
             self.assertNotIn('scores', a)
 
     def test_tokenizer_failure_and_deployment_mismatch_no_generation(self):
@@ -585,7 +613,7 @@ class RunnerTests(unittest.TestCase):
                     self.run_mock(t, damage=damage)
                 a = json.loads(next(Path(t).glob('*.json')).read_text())
                 self.assertEqual(len(a['turns']), 1)
-                self.assertIn('provider_response_raw', a['turns']['A_model'])
+                self.assertIn('provider_response_raw', a['turns']['A_prepare'])
 
     def test_network_failure_stops_without_retry(self):
         with tempfile.TemporaryDirectory() as t, \
@@ -634,7 +662,7 @@ class RunnerTests(unittest.TestCase):
                 paths.append(p)
             report = summarize(paths)
             self.assertEqual(len(report['runs']), 9)
-            self.assertEqual(sum(len(r['stages']) for r in report['runs']), 42)
+            self.assertEqual(sum(len(r['stages']) for r in report['runs']), 54)
             p = next(paths[0].glob('icl*.json'))
             bad = json.loads(p.read_text())
             del bad['scores']
@@ -738,7 +766,7 @@ class HistoryPolicies(unittest.TestCase):
                 self.assertTrue(s['operational_gate_pass'])
                 self.assertEqual(s['history_policies'], [policy])
                 u = s['usage_by_workflow']
-                n = 6 if arm == 'model_first' else 4
+                n = 6
                 branches = 0 if policy == m.HISTORY_POLICY else 2
                 for field in ('prompt_tokens', 'completion_tokens'):
                     self.assertEqual(u['total'][field]['sum'], sum(x['provider_usage'][field] for x in a['turns'].values()))
@@ -751,7 +779,7 @@ class HistoryPolicies(unittest.TestCase):
         for repeats in (1, 3):
             plans = [plan(repeats, p) for p in m.HISTORY_POLICIES]
             self.assertEqual(sum(p['conversations_per_model'] for p in plans), 6 * repeats)
-            self.assertEqual(sum(p['requests_per_model'] for p in plans), 28 * repeats)
+            self.assertEqual(sum(p['requests_per_model'] for p in plans), 36 * repeats)
             for p in plans:
                 for b in p['blocks']:
                     self.assertEqual(b['main_output_allowance'] + b['measurement_branch_output_allowance'], 24576 * repeats)
@@ -871,7 +899,7 @@ class ReportingAndCredentialReview(unittest.TestCase):
             b[field] = 'different'
             self.assertNotEqual(compatible_identity(b), original, field)
         b = copy.deepcopy(a)
-        b['identity']['stage_settings']['8192']['temperature'] = .5
+        b['identity']['stage_settings']['4096']['temperature'] = .5
         self.assertNotEqual(compatible_identity(b), original)
         b = copy.deepcopy(a)
         b['identity'].update(repeat=2, repeat_seed_label=1)

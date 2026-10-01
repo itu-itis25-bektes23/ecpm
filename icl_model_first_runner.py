@@ -30,16 +30,15 @@ def requests(world, arm, history_policy=design.HISTORY_POLICY):
     history = [{'role': 'system', 'content': design.SYSTEM}]
     for period in ('A', 'B'):
         texts = design.prompts(world, period, arm)
-        if arm == 'model_first':
-            msg = {'role': 'user', 'content': texts['model']}
-            answer = yield {'id': period + '_model', 'max_output_tokens': 4096,
-                            'history_policy': history_policy, 'conversation': 'main',
-                            'messages': copy.deepcopy(history + [msg])}
-            history += [msg, {'role': 'assistant', 'content': answer}]
+        msg = {'role': 'user', 'content': texts['prepare']}
+        answer = yield {'id': period + '_prepare', 'max_output_tokens': 4096,
+                        'history_policy': history_policy, 'conversation': 'main',
+                        'messages': copy.deepcopy(history + [msg])}
+        history += [msg, {'role': 'assistant', 'content': answer}]
         msg = {'role': 'user', 'content': texts['task']}
         answer = yield {'id': period + '_task',
                         'history_policy': history_policy, 'conversation': 'main',
-                        'max_output_tokens': 4096 if arm == 'model_first' else 8192,
+                        'max_output_tokens': 4096,
                         'messages': copy.deepcopy(history + [msg])}
         history += [msg, {'role': 'assistant', 'content': answer}]
         msg = {'role': 'user', 'content': texts['readout']}
@@ -60,7 +59,8 @@ def validate_config(wrapper, profile, history_policy=design.HISTORY_POLICY):
     evidence = wrapper['model_first']
     if (evidence.get('protocol') != design.PROTOCOL
             or evidence.get('history_policy') != history_policy
-            or evidence.get('output_allowances') != [4096, 8192]
+            or evidence.get('preparation_policy') != design.PREPARATION_POLICY
+            or evidence.get('output_allowances') != [4096]
             or any(not isinstance(evidence.get(k), str) or not evidence[k].strip()
                    for k in ('stage_limits_source', 'system_message_source', 'context_source'))):
         raise ValueError('history policy, stage-specific output and system-message/context evidence required')
@@ -156,7 +156,7 @@ def synthetic_answers(world):
     for period in ('A', 'B'):
         estimates = design.from_logs(world[period], previous)
         ref = design.reference(world, period, estimates, previous)
-        answers[period + '_model'] = 'SYNTHETIC OFFLINE REFERENCE, NOT A MODEL RESULT\n' + json.dumps(estimates)
+        answers[period + '_prepare'] = 'SYNTHETIC OFFLINE REFERENCE, NOT A MODEL RESULT\n' + json.dumps(estimates)
         for stage in ('task', 'readout'):
             answers[period + '_' + stage] = json.dumps(ref[stage], separators=(',', ':'))
         previous = estimates
@@ -195,7 +195,8 @@ def call_provider(body, config, timeout):
 def identity(world, arm, repeat, profile, model, config_wrapper, provider, history_policy=design.HISTORY_POLICY):
     design.check_history_policy(history_policy)
     config = config_wrapper['deployment'] if config_wrapper else None
-    return {'protocol': design.PROTOCOL, 'history_policy': history_policy, 'scorer': design.SCORER,
+    return {'protocol': design.PROTOCOL, 'preparation_policy': design.PREPARATION_POLICY,
+            'history_policy': history_policy, 'scorer': design.SCORER,
             'implementation_commit': pilot.git_head(), 'implementation_dirty': pilot._git_dirty(),
             'graph_seed': world['seed'], 'world_sha256': canonical(world), 'condition': arm,
             'queries': design.queries(world), 'repeat': repeat, 'repeat_seed_label': repeat - 1,
@@ -204,7 +205,7 @@ def identity(world, arm, repeat, profile, model, config_wrapper, provider, histo
             'lock_sha256': canonical(design.lock()), 'prompt_hashes': design.verify_prompts(world),
             'deployment_sha256': canonical(config_wrapper),
             'stage_settings': {str(cap): settings(profile, repeat - 1, bool(config and config['seed_supported']), cap)
-                               for cap in (4096, 8192)}}
+                               for cap in (4096,)}}
 
 
 def run_once(world, arm, repeat, args, wrapper, outdir):
@@ -311,6 +312,7 @@ def audit_artifact(a):
         dry = i['provider'] == 'dry-run'
         checks['identity'] = (i['protocol'] == design.PROTOCOL and i['scorer'] == design.SCORER
             and i.get('history_policy') == policy
+            and i.get('preparation_policy') == design.PREPARATION_POLICY
             and i['reasoning_mode'] == 'off' and i['condition'] in design.ARMS
             and i['repeat'] in (1, 2, 3) and i['repeat_seed_label'] == i['repeat'] - 1
             and i['world_sha256'] == canonical(world) and world == design.load(i['graph_seed'])
@@ -358,7 +360,7 @@ def write_summary(outdir, expected=3):
     rows = [{'file': p.name, 'run_id': a['run_id'], 'state': a['state'], 'audit': audit_artifact(a)}
             for p, a in zip(files, records)]
     policies = sorted({a['identity']['history_policy'] for a in records})
-    summary = {'protocol': design.PROTOCOL, 'history_policies': policies,
+    summary = {'protocol': design.PROTOCOL, 'preparation_policy': design.PREPARATION_POLICY, 'history_policies': policies,
                'history_policy': policies[0] if len(policies) == 1 else None,
                'expected_conversations': expected,
                'completed_conversations': sum(a['state'] == 'completed' for a in records),
@@ -416,8 +418,8 @@ def run_suite(sc, args, outdir):
         raise ValueError('explicit model-first condition and request profile required')
     if (args.mode != 'det' or args.pilot_type != 'passive' or type(args.repeats) is not int
             or args.repeats not in (1, 3) or args.sampling_seeds != list(range(args.repeats))
-            or args.max_tokens != 8192 or args.reasoning_mode != 'off'):
-        raise ValueError('locked pilot: passive det, OFF, one repeat 0 or three repeats 0/1/2, 8192 workflow allowance')
+            or args.max_tokens != 4096 or args.reasoning_mode != 'off'):
+        raise ValueError('locked pilot: passive det, OFF, one repeat 0 or three repeats 0/1/2, 4096 per-stage allowance')
     if (args.graph_condition or args.off_reference or args.reasoning_control_json or args.reasoning_control_source
             or args.temperature != 0 or args.top_p is not None or args.top_k is not None
             or args.sampling_seed_support != 'auto' or args.provider not in ('dry-run', 'openai')):

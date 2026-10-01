@@ -1,14 +1,21 @@
-# Model first, direct tasks, or supplied graph
+# Model first, general preparation, or supplied graph
 
-`icl_model_first_v1` tests whether freely describing a system before tasks
-affects performance. It is OFF-only, separate from the
+`icl_model_first_v1` with preparation policy `matched_preparation_v1` tests
+whether explicitly asking for a system description helps beyond general
+preparation. It is OFF-only, separate from the
 [graph-availability experiment](ICL_GRAPH.md).
 
 | Condition | Each period |
 | --- | --- |
 | `model_first` | Logs, freely written description, tasks |
-| `task_only` | Logs, tasks directly |
-| `graph_given` | Logs and current graph, tasks directly |
+| `task_only` | Logs, general preparation notes, tasks |
+| `graph_given` | Logs and current graph, general preparation notes, tasks |
+
+Every condition has three responses per period: preparation, task answers,
+and a transition report. All stages allow 4096 output tokens. Only model-first
+explicitly asks for a model; the other conditions use the same general
+preparation instruction and may choose their own notes. This comparison tests
+an explicit model request against general preparation, not against no preparation.
 
 Only `graph_given` explicitly calls the system a graph. Model-first accepts any
 representation. All conditions share deterministic silent-break worlds,
@@ -28,11 +35,13 @@ Select `--history-policy`:
 - `separate_reports_post_task_v1`: collect each report in a copy of the post-task
   conversation, without appending the exchange to main history. No B stage,
   including its report copy, sees A's report. Earlier evidence, task answers
-  and model-first descriptions remain visible.
+  and preparation answers remain visible.
 
 Malformed final answers remain verbatim wherever retained. Provider-private
-reasoning is never replayed. Policies have separate recorded identities and
-results. Free-form descriptions are saved and `not_scored_by_design`.
+reasoning is never replayed. History and preparation policies have separate
+recorded identities and results. Earlier runs without matched preparation remain a different design.
+Use their original code version to audit them; do not pool them with this
+version. Free-form preparation answers are saved and not scored.
 
 ## Offline commands
 
@@ -50,17 +59,19 @@ python3 -B run_pilot.py --protocol icl_model_first_v1 \
   --scenario icl_det_gate_seed8 --mode det \
   --model-first-condition model_first --history-policy retained_reports_v2 \
   --request-profile sol --provider dry-run --reasoning-mode off \
-  --repeats 1 --sampling-seeds 0 --max-tokens 8192 \
+  --repeats 1 --sampling-seeds 0 --max-tokens 4096 \
   --out /tmp/icl_model_first_dry --tag model_first_retained
 ```
 
 Select each condition and policy with a fresh tag. The generated preliminary
-seed-8 plans contain six conversations and 28 responses across both policies:
-six model-first and four direct/supplied-graph responses per policy. These are
+seed-8 plans contain six conversations and 36 responses across both policies:
+six responses per conversation in every condition. These are
 planned counts, not model results. `--repeats 3 --sampling-seeds 0 1 2` supports
 later expansion; do not pool repeat 1 twice. The preview emits seed-8/13/25
-prompts, complete synthetic histories, reference scores and hashes. Source
-reconciliation preserves both identities where supplied copies have an extra LF.
+prompts, complete synthetic histories, reference scores and hashes. For prompt
+review, `review_prompts/` contains exactly three files: one complete initial
+Period A prompt per condition. They contain no answers or Period B material.
+Source reconciliation preserves both identities where supplied copies have an extra LF.
 
 ## Live configuration and limits
 
@@ -72,8 +83,9 @@ under `deployment`, plus this `model_first` evidence:
 {
   "protocol": "icl_model_first_v1",
   "history_policy": "retained_reports_v2",
-  "output_allowances": [4096, 8192],
-  "stage_limits_source": "<evidence both limits reach the backend>",
+  "preparation_policy": "matched_preparation_v1",
+  "output_allowances": [4096],
+  "stage_limits_source": "<evidence the 4096 limit reaches the backend>",
   "system_message_source": "<evidence for the effective system-role path>",
   "context_source": "<verified policy-specific context handling>"
 }
@@ -84,8 +96,9 @@ fixtures are not readiness evidence. Set `--model` and `--base-url` to verified
 exact values. Confirm model-specific OFF controls, effective settings,
 authentication and context handling. Azure and direct OpenAI are not interchangeable.
 
-Model-first allows 4096 tokens per description and task; other conditions allow
-8192 per task. Every report allows 4096. Unused allowance does not transfer.
+Preparation, tasks and reports each allow 4096 tokens in every condition.
+Unused allowance does not transfer. The same number of turns and output
+allowances does not imply equal actual token use or computation.
 Each actual full conversation plus its stage allowance must fit before sending.
 Never truncate or treat a previous answer as a future bound. Operational failures
 stop; normally finished wrong/malformed answers remain results. There is no
@@ -132,6 +145,7 @@ duplicate repeat identities are rejected.
 
 Route/report consistency is diagnostic: the later report has seen the task answer,
 so it is not a pre-task model and cannot establish which beliefs caused a route.
-Output allowances are matched, not actual computation, input or latency. Repeats
+Turn counts and stage output allowances are matched, not actual computation,
+input or latency. Repeats
 within a graph are not independent worlds. Performance does not establish an
 internal world model. Do not retry malformed answers to improve results.

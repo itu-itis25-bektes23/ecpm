@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 
 PROTOCOL = 'icl_model_first_v1'
+PREPARATION_POLICY = 'matched_preparation_v1'
 # Separate from PROTOCOL, which also fixes the route-query selection namespace.
 HISTORY_POLICY = 'retained_reports_v2'
 HISTORY_POLICIES = (HISTORY_POLICY, 'separate_reports_post_task_v1')
@@ -52,6 +53,12 @@ so that your model can be used to answer questions about it later.'''
 MODEL_B = '''Update your model of how this system behaves using the Period B evidence.
 Use whatever representation you find useful. Describe the current system
 so that your model can be used to answer questions about it later.'''
+PREPARE_A = """Review the supplied evidence and prepare to answer questions about the
+current system. Write any notes you find useful for answering those
+questions later."""
+PREPARE_B = """Review the Period B evidence and prepare to answer questions about the
+current system. Write any notes you find useful for answering those
+questions later."""
 ROUTE_RULES = '''For each query below, find a route that minimizes the expected number of
 attempts from its start to its goal in the current period. Each step gives
 the state where an action is taken and that action. After failure, retry
@@ -132,10 +139,12 @@ p_success=null. Do not use the string "null".
     return text
 
 def prompts(world, period, arm):
-    e=evidence(world,period,arm)
-    if arm=='model_first':
-        return {'model':e+'\n\n'+(MODEL_A if period=='A' else MODEL_B), 'task':task(world,period), 'readout':readout(world,period)}
-    return {'task':e+'\n\n'+task(world,period), 'readout':e+'\n\n'+readout(world,period)}
+    if arm not in ARMS:
+        raise ValueError('unknown condition')
+    instruction = ((MODEL_A if period == 'A' else MODEL_B) if arm == 'model_first'
+                   else (PREPARE_A if period == 'A' else PREPARE_B))
+    return {'prepare': evidence(world, period, arm) + '\n\n' + instruction,
+            'task': task(world, period), 'readout': readout(world, period)}
 
 def schedule(world, arm, answers, history_policy=HISTORY_POLICY):
     """Returns actual request histories with supplied synthetic/saved answer text.
@@ -146,12 +155,11 @@ Private provider reasoning is not input.
     history=[{'role':'system','content':SYSTEM}]; calls=[]
     for period in ('A','B'):
         p=prompts(world,period,arm)
-        if arm=='model_first':
-            history.append({'role':'user','content':p['model']})
-            calls.append({'id':period+'_model','max_output_tokens':4096,'messages':copy.deepcopy(history)})
-            history.append({'role':'assistant','content':answers[period+'_model']})
+        history.append({'role':'user','content':p['prepare']})
+        calls.append({'id':period+'_prepare','max_output_tokens':4096,'messages':copy.deepcopy(history)})
+        history.append({'role':'assistant','content':answers[period+'_prepare']})
         history.append({'role':'user','content':p['task']})
-        calls.append({'id':period+'_task','max_output_tokens':4096 if arm=='model_first' else 8192,'messages':copy.deepcopy(history)})
+        calls.append({'id':period+'_task','max_output_tokens':4096,'messages':copy.deepcopy(history)})
         history.append({'role':'assistant','content':answers[period+'_task']})
         report=history+[{'role':'user','content':p['readout']}]
         calls.append({'id':period+'_readout','max_output_tokens':4096,'messages':copy.deepcopy(report)})
@@ -243,6 +251,8 @@ def verify_world(seed):
 
 
 def verify_prompts(w):
+    if lock().get('preparation_policy') != PREPARATION_POLICY:
+        raise ValueError('locked preparation policy drift')
     results = {}
     for arm in ARMS:
         for period in ('A', 'B'):
@@ -262,7 +272,7 @@ def verify_histories(w, history_policy=HISTORY_POLICY):
     if lock().get('history_policies') != list(HISTORY_POLICIES):
         raise ValueError('locked history policy drift')
     answers = {p + '_' + s: f'SYNTHETIC {p}_{s}; NOT A MODEL RESULT'
-               for p in ('A', 'B') for s in ('model', 'task', 'readout')}
+               for p in ('A', 'B') for s in ('prepare', 'task', 'readout')}
     result = {}
     for arm in ARMS:
         raw = json.dumps(schedule(w, arm, answers, history_policy), indent=2) + '\n'

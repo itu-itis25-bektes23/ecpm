@@ -4,6 +4,40 @@ import unittest
 import icl_model_first as d
 
 class ContractTests(unittest.TestCase):
+    def test_preparation_is_present_and_retained_in_every_condition(self):
+        for seed in (8, 13, 25):
+            world = d.load(seed)
+            answers = {p+'_'+s: f'UNIQUE {p}_{s}' for p in ('A','B')
+                       for s in ('prepare','task','readout')}
+            for policy in d.HISTORY_POLICIES:
+                for arm in d.ARMS:
+                    calls = d.schedule(world, arm, answers, policy)
+                    self.assertEqual([c['id'] for c in calls],
+                                     [p+'_'+s for p in ('A','B')
+                                      for s in ('prepare','task','readout')])
+                    self.assertEqual([c['max_output_tokens'] for c in calls], [4096]*6)
+                    for p in ('A','B'):
+                        task_call = next(c for c in calls if c['id'] == p+'_task')
+                        self.assertIn({'role':'assistant','content':answers[p+'_prepare']},
+                                      task_call['messages'])
+
+    def test_only_initial_message_supplies_evidence_and_only_model_first_requests_model(self):
+        for seed in (8,13,25):
+            world = d.load(seed)
+            for period in ('A','B'):
+                prompts = {arm:d.prompts(world,period,arm) for arm in d.ARMS}
+                self.assertEqual(prompts['task_only']['prepare'],
+                                 prompts['graph_given']['prepare'].replace(d.graph_text(world[period])+'\n','',1))
+                for arm, parts in prompts.items():
+                    self.assertIn('Shuffled single-step observations', parts['prepare'])
+                    self.assertNotIn('Route queries:', parts['prepare'])
+                    self.assertEqual(parts['task'], d.task(world,period))
+                    self.assertEqual(parts['readout'], d.readout(world,period))
+                    if arm != 'model_first':
+                        instruction = parts['prepare'].split('\n\n')[-1].lower()
+                        self.assertNotIn('model', instruction)
+                        self.assertNotIn('representation', instruction)
+
     def test_fixture_coverage_and_changed_graph(self):
         for seed in (8,13,25):
             w=d.load(seed)
@@ -36,7 +70,7 @@ class ContractTests(unittest.TestCase):
                 self.assertEqual(common,d.evidence(w,p,'graph_given').replace(d.graph_text(w[p])+'\n','',1))
 
     def test_b_graph_is_updated(self):
-        w=d.load(8); p=d.prompts(w,'B','graph_given')['task']
+        w=d.load(8); p=d.prompts(w,'B','graph_given')['prepare']
         self.assertIn('G | a1 | true | E | 0',p)
         self.assertNotIn('G | a1 | true | E | 1',p)
 
@@ -49,7 +83,7 @@ class ContractTests(unittest.TestCase):
     def test_no_future_information_in_a_histories(self):
         w=d.load(8); changed=copy.deepcopy(w)
         changed['B']['rows']=['FUTURE EVIDENCE SENTINEL']
-        answers={p+'_'+s:f'answer {p}_{s}' for p in ('A','B') for s in ('model','task','readout')}
+        answers={p+'_'+s:f'answer {p}_{s}' for p in ('A','B') for s in ('prepare','task','readout')}
         future=dict(answers)
         for key in future:
             if key.startswith('B'):
@@ -63,7 +97,7 @@ class ContractTests(unittest.TestCase):
 
     def test_no_representation_or_route_queries_before_construction(self):
         w=d.load(8)
-        p=d.prompts(w,'A','model_first')['model'].lower()
+        p=d.prompts(w,'A','model_first')['prepare'].lower()
         for banned in ('graph','json','q0','q1','route queries','target','control'):
             self.assertNotIn(banned,p)
         self.assertIn('whatever representation',p)
@@ -77,7 +111,7 @@ class ContractTests(unittest.TestCase):
                 self.assertTrue(d.prompts(w,p,arm)['readout'].endswith(d.readout(w,p)))
 
     def test_complete_history_including_reports_no_branches(self):
-        answers={p+'_'+s:f'UNIQUE_ANSWER_{p}_{s}' for p in ('A','B') for s in ('model','task','readout')}
+        answers={p+'_'+s:f'UNIQUE_ANSWER_{p}_{s}' for p in ('A','B') for s in ('prepare','task','readout')}
         for seed in (8,13,25):
             w=d.load(seed)
             for arm in d.ARMS:
@@ -92,7 +126,7 @@ class ContractTests(unittest.TestCase):
                         self.assertIn(d.prompts(w,'A',arm)['readout'],texts)
                         self.assertIn(answers['A_readout'],texts)
                     else:
-                        self.assertFalse(any(answers['B_'+s] in texts for s in ('model','task','readout')))
+                        self.assertFalse(any(answers['B_'+s] in texts for s in ('prepare','task','readout')))
                     if stage=='readout':
                         self.assertIn(answers[p+'_task'],texts)
                     expected.append({'role':'assistant','content':answers[call['id']]})
@@ -107,7 +141,7 @@ class ContractTests(unittest.TestCase):
 
     def test_both_policies_complete_expected_history(self):
         answers={p+'_'+s:f' \nMALFORMED EXACT {p}_{s} }}{{\t '
-                 for p in ('A','B') for s in ('model','task','readout')}
+                 for p in ('A','B') for s in ('prepare','task','readout')}
         for seed in (8,13,25):
             w=d.load(seed)
             for arm in d.ARMS:
@@ -124,11 +158,11 @@ class ContractTests(unittest.TestCase):
                         if period=='B':
                             self.assertIn(answers['A_task'],texts)
                             if arm=='model_first':
-                                self.assertIn(answers['A_model'],texts)
+                                self.assertIn(answers['A_prepare'],texts)
                             for value in (answers['A_readout'],d.prompts(w,'A',arm)['readout']):
                                 self.assertEqual(value in texts,policy==d.HISTORY_POLICY)
                         else:
-                            self.assertFalse(any(answers['B_'+s] in texts for s in ('model','task','readout')))
+                            self.assertFalse(any(answers['B_'+s] in texts for s in ('prepare','task','readout')))
                         branch=stage=='readout' and policy!=d.HISTORY_POLICY
                         self.assertEqual(call['conversation'],'measurement_branch' if branch else 'main')
                         if not branch:
@@ -139,20 +173,20 @@ class ContractTests(unittest.TestCase):
             for period in ('A','B'):
                 for arm in d.ARMS:
                     for text in d.prompts(d.load(seed),period,arm).values():
-                        self.assertEqual('Current-period graph:' in text,arm=='graph_given')
+                        self.assertEqual('Current-period graph:' in text,arm=='graph_given' and text == d.prompts(d.load(seed),period,arm)['prepare'])
                         self.assertNotIn('Current-period specification:',text)
                         if arm!='graph_given':
                             self.assertNotIn('graph',text.lower())
 
     def test_matched_allowances_and_request_count(self):
-        w=d.load(8); answers={p+'_'+s:'visible answer' for p in ('A','B') for s in ('model','task','readout')}
+        w=d.load(8); answers={p+'_'+s:'visible answer' for p in ('A','B') for s in ('prepare','task','readout')}
         counts=[]
         for arm in d.ARMS:
             calls=d.schedule(w,arm,answers); counts.append(len(calls))
             self.assertEqual(sum(c['max_output_tokens'] for c in calls),24576)
             for p in ('A','B'):
                 self.assertEqual(sum(c['max_output_tokens'] for c in calls if c['id'].startswith(p) and not c['id'].endswith('readout')),8192)
-        self.assertEqual(counts,[6,4,4]); self.assertEqual(sum(counts)*3,42)
+        self.assertEqual(counts,[6,6,6]); self.assertEqual(sum(counts)*3,54)
 
     def test_queries_unique_and_reproducible(self):
         for seed in (8,13,25):
