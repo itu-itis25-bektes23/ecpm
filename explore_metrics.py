@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Metrics computed from a completed live-exploration run (explore_agent.py).
 
-Built on resource_mdp's frozen scoring seam (broken_link_usage, score_route),
-called unmodified.
+Uses resource_mdp's frozen planning semantics without rounding intermediate
+route costs, and scores changed-action usage by stable action label across
+worlds.
 
 Stdlib only. Python 3.8+.
 """
 
 from __future__ import annotations
 
-from resource_mdp import RoutingMDP, broken_link_usage, optimal_ties, score_route
+from resource_mdp import RoutingMDP, optimal_ties
 
 
 def _outcome_counts(episodes) -> dict:
@@ -85,7 +86,11 @@ def _episode_route_regret(mdp, start, ep):
     path = [start] + [s.next_node for s in ep.steps if s.success]
     if path[-1] != mdp.goal:
         return None
-    return score_route(mdp, path, start)["regret"]
+    cost = mdp.plan_cost(path)
+    optimal_cost = mdp.optimal()[0].get(start, float("inf"))
+    if cost == float("inf") or optimal_cost == float("inf"):
+        return None
+    return cost - optimal_cost
 
 
 def _route_regrets(mdp, start, episodes) -> list:
@@ -122,41 +127,88 @@ def _per_episode_metrics(mdp, start, episodes) -> list:
            for ep in episodes]
 
 
-def _edge_mle(mdp, steps) -> dict:
-    """Laplace-smoothed success-rate estimate per edge from `steps` alone
-    (0.5 prior for edges never attempted) -- what the model could have
-    believed the reliabilities to be, as opposed to the true `mdp.p`.
+def _observed_m0_model(goal, steps):
+    """Build a partial reference from M0 feedback and the public goal only.
 
-    Args:
-        mdp: RoutingMDP whose edges (mdp.p keys) define the action set.
-        steps: List of LiveStep/Attempt to estimate from.
-
-    Returns:
-        {(u, v): p_hat} for every edge in mdp.p.
+    Never read evaluator-only chosen destinations or true topology. A
+    destination becomes known only after a successful move. Failed-only
+    actions retain unknown destinations; unavailable actions and parser
+    aborts do not become graph edges. Probabilities use Laplace smoothing.
+    This is the posterior mean with a Beta(1, 1) prior in both modes;
+    the simulator's mode is not supplied to this reference.
+    This is a reference over observed routes, not an elicited LLM belief.
     """
-    attempts = {edge: 0 for edge in mdp.p}
-    successes = {edge: 0 for edge in mdp.p}
+    nodes, actions = {goal}, {}
     for s in steps:
-        edge = (s.node, s.chosen)
-        if edge in attempts:
-            attempts[edge] += 1
-            successes[edge] += s.success
-    return {edge: (successes[edge] + 1) / (attempts[edge] + 2)
-           for edge in mdp.p}
+        if s.parse_status != "ok":
+            continue
+        nodes.add(s.node)
+        key = (s.node, s.action_label)
+        row = actions.setdefault(key, {"destination": None,
+                                       "n_attempts": 0, "n_successes": 0})
+        row["n_attempts"] += 1
+        if s.success:
+            if row["destination"] not in (None, s.next_node):
+                raise ValueError(f"m0_destination_conflict: {key}")
+            row["destination"] = s.next_node
+            row["n_successes"] += 1
+            nodes.add(s.next_node)
+    edges = {}
+    for (node, label), row in actions.items():
+        row["p_hat"] = (row["n_successes"] + 1) / (row["n_attempts"] + 2)
+        if row["destination"] is not None:
+            edge = (node, row["destination"])
+            if edge in edges:
+                raise ValueError(f"m0_parallel_actions: {node}, {label}")
+            edges[edge] = row["p_hat"]
+    return RoutingMDP(sorted(nodes), goal, edges), actions
 
 
-def _belief_mdp(mdp, steps) -> RoutingMDP:
-    """Same topology as `mdp`, but with true probabilities replaced by the
-    model's own MLE belief from `steps` (see _edge_mle). Used to test
-    whether later actions track this stale self-derived model rather than
-    the (possibly since-changed) real one -- see "Imperfect World Models
-    are Exploitable" (arXiv:2605.15960)."""
-    return RoutingMDP(mdp.nodes, mdp.goal, _edge_mle(mdp, steps))
+def _m0_observation_agreement(mdp, actions, episodes):
+    """Score labels against known M0 routes, with explicit abstention counts.
+
+    Unknown actions/destinations and actions without a known finite route
+    are unscorable, not wrong. Each episode with scored decisions receives
+    equal weight. M1 destinations and outcomes never update the reference.
+    Optimality means minimum expected steps on the known routes, without a
+    horizon cutoff, using point estimates of the success probabilities.
+    """
+    dist, _ = mdp.optimal()
+    skipped = {"unobserved_action": 0, "unknown_destination": 0,
+               "no_known_route": 0}
+    per_episode = []
+    for ep in episodes:
+        scores, n_steps = [], 0
+        for s in ep.steps:
+            if s.parse_status == "retries_exhausted":
+                continue
+            n_steps += 1
+            row = actions.get((s.node, s.action_label))
+            if row is None:
+                skipped["unobserved_action"] += 1
+            elif row["destination"] is None:
+                skipped["unknown_destination"] += 1
+            elif (dist.get(s.node, float("inf")) == float("inf")
+                  or dist.get(row["destination"], float("inf")) == float("inf")):
+                skipped["no_known_route"] += 1
+            else:
+                cost = 1 / row["p_hat"] + dist[row["destination"]]
+                scores.append(abs(cost - dist[s.node]) < 1e-9)
+        per_episode.append({"episode_idx": ep.episode_idx,
+                            "rate": _mean(scores), "n_steps": n_steps,
+                            "n_scored_steps": len(scores),
+                            "n_skipped_steps": n_steps - len(scores)})
+    rates = [row["rate"] for row in per_episode if row["rate"] is not None]
+    coverage = {"n_steps": sum(row["n_steps"] for row in per_episode),
+                "n_scored_steps": sum(row["n_scored_steps"] for row in per_episode),
+                "n_skipped_steps": sum(skipped.values()),
+                "n_scored_episodes": len(rates),
+                "skipped_by_reason": skipped, "per_episode": per_episode}
+    return _mean(rates), coverage
 
 
 def compute_explore_metrics(inst, m0_episodes, m1_episodes) -> dict:
-    """Metrics computed from the LiveStep logs, reusing resource_mdp's frozen scoring primitives
-    unmodified wherever possible.
+    """Metrics computed from LiveStep logs using the frozen MDP semantics.
 
     Args:
         inst: The resource_mdp.PairedInstance the episodes were run on.
@@ -164,83 +216,181 @@ def compute_explore_metrics(inst, m0_episodes, m1_episodes) -> dict:
         m1_episodes: List of EpisodeOutcome from the post-change phase.
 
     Returns:
-        Dict of named metrics -- optimal_action_rate_m0/m1,
-        broken_link_usage_before/after_first_failure,
-        adaptation_lag_steps, steps_to_goal_m0/m1 (mean/median),
-        episode_outcome_counts_m0/m1, route_regret_m0/m1,
+        Dict of named metrics -- goal_success_rate_m0/m1 (None when empty),
+        n_episodes_m0/m1 (denominators including all episode outcomes),
+        optimal_action_rate_m0/m1 and their scored-episode counts,
+        changed_action_usage, changed_action_switch,
+        steps_to_goal_m0/m1 (mean/median),
+        episode_outcome_counts_m0/m1, route_regret_m0/m1 and their valid-route
+        counts,
         parse_failure_rate_m0/m1, retries_exhausted_rate_m0/m1,
-        optimal_action_rate_m1_by_m0_belief, per_episode_m0/m1.
+        illegal_action_rate_m0/m1,
+        m0_reference_action_agreement_m1, m0_observation_reference,
+        m0_reference_agreement_coverage_m1, per_episode_m0/m1.
     """
     m0_steps = [s for ep in m0_episodes for s in ep.steps]
-    m1_steps = [s for ep in m1_episodes for s in ep.steps]
-    m0_belief = _belief_mdp(inst.m0, m0_steps)
+    # Usage and lag count executed actions, not parser-abort diagnostics.
+    # Keep the original episodes intact for parse and outcome statistics.
+    m1_steps = [s for ep in m1_episodes for s in ep.steps
+                if s.parse_status != "retries_exhausted"]
+    m0_reference, m0_actions = _observed_m0_model(inst.m0.goal, m0_steps)
+    m0_agreement, m0_coverage = _m0_observation_agreement(
+        m0_reference, m0_actions, m1_episodes)
 
-    before = after = adaptation_lag = None
+    def usage(steps, node, label):
+        decisions = [s for s in steps if s.node == node
+                     and s.parse_status != "retries_exhausted"]
+        choices = sum(s.action_label == label for s in decisions)
+        return {"rate": choices / len(decisions) if decisions else None,
+                "n_choices": choices, "n_decisions": len(decisions)}
+
+    action_switch = {"version": "first_legal_alternative_after_feedback_v1",
+                     "status": "no_reference_event", "decision_lag": None,
+                     "n_decisions_after_feedback": 0,
+                     "n_actions_after_feedback": 0,
+                     "episode_idx": None, "t": None,
+                     "changed_action_available": None}
+    changed_usage = {"version": "action_label_phase_usage_v1",
+                     "node": None, "action_label": None,
+                     "m0": None, "m1": None, "after_feedback": None,
+                     "feedback_event": {"status": "not_applicable"}}
     edge = inst.change.get("edge")
     if edge is not None:
         u, v = edge
-        # first M1 step where the model tried the now-broken edge and
-        # failed -- the split point between "before" and "after" it
-        # noticed
+        label = inst.labels[(u, v)]
+        changed_usage.update(node=u, action_label=label,
+                             m0=usage(m0_steps, u, label),
+                             m1=usage(m1_steps, u, label))
+        # This is an observed failure, not evidence of recognized change.
         first_fail = next((i for i, s in enumerate(m1_steps)
-                           if s.node == u and s.chosen == v
+                           if s.node == u and s.action_label == label
                            and not s.success), None)
-        if first_fail is None:
-            before = broken_link_usage(m1_steps, u, v)
+        event = {"status": "not_observed", "kind": None,
+                 "episode_idx": None, "t": None, "n_actions_before_feedback": None}
+        boundary = None
+        if inst.condition == "hard_removal":
+            event["kind"] = "menu_action_absent"
+            # Every policy call renders the menu, even when parsing aborts.
+            # A previous M0 visit establishes that the action was available.
+            if not any(s.node == u for s in m0_steps):
+                event["status"] = "missing_m0_menu_observation"
+            else:
+                executed = 0
+                for ep in m1_episodes:
+                    for s in ep.steps:
+                        if s.node == u:
+                            boundary = executed
+                            event.update(status="observed", episode_idx=ep.episode_idx,
+                                         t=s.t, n_actions_before_feedback=boundary)
+                            break
+                        executed += s.parse_status != "retries_exhausted"
+                    if boundary is not None:
+                        break
+        elif inst.condition == "redirect":
+            event["kind"] = "destination_mismatch"
+            old = m0_actions.get((u, label), {}).get("destination")
+            if old is None:
+                event["status"] = "missing_m0_destination_observation"
+            else:
+                for i, s in enumerate(m1_steps):
+                    if (s.node == u and s.action_label == label
+                            and s.success and s.next_node != old):
+                        boundary = i + 1
+                        event.update(status="observed", episode_idx=s.episode_idx,
+                                     t=s.t, n_actions_before_feedback=boundary)
+                        break
         else:
-            before = broken_link_usage(m1_steps[:first_fail], u, v)
-            after = broken_link_usage(m1_steps[first_fail:], u, v)
-            # last step that still chose the broken edge, however long
-            # after the first failure -- the "how long did it keep
-            # trying" signal
-            last_use = max((i for i, s in enumerate(m1_steps)
-                           if s.node == u and s.chosen == v), default=None)
-            if last_use is not None:
-                adaptation_lag = max(0, last_use - first_fail)
+            event["kind"] = "first_failure"
+            if first_fail is not None:
+                s = m1_steps[first_fail]
+                boundary = first_fail + 1
+                event.update(status="observed", episode_idx=s.episode_idx,
+                             t=s.t, n_actions_before_feedback=boundary)
+        changed_usage["feedback_event"] = event
+        if boundary is not None:
+            following = m1_steps[boundary:]
+            changed_usage["after_feedback"] = usage(following, u, label)
+            decisions = [s for s in following if s.node == u]
+            action_switch.update(
+                status="no_opportunity" if not decisions else "not_observed_before_end",
+                n_decisions_after_feedback=len(decisions),
+                n_actions_after_feedback=len(following),
+                changed_action_available=inst.condition != "hard_removal")
+            # Illegal choices consume an opportunity but are not a legal
+            # alternative strategy. Parsing aborts were already excluded.
+            for i, s in enumerate(decisions, 1):
+                if s.action_label != label and s.parse_status == "ok":
+                    action_switch.update(status="switch_observed", decision_lag=i,
+                                         episode_idx=s.episode_idx, t=s.t)
+                    break
 
     def parse_stats(episodes) -> tuple:
-        """(parse_failure_rate, retries_exhausted_rate) across all steps in
-        `episodes`, or (None, None) if there are no steps."""
+        """Format-error and abort rates per decision record, including
+        corrected replies and final aborts. Illegal choices alone are not
+        format errors. Return (None, None) when there are no records."""
         steps = [s for ep in episodes for s in ep.steps]
         if not steps:
             return None, None
-        fail = sum(1 for s in steps if s.parse_status != "ok")
+        fail = sum(1 for s in steps if s.retries > 0 or s.parse_status in
+                   ("malformed_json", "invalid_object", "retries_exhausted"))
         exhausted = sum(1 for s in steps if s.parse_status == "retries_exhausted")
         return fail / len(steps), exhausted / len(steps)
 
     pf_m0, re_m0 = parse_stats(m0_episodes)
     pf_m1, re_m1 = parse_stats(m1_episodes)
+    action_rates_m0 = _episode_action_rates(inst.m0, m0_episodes)
+    action_rates_m1 = _episode_action_rates(inst.m1, m1_episodes)
+    route_regrets_m0 = _route_regrets(inst.m0, inst.start, m0_episodes)
+    route_regrets_m1 = _route_regrets(inst.m1, inst.start, m1_episodes)
+    successful_steps_m0 = [len(e.steps) for e in m0_episodes
+                           if e.outcome == "reached_goal"]
+    successful_steps_m1 = [len(e.steps) for e in m1_episodes
+                           if e.outcome == "reached_goal"]
+
+    def illegal_rate(steps):
+        """Share of executed attempts with unavailable actions, excluding aborts."""
+        return _mean([s.parse_status == "illegal_action" for s in steps
+                      if s.parse_status != "retries_exhausted"])
 
     return {
-        "optimal_action_rate_m0": _mean(_episode_action_rates(inst.m0,
-                                                              m0_episodes)),
-        "optimal_action_rate_m1": _mean(_episode_action_rates(inst.m1,
-                                                              m1_episodes)),
-        "broken_link_usage_before_first_failure": before,
-        "broken_link_usage_after_first_failure": after,
-        "adaptation_lag_steps": adaptation_lag,
+        "goal_success_rate_m0": _mean([e.outcome == "reached_goal"
+                                       for e in m0_episodes]),
+        "goal_success_rate_m1": _mean([e.outcome == "reached_goal"
+                                       for e in m1_episodes]),
+        "n_episodes_m0": len(m0_episodes),
+        "n_episodes_m1": len(m1_episodes),
+        "optimal_action_rate_m0": _mean(action_rates_m0),
+        "optimal_action_rate_m1": _mean(action_rates_m1),
+        "optimal_action_rate_n_scored_episodes_m0": len(action_rates_m0),
+        "optimal_action_rate_n_scored_episodes_m1": len(action_rates_m1),
+        "changed_action_usage": changed_usage,
+        "changed_action_switch": action_switch,
         "steps_to_goal_m0": {
-            "mean": _mean([len(e.steps) for e in m0_episodes
-                          if e.outcome == "reached_goal"]),
-            "median": _median([len(e.steps) for e in m0_episodes
-                              if e.outcome == "reached_goal"])},
+            "mean": _mean(successful_steps_m0),
+            "median": _median(successful_steps_m0),
+            "n_successful_episodes": len(successful_steps_m0)},
         "steps_to_goal_m1": {
-            "mean": _mean([len(e.steps) for e in m1_episodes
-                          if e.outcome == "reached_goal"]),
-            "median": _median([len(e.steps) for e in m1_episodes
-                              if e.outcome == "reached_goal"])},
+            "mean": _mean(successful_steps_m1),
+            "median": _median(successful_steps_m1),
+            "n_successful_episodes": len(successful_steps_m1)},
         "episode_outcome_counts_m0": _outcome_counts(m0_episodes),
         "episode_outcome_counts_m1": _outcome_counts(m1_episodes),
-        "route_regret_m0": _mean(_route_regrets(inst.m0, inst.start,
-                                                m0_episodes)),
-        "route_regret_m1": _mean(_route_regrets(inst.m1, inst.start,
-                                                m1_episodes)),
+        "route_regret_m0": _mean(route_regrets_m0),
+        "route_regret_m1": _mean(route_regrets_m1),
+        "route_regret_n_valid_routes_m0": len(route_regrets_m0),
+        "route_regret_n_valid_routes_m1": len(route_regrets_m1),
         "parse_failure_rate_m0": pf_m0, "parse_failure_rate_m1": pf_m1,
         "retries_exhausted_rate_m0": re_m0, "retries_exhausted_rate_m1": re_m1,
-        # high here alongside a low optimal_action_rate_m1 means the model
-        # is still planning against its own stale M0 belief, not reality
-        "optimal_action_rate_m1_by_m0_belief": _mean(
-            _episode_action_rates(m0_belief, m1_episodes)),
+        "illegal_action_rate_m0": illegal_rate(m0_steps),
+        "illegal_action_rate_m1": illegal_rate(m1_steps),
+        # Agreement with a partial reference is not proof of an internal belief.
+        "m0_reference_action_agreement_m1": m0_agreement,
+        "m0_observation_reference": {
+            "version": "observed_transitions_laplace_v1",
+            "goal": inst.m0.goal,
+            "actions": [{"node": node, "action_label": label, **row}
+                        for (node, label), row in sorted(m0_actions.items())]},
+        "m0_reference_agreement_coverage_m1": m0_coverage,
         "per_episode_m0": _per_episode_metrics(inst.m0, inst.start,
                                               m0_episodes),
         "per_episode_m1": _per_episode_metrics(inst.m1, inst.start,

@@ -198,10 +198,12 @@ def test_broken_edge_always_fails_when_attempted():
 
     metrics = compute_explore_metrics(inst, result["m0_episodes"],
                                       result["m1_episodes"])
-    assert metrics["broken_link_usage_after_first_failure"] is not None
+    usage = metrics["changed_action_usage"]
+    assert usage["feedback_event"]["status"] == "observed"
+    assert usage["after_feedback"] is not None
     print(f"PASS stale M1 policy always fails on the broken edge "
          f"({len(broken_attempts)} attempts), "
-         f"adaptation_lag_steps={metrics['adaptation_lag_steps']}")
+         f"switch={metrics['changed_action_switch']['status']}")
 
 
 def test_reproducibility():

@@ -32,6 +32,8 @@ from typing import Callable
 from resource_mdp import (PolicyAborted, explore_policy, invert_labels,
                           legal_actions, rollout)
 
+ACTION_PROTOCOL = "illegal_action_costs_step_v1"
+
 
 # --------------------------------------------------------------------------
 # Records
@@ -45,14 +47,14 @@ class LiveStep:
     replacement anywhere an Attempt list is expected."""
     t: int                  # step number in the episode
     node: str                # node the model was at
-    chosen: str              # node it tried to move to
+    chosen: str              # intended destination; empty for unknown actions or aborts
     success: bool             # did the move work?
     next_node: str            # node it's at now
     phase: str              # "m0" | "m1"
     episode_idx: int         # which episode (0-based)
     action_label: str       # the 'aK' label the model actually chose
     parse_status: str       # ok | malformed_json | invalid_object | illegal_action | retries_exhausted
-    retries: int              # correction attempts before this action was accepted
+    retries: int              # format corrections before the final reply
     raw_text: str             # model's full reply for this step
     reasoning: str = ""      # model's reasoning for this step, kept separate from raw_text (empty for dry-run and for providers without a separate reasoning channel)
 
@@ -74,7 +76,7 @@ class ExploreConfig:
     max_episodes_m0: int = 4            # max episodes on the pre-change world
     max_episodes_m1: int = 4            # episodes on the post-change world (always runs all of them)
     max_steps_per_episode: int = 25     # step limit per episode
-    max_retries_per_step: int = 2       # retries for a bad action before giving up
+    max_retries_per_step: int = 2       # format retries before giving up
     announce_change: bool = False       # tell the model the world may have changed (ablation)
     max_context_tokens_est: int = 12000  # trim old turns once the transcript gets this big
     keep_last_n_turns_min: int = 6      # never trim below this many recent turns
@@ -189,13 +191,13 @@ def build_system_prompt(goal) -> str:
         "You are exploring an unfamiliar courier network of locations "
         "connected by one-way links. At each location you may attempt one "
         "of the listed actions (aK). An attempt either delivers you to "
-        "that action's destination, or fails and you stay where you are "
-        "-- either way it costs one step. You do not know the network's "
+        "that action's destination, or fails and you stay where you are. "
+        "Either way it costs one step. You do not know the network's "
         "structure or reliabilities in advance: you must learn them by "
         "trying actions and observing what happens. Your goal is to reach "
         f"{goal} in as few steps as possible, across several episodes. "
         "The network's reliabilities may or may not change between "
-        "episodes; nothing will tell you this directly -- watch your own "
+        "episodes. Nothing will tell you this directly; watch your own "
         "outcomes. For every step: you may reason briefly first, but end "
         'your reply with exactly one JSON object of the form '
         '{"action": "aK"} naming the single action you choose. Output no '
@@ -203,8 +205,13 @@ def build_system_prompt(goal) -> str:
     )
 
 
+def _illegal_action_feedback(label, node):
+    return (f"Action {label} is not available at {node}. "
+            f"The attempt used one step. You remain at {node}.")
+
+
 def render_step_observation(node, menu, steps_left, last_result=None,
-                            note=None) -> str:
+                            note=None, last_action_illegal=False) -> str:
     """Build the text of one per-step observation message shown to the
     model.
 
@@ -220,6 +227,7 @@ def render_step_observation(node, menu, steps_left, last_result=None,
             outcome of the previous action.
         note: Optional extra line prepended to the message (e.g. a
             phase-transition note).
+        last_action_illegal: Whether the previous action was unavailable.
 
     Returns:
         The observation text as a single string, ready to be sent as a
@@ -230,8 +238,11 @@ def render_step_observation(node, menu, steps_left, last_result=None,
         lines.append(note)
     if last_result is not None:
         label, success = last_result
-        outcome = "succeeded (you moved)" if success else "failed (you stayed)"
-        lines.append(f"Your last action {label} {outcome}.")
+        if last_action_illegal:
+            lines.append(_illegal_action_feedback(label, node))
+        else:
+            outcome = "succeeded (you moved)" if success else "failed (you stayed)"
+            lines.append(f"Your last action {label} {outcome}.")
     lines.append(f"You are at {node}. Steps remaining this episode: "
                 f"{steps_left}.")
     lines.append(f"Legal actions here: {', '.join(menu)}.")
@@ -329,13 +340,14 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
 
     Returns:
         A policy(u, rng) -> node callable (same contract
-        resource_mdp.rollout() expects).
+        resource_mdp.rollout() expects). Use allow_illegal_attempts=True
+        to execute unavailable choices as failed, step-consuming attempts.
     """
     assert (act_fn is None) != (node_policy is None), \
         "give exactly one of act_fn, node_policy"
     menu_cache = legal_actions(mdp, labels)   # node -> legal 'aK' labels, computed once
     inv = invert_labels(labels, mdp)          # (node, "aK") -> destination node in THIS world
-    prev = {"label": None, "target": None}    # last action taken, used to detect success/failure next call
+    prev = {"label": None, "target": None, "illegal": False}
     first_call = [True]                       # whether initial_note still needs to be shown
 
     def policy(u, rng) -> str:
@@ -351,7 +363,8 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
         first_call[0] = False
         steps_left = cfg.max_steps_per_episode - len(step_meta)
         obs = render_step_observation(u, menu, steps_left,
-                                      last_result=last_result, note=note)
+                                      last_result=last_result, note=note,
+                                      last_action_illegal=prev["illegal"])
         messages.append({"role": "user", "content": obs})   # log the observation turn
 
         if node_policy is not None:
@@ -363,7 +376,7 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
             reasoning = ""
             status, retries = "ok", 0
         else:
-            # live-model path: ask, parse, and retry on a bad reply up to max_retries_per_step times
+            # Retry unreadable formats only. A clear illegal choice costs a step.
             trimmed = trim_history(messages, cfg.max_context_tokens_est,
                                    cfg.keep_last_n_turns_min)
             retries = 0
@@ -373,15 +386,16 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
             while True:
                 raw, reasoning = act_fn(system_prompt, trimmed)
                 parsed = parse_step_action(raw, menu)
-                if parsed["status"] == "ok" or retries >= cfg.max_retries_per_step:
+                if (parsed["status"] in ("ok", "illegal_action")
+                        or retries >= cfg.max_retries_per_step):
                     break
                 retries += 1
-                correction = (f'That was not one of the legal actions '
-                             f'({", ".join(menu)}). ' + obs)
+                correction = ('Your reply could not be read as an action. '
+                              'Return one JSON object with a string "action" field. ' + obs)
                 trimmed = trimmed + [
                     {"role": "assistant", "content": raw},
                     {"role": "user", "content": correction}]
-            if parsed["status"] != "ok":
+            if parsed["status"] not in ("ok", "illegal_action"):
                 # retries exhausted: end the episode here rather than
                 # substituting a random move the model never chose
                 messages.append({"role": "assistant", "content": raw})
@@ -389,16 +403,21 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
                     abort_info.update(node=u, retries=retries,
                                       raw_text=raw, reasoning=reasoning)
                 raise PolicyAborted
-            action_label, status = parsed["action"], "ok"
-            v = inv.get((u, action_label))   # translate the chosen label back to a node
-            if v is None:
-                v = menu_cache.get(u) and inv.get((u, menu_cache[u][0]))
+            action_label, status = parsed["action"], parsed["status"]
+            if status == "ok":
+                v = inv[(u, action_label)]
+            else:
+                # Preserve a removed action's original target for diagnostics.
+                # Unknown labels have no destination, but are still real attempts.
+                v = next((target for (source, target), label in labels.items()
+                          if source == u and label == action_label), "")
 
         messages.append({"role": "assistant", "content": raw})   # log the model's reply
         step_meta.append({"action_label": action_label,
                           "parse_status": status, "retries": retries,
                           "raw_text": raw, "reasoning": reasoning})
         prev["label"], prev["target"] = action_label, v   # remember for next call's success check
+        prev["illegal"] = status == "illegal_action"
         return v
     return policy
 
@@ -523,7 +542,8 @@ def run_explore_instance(inst, cfg, act_fn=None, node_policy_fn=None) -> dict:
                 abort_info=abort_info)
             rng = random.Random(f"{cfg.seed}|explore|{phase}|{ep_idx}")
             attempts, delivered = rollout(mdp, inst.start, policy, rng,
-                                          horizon=cfg.max_steps_per_episode)
+                                          horizon=cfg.max_steps_per_episode,
+                                          allow_illegal_attempts=True)
             steps = _zip_steps(attempts, step_meta, phase, ep_idx)
             if abort_info:
                 # retries exhausted mid-episode: append one diagnostic
@@ -540,6 +560,22 @@ def run_explore_instance(inst, cfg, act_fn=None, node_policy_fn=None) -> dict:
                 outcome = "retries_exhausted"
             else:
                 outcome = "reached_goal" if delivered else "horizon_cutoff"
+                # No next policy call will report the final executed action.
+                # On a parser abort, that call already reported its predecessor.
+                if steps:
+                    last = steps[-1]
+                    feedback = (f"succeeded. You arrived at {last.next_node}."
+                                if last.success else
+                                f"failed. You remained at {last.next_node}.")
+                    ending = ("you reached the goal" if delivered else
+                              "the step limit was reached")
+                    final_result = (f"Your last action {last.action_label} {feedback}"
+                                    if last.parse_status != "illegal_action" else
+                                    _illegal_action_feedback(last.action_label, last.node))
+                    messages.append({
+                        "role": "user",
+                        "content": (f"{final_result}\n"
+                                    f"The episode ended because {ending}.")})
             episodes.append(EpisodeOutcome(
                 episode_idx=ep_idx, phase=phase, steps=steps,
                 outcome=outcome))

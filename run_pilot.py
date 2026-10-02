@@ -1837,6 +1837,7 @@ def run_pilot_active(sc, deterministic, args):
         "model": {"provider": args.provider, "model": args.model,
                   "temperature": 0, "max_tokens": args.max_tokens},
         "explore": {
+            "action_protocol": explore_agent.ACTION_PROTOCOL,
             "config": asdict(cfg),
             "transcript": result["messages"],
             "m0_episodes": [_episode_to_json(e)
@@ -1882,6 +1883,11 @@ def run_pilot_active(sc, deterministic, args):
             "scored": probe_result["scored"],
         }
     return artifact
+
+
+def _format_optional_rate(value):
+    """Format a rate for the operator summary without rejecting null metrics."""
+    return "n/a" if value is None else f"{value:.2f}"
 
 
 def main():
@@ -2056,9 +2062,10 @@ def main():
         if mf is None:
             em = art.get("explore", {}).get("metrics", {})
             print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
-                  f"opt_rate m0={em.get('optimal_action_rate_m0'):.2f} "
-                  f"m1={em.get('optimal_action_rate_m1'):.2f} "
-                  f"lag={em.get('adaptation_lag_steps')}\n")
+                  f"opt_rate m0={_format_optional_rate(em.get('optimal_action_rate_m0'))} "
+                  f"m1={_format_optional_rate(em.get('optimal_action_rate_m1'))} "
+                  f"switch={em.get('changed_action_switch', {}).get('status')} "
+                  f"decision_lag={em.get('changed_action_switch', {}).get('decision_lag')}\n")
         else:
             print(f"{path}: pinned={art['env']['pinned_to_freeze']} "
                   f"final={mf['per_phase_score']} "

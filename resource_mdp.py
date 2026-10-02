@@ -778,16 +778,23 @@ class PolicyAborted(Exception):
     next hop. Policies that never raise it are unaffected."""
 
 
-def rollout(mdp, start, policy, rng, horizon=40):
+def rollout(mdp, start, policy, rng, horizon=40, *, allow_illegal_attempts=False):
     """policy: callable(node, rng) -> next hop, or raises PolicyAborted to
-    stop early. Returns (attempts, delivered)."""
+    stop early. Returns (attempts, delivered).
+
+    With allow_illegal_attempts, an unlisted destination costs one step
+    and leaves the agent in place. Legal actions keep normal dynamics.
+    """
     at, t, attempts = start, 0, []
     while at != mdp.goal and t < horizon:
         try:
             v = policy(at, rng)
         except PolicyAborted:
             break
-        nxt, ok = mdp.step(at, v, rng)
+        if allow_illegal_attempts and (at, v) not in mdp.p:
+            nxt, ok = at, False
+        else:
+            nxt, ok = mdp.step(at, v, rng)
         t += 1
         attempts.append(Attempt(t, at, v, ok, nxt))
         at = nxt
