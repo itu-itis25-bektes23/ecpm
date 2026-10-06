@@ -1,0 +1,69 @@
+{
+ "_note": "Model profiles for experiments/run_matrix.py. Prices are USD per 1M tokens; null means unpriced. verify_id true means the model id has not been checked against the provider's model list.",
+ "gemma4_e4b": {
+  "provider": "openai",
+  "base_url": "http://localhost:1234/v1",
+  "model": "google/gemma-4-E4B-it",
+  "api_key_env": "ECPM_LOCAL_API_KEY",
+  "timeout": 900,
+  "in_price": 0,
+  "out_price": 0,
+  "price_note": "local LM Studio, no per-token cost",
+  "verify_id": true
+ },
+ "gpt4o": {
+  "provider": "azure",
+  "model": "gpt-4o-2024-08-06",
+  "api_key_env": "AZURE_OPENAI_API_KEY",
+  "alt_provider": {
+   "provider": "openai",
+   "base_url": "https://api.openai.com/v1",
+   "api_key_env": "OPENAI_API_KEY"
+  },
+  "azure_note": "on Azure, model is the deployment name; set --azure-endpoint via AZURE_OPENAI_ENDPOINT",
+  "timeout": 120,
+  "in_price": null,
+  "out_price": null,
+  "price_note": "TODO fill from provider page",
+  "paper_note": "Table 8: gpt-4o, temperature 0. The dated snapshot is recorded from the run artifacts."
+ },
+ "gpt56_sol": {
+  "provider": "openai",
+  "base_url": "https://api.openai.com/v1",
+  "model": "gpt-5.6-sol",
+  "api_key_env": "OPENAI_API_KEY",
+  "timeout": 600,
+  "in_price": null,
+  "out_price": null,
+  "price_note": "TODO fill from provider page",
+  "verify_id": true,
+  "samples_silent_break": 3,
+  "paper_note": "Table 8: reasoning effort medium (API default), provider temperature, three answers per silent-break instance.",
+  "omit_temperature": true
+ },
+ "deepseek_v4_flash": {
+  "provider": "deepseek",
+  "base_url": "https://api.deepseek.com/v1",
+  "model": "DeepSeek-V4-Flash-0731",
+  "api_key_env": "DEEPSEEK_API_KEY",
+  "timeout": 600,
+  "in_price": null,
+  "out_price": null,
+  "price_note": "TODO fill from provider page",
+  "verify_id": true,
+  "paper_note": "Table 8: checkpoint requested explicitly because the API name deepseek-v4-flash now routes to V4.1 Flash."
+ },
+ "kimi_k27_code": {
+  "provider": "moonshot",
+  "base_url": "https://api.moonshot.ai/v1",
+  "model": "kimi-k2.7-code",
+  "api_key_env": "MOONSHOT_API_KEY",
+  "omit_temperature": true,
+  "timeout": 600,
+  "in_price": null,
+  "out_price": null,
+  "price_note": "TODO fill from provider page",
+  "verify_id": true,
+  "paper_note": "Table 8: thinking always on, provider temperature."
+ }
+}
