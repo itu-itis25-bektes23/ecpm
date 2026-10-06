@@ -62,7 +62,9 @@ def row_for(artifact):
         "detection": bool(dl.get("detection_correct")),
         "localization": bool(dl.get("localization_correct")),
         "preservation": bool(b_scored.get("control_preservation", {}).get(
-            "all_four_controls_correct")),
+            "all_controls_correct", b_scored.get(
+                "control_preservation", {}).get(
+                "all_four_controls_correct"))),
         "route_a_optimal": a_scored.get("route", {}).get("is_optimal") is True,
         "route_b_optimal": b_scored.get("route", {}).get("is_optimal") is True,
         "belief_acc_a": a_scored.get("beliefs", {}).get("accuracy", 0.0),

@@ -790,3 +790,129 @@ def score_control_preservation(record, pre_beliefs, post_beliefs,
             "all_four_controls_correct": len(rows) == 4 and mean == 1.0,
             "truth_mean_control_preservation": round(truth_mean, 4),
             "per_pair": rows}
+
+
+# --------------------------------------------------------------------------
+# Additive: Period B belief about every listed pair (--period-b-every-pair).
+# Nothing above changes; these helpers run only when that flag is on.
+# --------------------------------------------------------------------------
+
+SELF_CONSISTENT_P_FLOOR = 0.05
+
+
+def validate_listed_pairs(beliefs, listed_pairs):
+    """Check that parsed beliefs cover every listed pair exactly once.
+
+    Same rules as the five-pair check in score_icl_beliefs: an unlisted
+    pair is unknown_pair, a repeat is duplicate_pair, a gap is
+    missing_pair. A beliefs object that did not parse keeps its status."""
+    wanted = [(q["node"], q["action"]) for q in listed_pairs]
+    out = {"status": beliefs.get("status", "invalid_object"),
+           "n_listed": len(wanted), "pairs": []}
+    if out["status"] != "ok":
+        return out
+    wset, got = set(wanted), {}
+    for item in beliefs["pairs"]:
+        key = (item["node"], item["action"])
+        if key not in wset:
+            out["status"] = "unknown_pair"
+            out["offending_pair"] = {"node": key[0], "action": key[1]}
+            return out
+        if key in got:
+            out["status"] = "duplicate_pair"
+            out["offending_pair"] = {"node": key[0], "action": key[1]}
+            return out
+        got[key] = item
+    missing = [k for k in wanted if k not in got]
+    if missing:
+        out["status"] = "missing_pair"
+        out["missing_pairs"] = [{"node": n, "action": a} for n, a in missing]
+        return out
+    out["pairs"] = [got[k] for k in wanted]
+    return out
+
+
+def parse_icl_turn_b_every_pair(text, listed_pairs, queried_pairs):
+    """parse_icl_turn_b plus a full-menu check.
+
+    `every_pair_beliefs` holds the validated full set. `beliefs` is reduced
+    to the queried pairs so the five-pair scorers run unchanged; if the
+    full set fails validation, `beliefs` carries that status instead."""
+    parsed = parse_icl_turn_b(text)
+    every = validate_listed_pairs(parsed["beliefs"], listed_pairs)
+    parsed["every_pair_beliefs"] = every
+    if every["status"] == "ok":
+        queried = {(q["node"], q["action"]) for q in queried_pairs}
+        parsed["beliefs"] = {"status": "ok", "pairs": [
+            p for p in every["pairs"] if (p["node"], p["action"]) in queried]}
+    elif parsed["beliefs"]["status"] == "ok":
+        parsed["beliefs"] = {"status": every["status"], "pairs": []}
+    if parsed["status"] != "malformed_json":
+        status = _component_status((parsed["detection"],
+                                    parsed["localization"],
+                                    parsed["beliefs"], parsed["route"]))
+        parsed["status"] = status
+        parsed["well_formed"] = status == "ok"
+    return parsed
+
+
+def route_self_consistency(parsed_route, every_beliefs, start, goal,
+                           p_floor=SELF_CONSISTENT_P_FLOOR):
+    """Is the route self-consistent with the model's own Period B beliefs?
+
+    Self-consistent: the route uses no action the model states is
+    unavailable or has p_hat <= p_floor, follows the stated destinations
+    from start to goal, and is optimal (cost sum of 1 / p_hat) under the
+    stated destinations and probabilities. The optimum is computed with
+    ecpm_baseline.plan_route (Dijkstra) over the stated beliefs."""
+    from ecpm_baseline import plan_route
+    out = {"status": "not_scored", "self_consistent": None,
+           "p_floor": p_floor}
+    if parsed_route.get("status") != "ok" or every_beliefs.get("status") != "ok":
+        out["reason"] = "route or every-pair beliefs not well formed"
+        return out
+    beliefs = {(p["node"], p["action"]): p for p in every_beliefs["pairs"]}
+    route = parsed_route["route"]
+    reasons, cost, node = [], 0.0, start
+    if not route:
+        reasons.append("empty_route")
+    for step in route:
+        key = (step["node"], step["action"])
+        belief = beliefs.get(key)
+        if step["node"] != node:
+            reasons.append("route_not_connected_under_stated_destinations")
+            break
+        if belief is None:
+            reasons.append("action_not_listed")
+            break
+        if not belief["available"]:
+            reasons.append("uses_action_stated_unavailable")
+            break
+        if belief["p_success"] is None or belief["p_success"] <= p_floor + EPS:
+            reasons.append("uses_action_with_p_hat_at_or_below_floor")
+            break
+        cost += 1.0 / belief["p_success"]
+        node = belief["destination"]
+    if not reasons and node != goal:
+        reasons.append("does_not_reach_goal_under_stated_destinations")
+    dests, stats = {}, {}
+    for key, belief in beliefs.items():
+        if (belief["available"] and belief["destination"] is not None
+                and belief["p_success"]):
+            dests[key] = {belief["destination"]: 1}
+            stats[key] = {"attempts": 1.0, "delivered": belief["p_success"]}
+    best = plan_route(dests, stats, start, goal, None)
+    stated_optimal = best["expected_cost"]
+    route_cost = None if reasons else cost
+    if not reasons and (stated_optimal is None
+                        or cost > stated_optimal + 1e-6):
+        reasons.append("not_optimal_under_stated_beliefs")
+    out.update({
+        "status": "ok", "self_consistent": not reasons,
+        "reasons": reasons,
+        "route_cost_under_beliefs": (None if route_cost is None
+                                     else round(route_cost, 4)),
+        "optimal_cost_under_beliefs": (None if stated_optimal is None
+                                       else round(stated_optimal, 4)),
+    })
+    return out

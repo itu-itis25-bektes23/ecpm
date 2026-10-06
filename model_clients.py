@@ -20,6 +20,41 @@ _ANTHROPIC_NO_SAMPLING = {
 }
 
 
+class MissingAPIKeyError(RuntimeError):
+    """The API key environment variable is unset or empty. Not retryable:
+    run_pilot.with_retry retries KeyError, so a missing key must not
+    surface as one. This class derives from RuntimeError, not KeyError.
+    """
+
+
+# Named OpenAI-compatible providers: base_url and default key variable.
+# Routed through call_openai / call_openai_chat unchanged.
+NAMED_PROVIDERS = {
+    "deepseek": {"base_url": "https://api.deepseek.com/v1",
+                 "api_key_env": "DEEPSEEK_API_KEY"},
+    "moonshot": {"base_url": "https://api.moonshot.ai/v1",
+                 "api_key_env": "MOONSHOT_API_KEY"},
+}
+
+
+def require_key(env_name):
+    """Return the value of env_name or raise MissingAPIKeyError."""
+    val = os.environ.get(env_name)
+    if not val:
+        raise MissingAPIKeyError(
+            f"environment variable {env_name} is not set; export it or "
+            f"pass --api-key-env with the right name")
+    return val
+
+
+def _openai_key(api_key_env):
+    """Default behaviour (api_key_env None) is unchanged: OPENAI_API_KEY
+    with the 'local' placeholder fallback for local servers."""
+    if api_key_env is None:
+        return os.environ.get("OPENAI_API_KEY", "local")
+    return require_key(api_key_env)
+
+
 class TransientLLMError(Exception):
     """Empty/unparseable LLM response body, treated as retryable by
     run_pilot.with_retry, same spirit as a network error.
@@ -68,7 +103,7 @@ def call_anthropic(model, messages, max_tokens, timeout):
         "https://api.anthropic.com/v1/messages",
         data=json.dumps(body).encode(),
         headers={"content-type": "application/json",
-                 "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                 "x-api-key": require_key("ANTHROPIC_API_KEY"),
                  "anthropic-version": "2023-06-01"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
@@ -93,13 +128,14 @@ def call_azure(deployment, messages, max_tokens, endpoint, api_version,
         url,
         data=json.dumps(body).encode(),
         headers={"content-type": "application/json",
-                 "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
+                 "api-key": require_key("AZURE_OPENAI_API_KEY")})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     return _content_or_retry(data), data.get("usage", {})
 
 
-def call_openai(model, messages, max_tokens, base_url, timeout):
+def call_openai(model, messages, max_tokens, base_url, timeout,
+                api_key_env=None, omit_temperature=False):
     """OpenAI-compatible chat endpoint. Also covers LM Studio and any other
     local server exposing /v1/chat/completions -- point --base-url at it; the
     key falls back to a placeholder, which local servers ignore."""
@@ -108,13 +144,14 @@ def call_openai(model, messages, max_tokens, base_url, timeout):
         body["max_completion_tokens"] = max_tokens
     else:
         body["max_tokens"] = max_tokens
-        body["temperature"] = 0
+        if not omit_temperature:
+            body["temperature"] = 0
     req = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions",
         data=json.dumps(body).encode(),
         headers={"content-type": "application/json",
                  "authorization":
-                     f"Bearer {os.environ.get('OPENAI_API_KEY', 'local')}"})
+                     f"Bearer {_openai_key(api_key_env)}"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     return _content_or_retry(data), data.get("usage", {})
@@ -126,7 +163,8 @@ def call_openai(model, messages, max_tokens, base_url, timeout):
 # --------------------------------------------------------------------
 
 
-def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0):
+def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0,
+                        timeout=120):
     """Calls Claude with the given system prompt and message history.
     If thinking_budget > 0, enables Extended Thinking with that token
     budget (Anthropic requires temperature 1 and max_tokens greater than
@@ -147,9 +185,9 @@ def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0):
         "https://api.anthropic.com/v1/messages",
         data=json.dumps(body).encode(),
         headers={"content-type": "application/json",
-                 "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                 "x-api-key": require_key("ANTHROPIC_API_KEY"),
                  "anthropic-version": "2023-06-01"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     reasoning = "".join(b.get("thinking", "") for b in data.get("content", [])
                         if b.get("type") == "thinking")
@@ -160,21 +198,24 @@ def call_anthropic_chat(model, system, messages, max_tokens, thinking_budget=0):
     return text, reasoning, data.get("usage", {})
 
 
-def call_openai_chat(model, system, messages, max_tokens, base_url):
+def call_openai_chat(model, system, messages, max_tokens, base_url,
+                     timeout=120, api_key_env=None, omit_temperature=False):
     full_messages = [{"role": "system", "content": system}] + list(messages)
     body = {"model": model, "messages": full_messages}
     if _is_gpt_reasoning(model):
         body["max_completion_tokens"] = max_tokens
     else:
         body["max_tokens"] = max_tokens
-        body["temperature"] = 0
+        if not omit_temperature:
+            body["temperature"] = 0
+    key = (require_key("OPENAI_API_KEY") if api_key_env is None
+           else require_key(api_key_env))
     req = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions",
         data=json.dumps(body).encode(),
         headers={"content-type": "application/json",
-                 "authorization":
-                     f"Bearer {os.environ['OPENAI_API_KEY']}"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
+                 "authorization": f"Bearer {key}"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     text = data["choices"][0]["message"]["content"]
     if not text.strip():
@@ -183,7 +224,7 @@ def call_openai_chat(model, system, messages, max_tokens, base_url):
 
 
 def call_azure_chat(deployment, system, messages, max_tokens, endpoint,
-                    api_version, reasoning=False):
+                    api_version, reasoning=False, timeout=120):
     """`deployment` is the Azure-side deployment name; pass
     `reasoning=True` explicitly (run_pilot.py's --azure-reasoning-model
     flag) when the deployment is a GPT reasoning model."""
@@ -200,8 +241,8 @@ def call_azure_chat(deployment, system, messages, max_tokens, endpoint,
         url,
         data=json.dumps(body).encode(),
         headers={"content-type": "application/json",
-                 "api-key": os.environ["AZURE_OPENAI_API_KEY"]})
-    with urllib.request.urlopen(req, timeout=120) as resp:
+                 "api-key": require_key("AZURE_OPENAI_API_KEY")})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read())
     text = data["choices"][0]["message"]["content"]
     if not text.strip():

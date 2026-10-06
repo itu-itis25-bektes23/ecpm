@@ -88,11 +88,13 @@ import explore_agent
 import explore_metrics
 from ecpm_parser import (PARSERS, belief_self_consistency,
                          diagnose_route_beliefs, parse_icl_turn_a,
-                         parse_icl_turn_b, run_probe, score_belief,
+                         parse_icl_turn_b, parse_icl_turn_b_every_pair,
+                         route_self_consistency, run_probe, score_belief,
                          score_control_preservation, score_icl_beliefs,
                          score_icl_localization, score_adaptation,
                          score_route_pre)
-from model_clients import (TransientLLMError, _is_gpt_reasoning,
+from model_clients import (NAMED_PROVIDERS, TransientLLMError,
+                           _is_gpt_reasoning,
                            call_anthropic, call_anthropic_chat, call_azure,
                            call_azure_chat, call_openai, call_openai_chat)
 from prompts import (ASKS_ACTIVE, ask_block, context_block, context_block_a,
@@ -206,9 +208,11 @@ def git_head():
         return None
 
 
-def build_record(sc, deterministic):
+def build_record(sc, deterministic, n_nodes=None):
+    extra = {} if n_nodes is None else {"n_nodes": n_nodes}
     inst = make_pair(sc["seed"], sc["condition"],
-                     deterministic=deterministic, matched=sc["matched"])
+                     deterministic=deterministic, matched=sc["matched"],
+                     **extra)
     ev = paired_evidence(inst, k=sc["k"], evidence_seed=sc["evidence_seed"])
     return json.loads(json.dumps(pair_to_json(inst, ev)))
 
@@ -291,6 +295,13 @@ pair, available means that the action appears in the Period B menu; it does
 not mean the action works. If an action is unavailable, use available=false,
 destination=null, and p_success=null. """ + ICL_ROUTE_INSTRUCTION + \
 """ Do not include other text."""
+
+# Additive (--period-b-every-pair): the Period B answer states a belief about
+# every listed pair, in the same per-pair format. Only the count line differs.
+ICL_TURN_B_EVERY_PAIR_SCHEMA = ICL_TURN_B_SCHEMA.replace(
+    "Return exactly one JSON object with exactly five pairs:",
+    "Return exactly one JSON object with every listed pair:", 1)
+assert ICL_TURN_B_EVERY_PAIR_SCHEMA != ICL_TURN_B_SCHEMA
 
 
 # ------------------------------------------------------- graph ICL levels
@@ -513,7 +524,20 @@ def _format_queried_pairs(queried):
     return "\n".join(f"- {q['node']} {q['action']}" for q in queried)
 
 
-def build_icl_prompt(view, level, period, queried):
+def icl_listed_pairs(view, queried):
+    """Every pair listed on either menu: the queried pairs first, in their
+    order, then the rest sorted. Read from the prompt view only, and the
+    same set in every condition (the Period B menu is a subset of A's)."""
+    head = [(q["node"], q["action"]) for q in queried]
+    every = sorted({(node, action)
+                    for period in ("pre", "post")
+                    for node, menu in view[f"legal_actions_{period}"].items()
+                    for action in menu})
+    rest = [key for key in every if key not in set(head)]
+    return [{"node": n, "action": a} for n, a in head + rest]
+
+
+def build_icl_prompt(view, level, period, queried, every_pair=False):
     """Build one protocol prompt without access to evaluator-only fields."""
     if level not in ICL_LEVELS or period not in ("pre", "post"):
         raise ValueError("unknown ICL level or period")
@@ -532,6 +556,9 @@ def build_icl_prompt(view, level, period, queried):
     opening = (f"Period {period_name}.\n" if period == "pre" else
                "Period B may or may not differ from Period A.\n")
     schema = ICL_TURN_A_SCHEMA if period == "pre" else ICL_TURN_B_SCHEMA
+    if every_pair and period == "post":
+        schema = ICL_TURN_B_EVERY_PAIR_SCHEMA
+        queried = icl_listed_pairs(view, queried)
     return (f"{opening}{mechanics}\n{ICL_BELIEF_DEFINITIONS}\n\n"
             f"Nodes: {', '.join(view['nodes'])}\n"
             f"Start: {view['start']}   Goal: {view['goal']}\n"
@@ -554,8 +581,18 @@ def protocol_target_pair(record, sc):
     return (sibling_change["edge"]["from"], sibling_change["action"])
 
 
-def queried_pairs_for_icl(record, sc):
-    """T* plus four deterministic unchanged controls; legacy selection stays separate."""
+def queried_target_included(seed):
+    """--queried-target-half: a seed-only coin, so every condition of a
+    seed sees the same queried set; True on about half of the seeds."""
+    return random.Random(f"icl_two_response_v1|{seed}|target_in").random() < 0.5
+
+
+def queried_pairs_for_icl(record, sc, target_half=False):
+    """T* plus four deterministic unchanged controls; legacy selection stays separate.
+
+    target_half (--queried-target-half, default off): on seeds where
+    queried_target_included(seed) is False, five unchanged controls instead
+    (same rng string); otherwise exactly the default selection."""
     target = protocol_target_pair(record, sc)
     pre = {(e["from"], e["action"]): (e["to"], e["p"])
            for e in record["world_pre"]["edges"]}
@@ -566,6 +603,11 @@ def queried_pairs_for_icl(record, sc):
     if len(unchanged) < 4:
         raise ValueError("fewer than four unchanged controls are available")
     rng = random.Random(f"icl_two_response_v1|{sc['seed']}|pairs")
+    if target_half and not queried_target_included(sc["seed"]):
+        if len(unchanged) < 5:
+            raise ValueError("fewer than five unchanged controls are available")
+        selected = sorted(rng.sample(unchanged, 5))
+        return [{"node": node, "action": action} for node, action in selected]
     selected = sorted(rng.sample(unchanged, 4) + [target])
     return [{"node": node, "action": action} for node, action in selected]
 
@@ -782,9 +824,68 @@ def dispatch(args, record, probe, queried, messages):
                           args.azure_endpoint, args.api_version, args.timeout,
                           reasoning=args.azure_reasoning_model)
     if args.provider == "openai":
+        if (getattr(args, "api_key_env", None) is None
+                and not getattr(args, "omit_temperature", False)):
+            return call_openai(args.model, messages, args.max_tokens,
+                               args.base_url, args.timeout)
         return call_openai(args.model, messages, args.max_tokens,
-                           args.base_url, args.timeout)
+                           args.base_url, args.timeout,
+                           api_key_env=args.api_key_env,
+                           omit_temperature=args.omit_temperature)
+    if args.provider in NAMED_PROVIDERS:
+        return call_openai(args.model, messages, args.max_tokens,
+                           _named_base_url(args), args.timeout,
+                           api_key_env=_named_key_env(args),
+                           omit_temperature=getattr(args, "omit_temperature",
+                                                    False))
     return dry_run_answer(record, probe, queried), {}
+
+
+def _named_base_url(args):
+    """Named providers use their own base_url unless --base-url was
+    changed from the OpenAI default."""
+    if args.base_url and args.base_url != "https://api.openai.com/v1":
+        return args.base_url
+    return NAMED_PROVIDERS[args.provider]["base_url"]
+
+
+def _named_key_env(args):
+    return (getattr(args, "api_key_env", None)
+            or NAMED_PROVIDERS[args.provider]["api_key_env"])
+
+
+def build_telemetry(artifact, wall_s, in_price=None, out_price=None):
+    """Additive usage/cost summary over provider_usage in artifact probes.
+
+    reasoning_tokens is null unless at least one call reported it. Cost is
+    'estimated' only when both prices (USD per 1M tokens) are given and at
+    least one call reported usage; otherwise 'unpriced' with amount null.
+    """
+    usages = [p.get("provider_usage") or {}
+              for p in artifact.get("probes", {}).values()]
+    calls = len(usages)
+    reported = [u for u in usages if u]
+    pt = sum(int(u.get("prompt_tokens", u.get("input_tokens", 0)) or 0)
+             for u in reported)
+    ct = sum(int(u.get("completion_tokens", u.get("output_tokens", 0)) or 0)
+             for u in reported)
+    rts = [((u.get("completion_tokens_details") or {})
+            .get("reasoning_tokens")) for u in reported]
+    rts = [int(r) for r in rts if r is not None]
+    if in_price is not None and out_price is not None and reported:
+        cost = {"status": "estimated", "currency": "USD",
+                "amount": round(pt * in_price / 1e6 + ct * out_price / 1e6,
+                                6),
+                "source": f"--in-price {in_price} --out-price {out_price} "
+                          f"USD per 1M tokens"}
+    else:
+        cost = {"status": "unpriced", "currency": "USD", "amount": None,
+                "source": None}
+    return {"calls": calls, "prompt_tokens": pt if reported else None,
+            "completion_tokens": ct if reported else None,
+            "reasoning_tokens": sum(rts) if rts else None,
+            "n_usage_reported": len(reported),
+            "wall_s": round(wall_s, 3), "cost": cost}
 
 
 def sha256_text(value):
@@ -1162,7 +1263,7 @@ def _route_target_diagnostic(parsed_route, parsed_beliefs, target, goal):
 
 
 def score_icl_turn(record, parsed, queried, period, target, visible_stats,
-                   pre_beliefs=None):
+                   pre_beliefs=None, expected_controls=4):
     beliefs = score_icl_beliefs(
         record, parsed["beliefs"], queried, period, visible_stats)
     route = (score_route_pre(record, parsed["route"])
@@ -1181,6 +1282,13 @@ def score_icl_turn(record, parsed, queried, period, target, visible_stats,
                                     parsed["localization"])
         preservation = score_control_preservation(
             record, pre_beliefs or {}, beliefs, queried, target)
+        controls_ok = preservation["all_four_controls_correct"]
+        if expected_controls != 4:
+            # --queried-target-half seed without the target: five controls.
+            controls_ok = (preservation["status"] == "ok"
+                           and preservation["n_controls"] == expected_controls
+                           and preservation["mean_control_preservation"] == 1.0)
+            preservation["all_controls_correct"] = controls_ok
         result.update({"detection_localization": dl,
                        "control_preservation": preservation})
         components_ok = components_ok and all(
@@ -1190,7 +1298,7 @@ def score_icl_turn(record, parsed, queried, period, target, visible_stats,
                            if dl["localization_applicable"] else
                            dl["null_changed_pair_correct"])
         correct = (correct and dl["detection_correct"] and localization_ok
-                   and preservation["all_four_controls_correct"])
+                   and controls_ok)
     result["well_formed"] = bool(parsed["well_formed"] and components_ok)
     result["correct"] = bool(result["well_formed"] and correct)
     result["correct_given_well_formed"] = (
@@ -1363,7 +1471,7 @@ def _final_icl_metrics(turn_a, turn_b):
 
 
 def write_icl_summary(outdir, results, protocol="icl_two_response_v1",
-                      levels=ICL_LEVELS, audit=None):
+                      levels=ICL_LEVELS, audit=None, repeats=3):
     """Write the accuracy-independent operational gate summary."""
     rows = []
     for result in results:
@@ -1404,9 +1512,10 @@ def write_icl_summary(outdir, results, protocol="icl_two_response_v1",
             checks = audit(artifact)
             rows[-1]["checks"] = checks
             rows[-1]["operational_pass"] = operational_pass and all(checks.values())
-    expected = len(levels) * 3
+    expected = len(levels) * repeats
     expected_level_repeats = {
-        (repeat, level) for repeat in (1, 2, 3) for level in levels}
+        (repeat, level) for repeat in range(1, repeats + 1)
+        for level in levels}
     observed_level_repeats = [
         (row["repeat"], row["level"]) for row in rows]
     complete_matrix = (len(observed_level_repeats) == expected
@@ -1442,10 +1551,15 @@ def write_icl_summary(outdir, results, protocol="icl_two_response_v1",
 
 def run_icl_two_response_once(record, view, sc, deterministic, args, level,
                               repeat, sampling_seed, outdir, extension=None,
-                              levels=ICL_LEVELS):
+                              levels=ICL_LEVELS, level_subset=None):
     """Run or safely resume one level/repeat; exactly two response calls."""
-    queried = queried_pairs_for_icl(record, sc)
+    target_half = (bool(getattr(args, "queried_target_half", False))
+                   and extension is None)
+    queried = queried_pairs_for_icl(record, sc, target_half=target_half)
     target = protocol_target_pair(record, sc)
+    every_pair = (bool(getattr(args, "period_b_every_pair", False))
+                  and extension is None and level in ICL_LEVELS)
+    listed_b = icl_listed_pairs(view, queried) if every_pair else None
     if extension is not None:
         prompt_a, prompt_b = extension.prompts
     elif level in ICL_GRAPH_LEVELS:
@@ -1453,7 +1567,8 @@ def run_icl_two_response_once(record, view, sc, deterministic, args, level,
         prompt_b = build_icl_graph_prompt(record, view, level, "post", queried)
     else:
         prompt_a = build_icl_prompt(view, level, "pre", queried)
-        prompt_b = build_icl_prompt(view, level, "post", queried)
+        prompt_b = build_icl_prompt(view, level, "post", queried,
+                                    every_pair=every_pair)
     visible_pre = visible_transition_stats(
         raw_visible_rows(view, "pre"), view["legal_actions_pre"])
     visible_post = visible_transition_stats(
@@ -1468,6 +1583,12 @@ def run_icl_two_response_once(record, view, sc, deterministic, args, level,
                                  queried)
     if extension is not None:
         identity.update(extension.identity_fields)
+    if every_pair:
+        identity["period_b_every_pair"] = True
+    if level_subset is not None:
+        identity["icl_level_subset"] = level_subset
+    if target_half:
+        identity["queried_target_half"] = True
     identity_sha = _canonical_sha256(identity)
     run_id = _icl_run_id(identity)
     path = os.path.join(outdir, run_id + ".json")
@@ -1489,9 +1610,12 @@ def run_icl_two_response_once(record, view, sc, deterministic, args, level,
             "level": level,
             "repeat": repeat,
             "repeated_output": True,
-            "level_order": (list(icl_level_order(repeat, levels)) if extension is None
+            "level_order": (list(level_subset["levels"]) if level_subset
+                            else list(icl_level_order(repeat, levels)) if extension is None
                             else [level]),
-            "level_order_position": (list(icl_level_order(repeat, levels)).index(level) + 1
+            "level_order_position": (list(level_subset["levels"]).index(level) + 1
+                                     if level_subset else
+                                     list(icl_level_order(repeat, levels)).index(level) + 1
                                      if extension is None else 1),
             "tag": args.tag,
             "env": {"schema_version": SCHEMA_VERSION,
@@ -1536,6 +1660,17 @@ def run_icl_two_response_once(record, view, sc, deterministic, args, level,
         if extension is not None:
             artifact.update(extension.artifact_fields)
             artifact["identity"] = identity
+        if level_subset is not None:
+            artifact["icl_level_subset"] = level_subset
+        if target_half:
+            artifact.setdefault("protocol_options", {})
+            artifact["protocol_options"]["queried_target_included"] = \
+                queried_target_included(sc["seed"])
+        if every_pair:
+            artifact.setdefault("protocol_options", {}).update({
+                "period_b_every_pair": True,
+                "listed_pairs_b": listed_b,
+                "self_consistent_p_floor": 0.05})
         _write_json_atomic(path, artifact)
 
     if artifact["state"] == "initialized":
@@ -1563,7 +1698,7 @@ def run_icl_two_response_once(record, view, sc, deterministic, args, level,
         messages = [{"role": "user", "content": prompt_a},
                     {"role": "assistant", "content": raw_a},
                     {"role": "user", "content": prompt_b}]
-        dry = _dry_run_icl_answer(record, queried, "post")
+        dry = _dry_run_icl_answer(record, listed_b or queried, "post")
         response = (dispatch_icl(args, messages, sampling, reasoning, dry_text=dry)
                     if extension is None else
                     extension.call(messages, "B", artifact, path))
@@ -1573,11 +1708,20 @@ def run_icl_two_response_once(record, view, sc, deterministic, args, level,
             extension.check_saved_turn(artifact, path, "B")
 
     if artifact["state"] == "turn_b_raw_saved":
-        parsed = parse_icl_turn_b(artifact["turns"]["B"]["raw_response"])
+        raw_b = artifact["turns"]["B"]["raw_response"]
+        parsed = (parse_icl_turn_b_every_pair(raw_b, listed_b, queried)
+                  if every_pair else parse_icl_turn_b(raw_b))
         artifact["turns"]["B"]["parsed"] = parsed
         artifact["turns"]["B"]["scored"] = score_icl_turn(
             record, parsed, queried, "post", target, visible_post,
-            pre_beliefs=artifact["turns"]["A"]["scored"]["beliefs"])
+            pre_beliefs=artifact["turns"]["A"]["scored"]["beliefs"],
+            expected_controls=sum(
+                (q["node"], q["action"]) != target for q in queried))
+        if every_pair:
+            artifact["turns"]["B"]["scored"]["route_self_consistency"] = \
+                route_self_consistency(parsed["route"],
+                                       parsed["every_pair_beliefs"],
+                                       record["start"], record["goal"])
         artifact["metrics"] = _final_icl_metrics(
             artifact["turns"]["A"], artifact["turns"]["B"])
         artifact["conversation"] = [
@@ -1596,17 +1740,63 @@ def run_icl_two_response_once(record, view, sc, deterministic, args, level,
     return artifact, path, False
 
 
+def icl_level_subset(args):
+    """--icl-levels/--icl-repeats: run only these v1 levels, each answered
+    --icl-repeats times (repeat r uses sampling seed r of
+    --sampling-seeds). None when both flags are absent, which keeps the
+    full 3 levels x 3 repeats suite and its records unchanged."""
+    levels = getattr(args, "icl_levels", None)
+    repeats = getattr(args, "icl_repeats", None)
+    if levels is None and repeats is None:
+        return None
+    if getattr(args, "level_set", "v1") != "v1":
+        raise ValueError("--icl-levels/--icl-repeats apply to the v1 level set only")
+    levels = list(levels) if levels else list(ICL_LEVELS)
+    if len(set(levels)) != len(levels):
+        raise ValueError("--icl-levels lists a level twice")
+    repeats = 3 if repeats is None else repeats
+    if repeats < 1:
+        raise ValueError("--icl-repeats must be at least 1")
+    if len(args.sampling_seeds) < repeats:
+        raise ValueError(f"--icl-repeats {repeats} needs at least {repeats} "
+                         f"--sampling-seeds")
+    return {"levels": levels, "repeats": repeats}
+
+
+def build_icl_telemetry(artifact, wall_s, in_price=None, out_price=None):
+    """--telemetry on the icl_two_response_v1 path: provider_usage summed
+    over Turn A and Turn B, wall time of this invocation, network retries,
+    estimated/unpriced cost (as build_telemetry) and the artifact size in
+    bytes (indent=2 JSON, before the telemetry dict is added)."""
+    turns = {name: turn for name, turn in artifact.get("turns", {}).items()
+             if "raw_response" in turn}
+    tel = build_telemetry({"probes": turns}, wall_s, in_price, out_price)
+    tel["network_retries"] = sum(len(t.get("network_retries") or [])
+                                 for t in turns.values())
+    body = {k: v for k, v in artifact.items() if k != "telemetry"}
+    tel["artifact_bytes"] = len(json.dumps(body, indent=2).encode("utf-8"))
+    return tel
+
+
 def run_icl_two_response_suite(sc, deterministic, args, outdir):
     if args.pilot_type != "passive":
         raise ValueError("icl_two_response_v1 is a passive protocol")
-    if args.repeats != 3 or len(args.sampling_seeds) != 3:
-        raise ValueError("icl_two_response_v1 requires three repeats and three sampling seeds")
+    level_subset = icl_level_subset(args)
+    if level_subset is None:
+        if args.repeats != 3 or len(args.sampling_seeds) != 3:
+            raise ValueError("icl_two_response_v1 requires three repeats and three sampling seeds")
+        sampling_seeds = args.sampling_seeds
+    else:
+        sampling_seeds = args.sampling_seeds[:level_subset["repeats"]]
+    if (getattr(args, "period_b_every_pair", False)
+            and getattr(args, "level_set", "v1") != "v1"):
+        raise ValueError("--period-b-every-pair applies to the v1 level set only")
     if not 0.0 <= args.temperature <= 2.0:
         raise ValueError("temperature must be between 0 and 2")
     if args.provider != "dry-run" and _git_dirty():
         raise ValueError("real protocol runs require a clean committed worktree")
     reasoning_provenance(args)
-    for sampling_seed in args.sampling_seeds:
+    for sampling_seed in sampling_seeds:
         sampling_seed_provenance(args, sampling_seed)
     if deterministic:
         gate = deterministic_gate(sc["seed"])
@@ -1619,17 +1809,32 @@ def run_icl_two_response_suite(sc, deterministic, args, outdir):
                        periods=("pre", "post"),
                        budget_per_pair=sc["budget"], budget_seed=0)
     results = []
-    for repeat, sampling_seed in enumerate(args.sampling_seeds, start=1):
-        for level in icl_level_order(repeat, levels):
+    telemetry = bool(getattr(args, "telemetry", False))
+    for repeat, sampling_seed in enumerate(sampling_seeds, start=1):
+        order = (level_subset["levels"] if level_subset
+                 else icl_level_order(repeat, levels))
+        for level in order:
+            t_wall = time.time()
             artifact, path, skipped = run_icl_two_response_once(
                 record, view, sc, deterministic, args, level, repeat,
-                sampling_seed, outdir, levels=levels)
+                sampling_seed, outdir, levels=levels,
+                level_subset=level_subset)
+            if telemetry and not (skipped and "telemetry" in artifact):
+                artifact["telemetry"] = build_icl_telemetry(
+                    artifact, time.time() - t_wall, args.in_price,
+                    args.out_price)
+                _write_json_atomic(path, artifact)
             outcome = "already completed; unchanged" if skipped else \
                 artifact["state"]
             print(f"{artifact['run_id']}: {outcome} -> {path}")
             results.append({"run_id": artifact["run_id"], "path": path,
                             "skipped": skipped})
-    summary, path = write_icl_summary(outdir, results, levels=levels)
+    if level_subset is None:
+        summary, path = write_icl_summary(outdir, results, levels=levels)
+    else:
+        summary, path = write_icl_summary(
+            outdir, results, levels=tuple(level_subset["levels"]),
+            repeats=level_subset["repeats"])
     print(f"operational gate: "
           f"{'PASS' if summary['operational_gate_pass'] else 'FAIL'} -> {path}")
     return results
@@ -1642,7 +1847,8 @@ def run_pilot(sc, deterministic, args):
     """Passive pilot: evidence is collected up front and handed to the
     model as text. See run_pilot_active for the live-agent counterpart."""
     probes = tuple(sc["probes"])
-    record = build_record(sc, deterministic)
+    record = build_record(sc, deterministic,
+                          n_nodes=getattr(args, "n_nodes", None))
     view = prompt_view(record, rendering=sc["rendering"],
                        periods=("pre", "post"),
                        budget_per_pair=sc["budget"])
@@ -1797,16 +2003,25 @@ def run_pilot_active(sc, deterministic, args):
         if args.provider == "anthropic":
             text, reasoning, usage = with_retry(
                 call_anthropic_chat, args.model, system, messages,
-                args.max_tokens, args.thinking_budget)
+                args.max_tokens, args.thinking_budget, timeout=args.timeout)
         elif args.provider == "azure":
             text, usage = with_retry(call_azure_chat, args.model, system,
                                      messages, args.max_tokens,
                                      args.azure_endpoint, args.api_version,
-                                     reasoning=args.azure_reasoning_model)
+                                     reasoning=args.azure_reasoning_model,
+                                     timeout=args.timeout)
         elif args.provider == "openai":
-            text, usage = with_retry(call_openai_chat, args.model, system,
-                                     messages, args.max_tokens,
-                                     args.base_url)
+            text, usage = with_retry(
+                call_openai_chat, args.model, system, messages,
+                args.max_tokens, args.base_url, timeout=args.timeout,
+                api_key_env=args.api_key_env,
+                omit_temperature=args.omit_temperature)
+        elif args.provider in NAMED_PROVIDERS:
+            text, usage = with_retry(
+                call_openai_chat, args.model, system, messages,
+                args.max_tokens, _named_base_url(args), timeout=args.timeout,
+                api_key_env=_named_key_env(args),
+                omit_temperature=args.omit_temperature)
         else:
             raise AssertionError("dry-run must not call act_fn")
         last_usage = usage
@@ -1929,7 +2144,29 @@ def main():
     ap.add_argument("--mode", default="both", choices=["both", "det", "sto"])
     # who answers
     ap.add_argument("--provider", default="dry-run",
-                    choices=["dry-run", "anthropic", "openai", "azure"])
+                    choices=["dry-run", "anthropic", "openai", "azure",
+                             "deepseek", "moonshot"])
+    ap.add_argument("--api-key-env", default=None,
+                    help="read the API key from this environment variable "
+                         "instead of OPENAI_API_KEY (openai) or the named "
+                         "provider default (deepseek, moonshot)")
+    ap.add_argument("--omit-temperature", action="store_true",
+                    help="OpenAI-compatible providers: send no temperature "
+                         "field in request bodies")
+    ap.add_argument("--telemetry", action="store_true",
+                    help="add a top-level telemetry dict (tokens, calls, "
+                         "wall time, cost; on icl_two_response_v1 also "
+                         "network retries and artifact bytes, one dict per "
+                         "run artifact); off by default so existing "
+                         "records stay byte-identical")
+    ap.add_argument("--in-price", type=float, default=None,
+                    help="--telemetry only: USD per 1M prompt tokens")
+    ap.add_argument("--out-price", type=float, default=None,
+                    help="--telemetry only: USD per 1M completion tokens")
+    ap.add_argument("--n-nodes", type=int, default=None,
+                    help="passive pilot only: graph size passed to "
+                         "make_pair; default None keeps the 8-node graph "
+                         "and leaves the record unchanged")
     ap.add_argument("--model", default="dry-run")
     ap.add_argument("--base-url", default="https://api.openai.com/v1")
     ap.add_argument("--azure-endpoint",
@@ -1956,12 +2193,33 @@ def main():
                     default="auto",
                     help="seed capability for the selected endpoint; auto "
                          "uses safe provider defaults")
+    ap.add_argument("--period-b-every-pair", action="store_true",
+                    help="icl_two_response_v1 v1 levels only: the Period B "
+                         "answer states a belief about every listed pair, "
+                         "and the route is scored for self-consistency "
+                         "against those beliefs (default off; records "
+                         "without it are unchanged)")
     ap.add_argument("--level-set", default="v1", choices=["v1", "graph"],
                     help="icl_two_response_v1 only; v1 varies evidence "
                          "rendering, graph varies how much of the true "
                          "graph is supplied")
     ap.add_argument("--repeats", type=int, default=3,
                     help="icl_two_response_v1 uses exactly three")
+    ap.add_argument("--queried-target-half", action="store_true",
+                    help="icl_two_response_v1 v1 levels only: the target "
+                         "is among the five queried pairs on half of the "
+                         "seeds (seed-only coin, same set in every "
+                         "condition of a seed), otherwise five unchanged "
+                         "controls (default off: target always queried)")
+    ap.add_argument("--icl-levels", nargs="+", default=None,
+                    choices=list(ICL_LEVELS),
+                    help="icl_two_response_v1 v1 levels only: run just these "
+                         "levels instead of the 3x3 suite (default off; the "
+                         "full suite and its records are unchanged)")
+    ap.add_argument("--icl-repeats", type=int, default=None,
+                    help="with or without --icl-levels: answer each level "
+                         "this many times, using the first N --sampling-seeds "
+                         "(default off)")
     ap.add_argument("--reasoning-mode", choices=["unspecified", "off", "on"],
                     default="unspecified",
                     help="reasoning condition; real off/on runs require an "
@@ -2016,6 +2274,16 @@ def main():
     if args.tag is None:
         args.tag = sc["name"]
     outdir = os.path.join(args.out, args.tag)
+    if ((args.icl_levels is not None or args.icl_repeats is not None)
+            and args.protocol != "icl_two_response_v1"):
+        raise SystemExit("--icl-levels/--icl-repeats require "
+                         "--protocol icl_two_response_v1")
+    if args.queried_target_half and args.protocol != "icl_two_response_v1":
+        raise SystemExit("--queried-target-half requires "
+                         "--protocol icl_two_response_v1")
+    if args.period_b_every_pair and args.protocol != "icl_two_response_v1":
+        raise SystemExit("--period-b-every-pair requires "
+                         "--protocol icl_two_response_v1")
     if args.protocol == "icl_model_first_v1":
         import icl_model_first_runner
         icl_model_first_runner.run_suite(sc, args, outdir)
@@ -2041,7 +2309,16 @@ def main():
         if args.pilot_type == "active":
             art = run_pilot_active(sc, det, args)
         else:
+            t_wall = time.time()
             art = run_pilot(sc, det, args)
+            if args.omit_temperature:
+                art["model"]["temperature"] = None
+                art["model"]["temperature_omitted"] = True
+            if args.n_nodes is not None:
+                art["instance"]["n_nodes"] = args.n_nodes
+            if args.telemetry:
+                art["telemetry"] = build_telemetry(
+                    art, time.time() - t_wall, args.in_price, args.out_price)
         parts = ["pilot_deterministic" if det else "pilot_stochastic"]
         if args.pilot_type == "active":
             parts.append("active")
