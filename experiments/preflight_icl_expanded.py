@@ -37,8 +37,10 @@ def prepare(wrapper):
     count = runner.context_check(body, config, design.NEW_CAP)
     if not count['fits']:
         raise ValueError('preflight context cannot fit')
-    bound = count.get('input_tokens', count.get('input_tokens_upper_bound'))
+    bound = count.get('input_tokens', count.get('input_tokens_upper_bound', count.get('input_token_units_estimate')))
     ceiling = runner.cost({'prompt_tokens': bound, 'completion_tokens': design.NEW_CAP}, config, profile)
+    if design.controls.estimated_context(config):
+        ceiling['assumption'] = 'conditional on the engineering input estimate; not a hard charge ceiling; returned usage can exceed it before the stop'
     return body, count, ceiling
 
 

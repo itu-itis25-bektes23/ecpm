@@ -931,5 +931,105 @@ class Expanded16K(unittest.TestCase):
                     self.assertEqual([c['messages'] for c in after],[c['messages'] for c in before])
 
 
+class OpenRouterEstimate(unittest.TestCase):
+    """Only synthetic envelopes; never deployment evidence."""
+
+    def wrapper(self, mode='off', policy=old.HISTORY_POLICY):
+        w = Expanded16K().deployment(mode=mode, policy=policy)
+        w['deployment']['context'] = {
+            'method': x.controls.OPENROUTER_CONTEXT_ESTIMATE, 'tokens': 1048576,
+            'overhead_tokens_per_message': None, 'engineering_reserve_per_message': 4096,
+            'admission_fraction': 0.25, 'source': 'SYNTHETIC TEST: engineering estimate, not measured overhead'}
+        w['deployment']['preflight']['response']['usage']['prompt_tokens'] = 100
+        Expanded16K().reseal_preflight(w['deployment'])
+        return w
+
+    def test_opt_in_bound_preserved_and_fixed_parameters(self):
+        c = self.wrapper()['deployment']; messages = [{'role': 'user', 'content': 'x'}]
+        for key, value in [('engineering_reserve_per_message', 1), ('admission_fraction', 1),
+                           ('overhead_tokens_per_message', 4096)]:
+            bad = copy.deepcopy(c); bad['context'][key] = value
+            with self.assertRaises(ValueError): x.controls.hosted_context_check(messages, bad, output_tokens=16384)
+        for profile, cap in [('sol', 16384), ('deepseek_openrouter', 4096)]:
+            bad = copy.deepcopy(c); bad['profile'] = profile
+            with self.assertRaises(ValueError): x.controls.hosted_context_check(messages, bad, output_tokens=cap)
+        prior = Expanded16K().deployment()['deployment']
+        self.assertEqual(x.controls.hosted_context_check(messages, prior), x.controls.context_bound(messages, prior))
+        prior['context']['overhead_tokens_per_message'] = None
+        with self.assertRaises(ValueError): x.controls.hosted_context_check(messages, prior)
+
+    def test_full_utf8_and_exact_capacity(self):
+        c = self.wrapper()['deployment']
+        body = {'messages': [{'role': 'system', 'content': 'é'}, {'role': 'user', 'content': '🙂'}]}
+        count = runner.context_check(body, c, 16384)
+        self.assertEqual(count['content_utf8_bytes'], 6)
+        self.assertEqual(count['input_token_units_estimate'], 8198)
+        self.assertEqual(count['request_sha256'], runner.canonical(body))
+        c['context']['tokens'] = 4 * count['total_token_units_estimate']
+        self.assertTrue(runner.context_check(body, c, 16384)['fits'])
+        c['context']['tokens'] -= 1
+        self.assertFalse(runner.context_check(body, c, 16384)['fits'])
+
+    def test_preflight_usage_and_identity(self):
+        from experiments.preflight_icl_expanded import prepare
+        w = self.wrapper(); c = w['deployment']
+        x.validate_config(w, c['profile'], 'off', old.HISTORY_POLICY, 16384)
+        self.assertEqual(prepare(w)[1]['status'], 'engineering_estimate_not_token_bound')
+        self.assertIn('not a hard charge ceiling', prepare(w)[2]['assumption'])
+        body = c['preflight']['request']
+        c['preflight']['response']['usage']['prompt_tokens'] = runner.context_check(body, c, 16384)['input_token_units_estimate'] + 1
+        Expanded16K().reseal_preflight(c)
+        with self.assertRaisesRegex(ValueError, 'preflight reported usage'): x.validate_config(w, c['profile'], 'off', old.HISTORY_POLICY, 16384)
+        world = x.build_world(8, 'det', 'silent_break')
+        args = report.arguments('model_first', 'off', old.HISTORY_POLICY, 'deepseek_openrouter', 16384)
+        a = x.identity(world, 'model_first', 1, args, self.wrapper())
+        b = x.identity(world, 'model_first', 1, args, Expanded16K().deployment())
+        self.assertNotEqual(a['deployment_sha256'], b['deployment_sha256'])
+        self.assertEqual(a['context_admission'], self.wrapper()['deployment']['context'])
+
+    def test_actual_history_off_on_and_offline_audit(self):
+        world = x.build_world(8, 'det', 'silent_break')
+        for mode, policy in itertools.product(('off', 'on'), x.HISTORY_POLICIES):
+            w = self.wrapper(mode, policy); c = w['deployment']
+            args = report.arguments('model_first', mode, policy, c['profile'], 16384)
+            args.provider, args.model = 'openai', c['model']
+            answers = x.oracle_answers(world); answers['A_prepare'] = 'malformed JSON {\n é\t  '
+            calls = []
+            def respond(body, config, timeout):
+                name = list(answers)[len(calls)]; calls.append(body)
+                if name != 'A_prepare':
+                    self.assertIn({'role': 'assistant', 'content': answers['A_prepare']}, body['messages'])
+                data = Expanded16K().response(c, mode, answers[name])
+                data['usage']['prompt_tokens'] = 100
+                return 200, json.dumps(data)
+            with tempfile.TemporaryDirectory() as folder, patch.object(x.pilot, '_git_dirty', return_value=False), patch.object(runner, 'call_provider', side_effect=respond):
+                a = runner.run_once(world, 'model_first', 1, args, w, folder, x)
+                self.assertEqual(len(calls), 6)
+                self.assertTrue(all(runner.audit_artifact(json.loads(json.dumps(a)), x).values()))
+                a['turns']['B_task']['context_check']['input_token_units_estimate'] += 1
+                self.assertFalse(all(runner.audit_artifact(a, x).values()))
+
+    def test_oversized_history_and_returned_usage_stop(self):
+        world = x.build_world(8, 'det', 'silent_break')
+        for oversized_answer in (True, False):
+            w = self.wrapper(); c = w['deployment']
+            args = report.arguments('model_first', 'off', old.HISTORY_POLICY, c['profile'], 16384)
+            args.provider, args.model = 'openai', c['model']
+            def respond(body, config, timeout):
+                data = Expanded16K().response(c, 'off', 'x' * 300000 if oversized_answer else '301')
+                if not oversized_answer:
+                    data['usage']['prompt_tokens'] = runner.context_check(body, c, 16384)['input_token_units_estimate'] + 1
+                return 200, json.dumps(data)
+            with tempfile.TemporaryDirectory() as folder, patch.object(x.pilot, '_git_dirty', return_value=False), patch.object(runner, 'call_provider', side_effect=respond) as provider:
+                with self.assertRaisesRegex(RuntimeError, 'operational failure saved'):
+                    runner.run_once(world, 'model_first', 1, args, w, folder, x)
+                self.assertEqual(provider.call_count, 1)
+                a = json.loads(next(Path(folder).glob('*.json')).read_text())
+                self.assertEqual(a['state'], 'incomplete')
+                self.assertIn('provider_response_raw', a['turns']['A_prepare'])
+                self.assertEqual(a['failure']['stage'], 'A_task' if oversized_answer else 'A_prepare')
+                self.assertNotIn('scores', a)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

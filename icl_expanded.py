@@ -483,6 +483,7 @@ def identity(world, arm, repeat, args, wrapper):
         'synthetic_reference': 'oracle_reference' if config is None else None,
         'sampling_seed_status': 'not_applied_synthetic' if config is None else 'supported' if config['seed_supported'] else 'unsupported',
         'deployment_sha256': canonical(wrapper),
+        **({'context_admission': dict(config['context'])} if config and controls.estimated_context(config) else {}),
         'evidence_sha256': {p: canonical({k: world[p][k] for k in ('nodes', 'start', 'goal', 'menu', 'rows', 'required_pairs')}) for p in ('A', 'B')},
         'prompt_hashes': {'system': canonical(system(world)), **{p: canonical(prompts(world, p, arm)) for p in ('A', 'B')}},
         'stage_settings': {str(cap): runner.settings(args.request_profile, repeat - 1,

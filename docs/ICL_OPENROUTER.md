@@ -73,6 +73,25 @@ plus the full output cap; it is not a spend forecast or an invoice. Saved provid
 usage, cache fields and reported cost remain available separately. Set a spending
 limit before executing any generation command.
 
+### Optional estimate-based pilot admission
+
+`context.method: openrouter_utf8_reserve_estimate_v1` is an explicit opt-in for
+the DeepSeek OpenRouter 16K pilot, not a documented tokenizer bound. Set
+`engineering_reserve_per_message: 4096`, `admission_fraction: 0.25`, and keep
+`overhead_tokens_per_message: null` with a source explaining the assumption.
+For every actual request, count all message-content UTF-8 bytes, add 4,096 token
+units per message, then reserve 16,384 output tokens. Send only if this sum is
+at most one quarter of the advertised context. Complete retained answers are
+included, even when malformed; nothing is trimmed. Provider-private reasoning
+is not replayed. The documented-bound method remains unchanged.
+
+The estimate, request/message hashes and policy are saved and audited offline.
+Returned input usage must not exceed either the input estimate or advertised
+capacity after reserving output. A violation is preserved and stops the run
+before another request. Passing a short preflight does not validate arbitrary
+history lengths or establish hosted overhead. Cost ceilings still use the full
+advertised capacity, since an estimate violation is detected only after charging.
+
 ## Exact preflight procedure (not executed during implementation)
 
 After filling and independently checking non-generation provenance:
