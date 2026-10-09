@@ -73,7 +73,10 @@ def validate_config(wrapper, profile, history_policy=design.HISTORY_POLICY):
 def context_check(body, config, allowance):
     if controls.local_context(config):
         return controls.count_local_request(body, config, output_tokens=allowance, allow_system=True)
-    return controls.context_bound(body['messages'], config, output_tokens=allowance, allow_system=True)
+    count = controls.hosted_context_check(body['messages'], config, output_tokens=allowance, allow_system=True)
+    if controls.estimated_context(config):
+        count['request_sha256'] = canonical(body)
+    return count
 
 
 def copied_fields(data, config, profile, dry=False, reasoning_mode='off'):
@@ -136,8 +139,11 @@ def response_checks(turn, body, config, profile, allowance, dry=False, reasoning
                 checks['context'] = (controls.audit_local_count(count, body, config, output_tokens=allowance)
                     and turn.get('prompt_usage_check') == match and match['matches'])
             else:
-                checks['context'] = count == controls.context_bound(body['messages'], config,
-                    output_tokens=allowance, allow_system=True) and count['fits']
+                checks['context'] = count == context_check(body, config, allowance) and count['fits']
+                if controls.estimated_context(config):
+                    match = controls.estimate_usage_check(count, usage)
+                    checks['context'] &= (turn.get('prompt_usage_check') == match
+                        and match['within_estimate'] and match['within_advertised_context'])
             checks['context'] &= (type(usage.get('prompt_tokens')) is int
                 and 0 <= usage['prompt_tokens'] <= config['context']['tokens'] - allowance)
     except (KeyError, TypeError, ValueError, IndexError, AttributeError):
@@ -275,6 +281,8 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
                 turn['response_sha256'] = design.digest(turn['raw_response'])
             if config and controls.local_context(config):
                 turn['prompt_usage_check'] = controls.prompt_usage_check(turn['context_check'], turn['provider_usage'])
+            elif config and controls.estimated_context(config):
+                turn['prompt_usage_check'] = controls.estimate_usage_check(turn['context_check'], turn['provider_usage'])
             persist(path, artifact, name + ':raw_saved')
             turn['operational_checks'] = response_checks(turn, body, config, args.request_profile, cap, config is None, mode)
             if not all(turn['operational_checks'].values()):

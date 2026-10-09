@@ -333,6 +333,57 @@ def context_bound(messages, config, reserve_answer=0, *, output_tokens=8192, all
             "source": context["source"]}
 
 
+OPENROUTER_CONTEXT_ESTIMATE = "openrouter_utf8_reserve_estimate_v1"
+
+
+def estimated_context(config):
+    return config.get("context", {}).get("method") == OPENROUTER_CONTEXT_ESTIMATE
+
+
+def hosted_context_check(messages, config, *, output_tokens=8192, allow_system=False):
+    """Opt-in engineering estimate, or the unchanged documented-bound method."""
+    if not estimated_context(config):
+        return context_bound(messages, config, output_tokens=output_tokens, allow_system=allow_system)
+    c = config["context"]
+    if (config.get("profile") != "deepseek_openrouter"
+            or config.get("model") != EXPANDED_MODELS["deepseek_openrouter"]
+            or config.get("endpoint") != "https://openrouter.ai/api/v1"
+            or output_tokens != 16384 or type(output_tokens) is not int
+            or c.get("overhead_tokens_per_message") is not None
+            or type(c.get("engineering_reserve_per_message")) is not int
+            or c["engineering_reserve_per_message"] != 4096
+            or c.get("admission_fraction") != 0.25
+            or type(c.get("tokens")) is not int or c["tokens"] < output_tokens
+            or not isinstance(c.get("source"), str) or not c["source"].strip()):
+        raise ValueError("explicit OpenRouter 16K estimate policy and fixed safety margins required")
+    if not messages or any(set(m) != {"role", "content"}
+            or m["role"] not in (("system", "user", "assistant") if allow_system else ("user", "assistant"))
+            or not isinstance(m["content"], str) for m in messages):
+        raise ValueError("context estimate needs complete actual text messages")
+    content_bytes = sum(len(m["content"].encode("utf-8")) for m in messages)
+    estimate = content_bytes + 4096 * len(messages)
+    limit = c["tokens"] // 4
+    return {"method": OPENROUTER_CONTEXT_ESTIMATE,
+            "status": "engineering_estimate_not_token_bound",
+            "content_utf8_bytes": content_bytes, "message_count": len(messages),
+            "messages_sha256": pilot._canonical_sha256(messages),
+            "engineering_reserve_per_message": 4096, "admission_fraction": 0.25,
+            "hosted_overhead_tokens_per_message": None,
+            "input_token_units_estimate": estimate, "requested_output_tokens": output_tokens,
+            "total_token_units_estimate": estimate + output_tokens,
+            "context_tokens": c["tokens"], "admission_limit_tokens": limit,
+            "fits": estimate + output_tokens <= limit, "source": c["source"]}
+
+
+def estimate_usage_check(count, usage):
+    actual = usage.get("prompt_tokens")
+    known = type(actual) is int and actual >= 0
+    return {"reported_prompt_tokens": actual,
+            "input_token_units_estimate": count["input_token_units_estimate"],
+            "within_estimate": known and actual <= count["input_token_units_estimate"],
+            "within_advertised_context": known and actual + count["requested_output_tokens"] <= count["context_tokens"]}
+
+
 def local_context(config):
     return config.get("context", {}).get("method") == LOCAL_CONTEXT
 
@@ -758,7 +809,10 @@ def validate_deployment(config, profile, mode, *, preflight_output_tokens=8192):
             raise ValueError("local counting/generation path not verified against saved preflight")
         bound = count
     else:
-        bound = context_bound(expected["messages"], config, output_tokens=preflight_output_tokens)
+        bound = hosted_context_check(expected["messages"], config, output_tokens=preflight_output_tokens)
+        if estimated_context(config) and not all(estimate_usage_check(
+                bound, response.get("usage", {}))[k] for k in ("within_estimate", "within_advertised_context")):
+            raise ValueError("preflight reported usage exceeds context estimate or advertised capacity")
     if hosted:
         usage = response.get("usage", {})
         if (any(not isinstance(effective.get(k), str) or not effective[k].strip()
