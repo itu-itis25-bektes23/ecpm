@@ -20,7 +20,8 @@ the B tasks, alongside the same observations.
 | `baseline_task` | Answer tasks directly, without a preparation response. | 4 |
 
 The four preparation arms share an approximate 250-word target and the same
-4096-token response allowance. Rules and task format appear before preparation;
+16,384-token response allowance for new runs. Historical 4,096-token runs retain
+their recorded allowance and separate identities. Rules and task format appear before preparation;
 specific route queries appear in the task request. There is no step-by-step
 counting procedure. A word target does not guarantee equal generated tokens or
 reasoning effort, so actual words and usage are saved. Baseline intentionally has
@@ -154,7 +155,7 @@ python3 -B run_pilot.py --protocol icl_expanded_v2 \
   --condition silent_break --seed 8 --mode det --k 10 --budget 10 \
   --model-first-condition model_first --history-policy retained_reports_v2 \
   --request-profile gemma_e4b --reasoning-mode off \
-  --repeats 1 --sampling-seeds 0 --max-tokens 4096 \
+  --repeats 1 --sampling-seeds 0 --max-tokens 16384 \
   --provider dry-run --tag expanded_synthetic
 python3 -B experiments/preview_icl_expanded.py \
   --summarize pilot_artifacts/expanded_synthetic --out /tmp/expanded-results
@@ -182,8 +183,9 @@ require verified controls and distinct identities.
 The current `sol` profile identifies `gpt-5.6-sol`, uses reasoning effort `none`
 or `medium`, and omits temperature, top-p and seed in both modes. This does not
 establish greedy sampling. A catalogue entry for another Sol version is not an
-admitted deployment. DeepSeek and Kimi do not yet have request profiles here;
-do not run them through a Sol or Gemma profile. Resolve the common sampling
+admitted deployment. `deepseek_openrouter` is a separate expanded-only profile;
+see [OpenRouter deployment and pilot commands](ICL_OPENROUTER.md). Kimi has no
+profile here. Do not substitute models through Sol or Gemma. Resolve the common sampling
 policy from verified deployment capabilities before launching comparisons.
 
 `--plan-profile PROFILE --config VERIFIED_CONFIG --k 10 --repeats 1 --out DIR`
@@ -194,6 +196,13 @@ Freeze the reviewed commit, verify actual context admission and mode controls,
 and set a cost limit using verified prices. Save every raw request, final answer,
 exposed reasoning, usage and available cost evidence. Estimates, cache counts and
 provider billing remain separate; unknown values remain null.
+New expanded CLI runs default to 16,384 per response, in both modes and all stages.
+Explicit `--max-tokens 4096` remains available for historical reproduction, not
+the new pilot. Allowances are included in identities, audits, costs and exports;
+do not pool different limits. Earlier protocols retain their original defaults.
+The reviewed v3 4K source tree at `05df38907307ec290ede76998f50a6fb1318b4fd`
+can be audited with this version only when recorded source hashes match that Git
+tree exactly; other historical versions still require their original checkout.
 Pricing calculations use the supplied uncached input and completion rates.
 If a deployment has long-context or other tiered rates, use verified conservative
 rates covering the entire planned input range for the ceiling. Treat the resulting

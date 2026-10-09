@@ -20,18 +20,19 @@ import icl_model_first_runner as runner
 from experiments.preview_icl_model_first import compatible_identity, save
 
 
-def arguments(arm, mode, policy, profile='gemma_e4b'):
+def arguments(arm, mode, policy, profile='gemma_e4b', output_tokens=design.CAP):
     return SimpleNamespace(provider='dry-run', request_profile=profile, model=None,
-        reasoning_mode=mode, history_policy=policy, model_first_condition=arm, timeout=900)
+        reasoning_mode=mode, history_policy=policy, model_first_condition=arm, timeout=900,
+        max_tokens=design.output_allowance(output_tokens))
 
 
-def command(seed, mode, scenario, arm, reasoning, policy, profile, tag, config=None, k=10, repeats=1):
+def command(seed, mode, scenario, arm, reasoning, policy, profile, tag, config=None, k=10, repeats=1, output_tokens=design.NEW_CAP):
     args = ['python3', '-B', 'run_pilot.py', '--protocol', design.PROTOCOL,
         '--seed', str(seed), '--mode', mode, '--condition', scenario,
         '--k', str(k), '--budget', str(k), '--evidence-seed', '0',
         '--model-first-condition', arm, '--history-policy', policy,
         '--request-profile', profile, '--reasoning-mode', reasoning,
-        '--repeats', str(repeats), '--sampling-seeds', *map(str, range(repeats)), '--max-tokens', str(design.CAP),
+        '--repeats', str(repeats), '--sampling-seeds', *map(str, range(repeats)), '--max-tokens', str(design.output_allowance(output_tokens)),
         '--provider', 'openai' if config else 'dry-run', '--tag', tag]
     if config:
         args += ['--model', config['model'], '--base-url', config['endpoint'],
@@ -41,44 +42,45 @@ def command(seed, mode, scenario, arm, reasoning, policy, profile, tag, config=N
 
 def plan(profile, wrappers=(), k=10, repeats=1):
     """An illustration is not a provider plan. Only validated wrappers admit live rows."""
-    if profile not in design.controls.MODELS:
+    if profile not in design.controls.EXPANDED_MODELS:
         raise ValueError('unknown request profile')
     if k not in design.SUPPORTED_K or repeats not in (1, 5):
         raise ValueError('K=10 and one/five repeats required')
     approved, excluded = {}, []
     for wrapper in wrappers:
         mode, policy = wrapper['expanded']['reasoning_mode'], wrapper['expanded']['history_policy']
-        config = design.validate_config(wrapper, profile, mode, policy)
+        cap = design.output_allowance(wrapper['expanded']['output_allowances'][0])
+        config = design.validate_config(wrapper, profile, mode, policy, cap)
         key = (mode, policy)
         if key in approved:
             raise ValueError('duplicate readiness mode/history')
-        approved[key] = config
+        approved[key] = (config, cap)
     rows = []
     for (seed, mode, scenario), arm, history, reasoning in itertools.product(
             design.configurations(), design.ARMS, design.HISTORY_POLICIES, ('off', 'on')):
-        config = approved.get((reasoning, history))
+        config, cap = approved.get((reasoning, history), (None, design.NEW_CAP))
         if wrappers and config is None:
             excluded.append(dict(seed=seed, mode=mode, scenario=scenario, arm=arm,
                                  history=history, reasoning=reasoning, reason='no validated configuration'))
             continue
         tag = f'expanded_{seed}_{mode}_{scenario}_{arm}_{history}_{reasoning}'
-        settings = runner.settings(profile, 0, bool(config and config['seed_supported']), design.CAP, reasoning)
+        settings = runner.settings(profile, 0, bool(config and config['seed_supported']), cap, reasoning, config)
         stage_ids = [p + '_' + s for p in ('A', 'B') for s in design.stages(arm)]
         rows.append(dict(graph_seed=seed, mode=mode, scenario=scenario, arm=arm,
             history_policy=history, reasoning_mode=reasoning, sampling_seed_label=0,
             sampling_seed_status='unverified_not_applied' if not config else 'supported' if config['seed_supported'] else 'unsupported',
             settings=settings, requests=len(stage_ids) * repeats, repeats=repeats, k=k,
-            sampling_seed_labels=list(range(repeats)), output_allowance_per_request=design.CAP,
+            sampling_seed_labels=list(range(repeats)), output_allowance_per_request=cap,
             stages=stage_ids,
             cost_plan={'status': 'unavailable', 'reason': 'no verified deployment/rates'} if not config else
                 runner.block_cost_plan(design.build_world(seed, mode, scenario, k), arm,
-                    {'deployment': config}, repeats=repeats, history_policy=history, design_api=design),
-            argv=command(seed, mode, scenario, arm, reasoning, history, profile, tag, config, k, repeats),
+                    {'deployment': config}, repeats=repeats, history_policy=history, design_api=design, output_tokens=cap),
+            argv=command(seed, mode, scenario, arm, reasoning, history, profile, tag, config, k, repeats, cap),
             deployment_sha256=runner.canonical(config) if config else None))
     return {'protocol': design.PROTOCOL, 'schedule': design.SCHEDULE, 'profile': profile,
         'status': 'validated_configuration_plan_not_live_verification' if wrappers else 'synthetic_illustration_not_provider_plan',
         'conversations': repeats * len(rows), 'responses': sum(r['requests'] for r in rows),
-        'maximum_output_tokens': design.CAP * sum(r['requests'] for r in rows), 'input_tokens': None,
+        'maximum_output_tokens': sum(r['output_allowance_per_request'] * r['requests'] for r in rows), 'input_tokens': None,
         'estimated_cost': None, 'billing_cost': None,
         'cost_note': 'Unknown until admitted inputs and verified rates are supplied; ceilings are not forecasts.',
         'rows': rows, 'excluded': excluded}
@@ -90,6 +92,7 @@ def dimensions(a):
         'condition', 'history_policy', 'reasoning_mode', 'profile', 'model', 'provider', 'repeat',
         'repeat_seed_label', 'implementation_commit', 'world_sha256', 'deployment_sha256')} | {
         'run_id': a['run_id'], 'synthetic': a['synthetic'], 'source_sha256': i['source_sha256'],
+        'output_allowance_per_response': design.artifact_allowance(i),
         'k': i['evidence_settings']['k'], 'evidence_seed': i['evidence_settings']['evidence_seed'],
         'query_policy': i['query_policy'], 'preparation_word_target': i['preparation_word_target']}
 
@@ -232,6 +235,11 @@ def summarize(paths):
                 reasoning_tokens=t.get('control_check', {}).get('reasoning_tokens'),
                 cached_tokens=details.get('cached_tokens') if isinstance(details, dict) else None,
                 exposed_reasoning=t.get('provider_reasoning'),
+                reasoning_details=t.get('provider_reasoning_details'),
+                returned_model=t.get('actual_response_model'),
+                returned_provider=t.get('actual_response_provider'),
+                finish_reason=t.get('provider_finish_reason'), truncated=t.get('truncated'),
+                provider_usage=u,
                 estimated_cost=t.get('cost'), billing_reconciliation=None))
     return {'runs': runs, 'metrics': metrics, 'request_usage': usage,
             'repeat_statistics': repeat_statistics(metrics), 'preparation_review': review,
@@ -343,7 +351,7 @@ def coverage(out):
         # Temporary synthetic runs exercise the actual shared persistence/audit path.
         for arm, history, reasoning in itertools.product(design.ARMS, design.HISTORY_POLICIES, ('off', 'on')):
             with tempfile.TemporaryDirectory(prefix='expanded-synthetic-') as temporary:
-                a = runner.run_once(w, arm, 1, arguments(arm, reasoning, history), None, temporary, design)
+                a = runner.run_once(w, arm, 1, arguments(arm, reasoning, history, output_tokens=design.NEW_CAP), None, temporary, design)
                 assert all(runner.audit_artifact(a, design).values())
                 assert len(a['turns']) == 2 * len(design.stages(arm))
                 assert all(a['scores'][k] == scored[k] for k in ('periods', 'preservation', 'preservation_tolerance'))
@@ -380,7 +388,7 @@ def main():
     ap.add_argument('--coverage', action='store_true')
     ap.add_argument('--summarize', nargs='+')
     ap.add_argument('--review-preparation', nargs='+', help='read-only empty task-JSON diagnostic for saved run directories or ZIPs')
-    ap.add_argument('--plan-profile', choices=tuple(design.controls.MODELS))
+    ap.add_argument('--plan-profile', choices=tuple(design.controls.EXPANDED_MODELS))
     ap.add_argument('--config', action='append', default=[], help='explicit non-secret expanded readiness file for a supported mode/history')
     ap.add_argument('--k', type=int, choices=design.SUPPORTED_K, default=10)
     ap.add_argument('--repeats', type=int, choices=(1, 5), default=1)
