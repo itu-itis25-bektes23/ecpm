@@ -9,7 +9,7 @@ runs/results/
     anthropic-claude-haiku-5.5/   (same three files)
     deepseek-deepseek-v4.1-flash/ (same three files)
   icl/
-    <model>/                      the ICL results CSVs for that model
+    openai-gpt-5.6-sol/           metrics.csv.gz, request_usage.csv.gz, costs.csv, icl_tables.md
 ```
 
 - **Folder names** are the OpenRouter model ID with `/` replaced by `-`, as in the run folders.
@@ -29,7 +29,28 @@ python summarize_agentic_runs.py --tables runs/results/agentic/<model>/agentic_r
 
 The last command writes `agentic_tables.md` next to the CSV. It works from any shared `agentic_runs.csv`, so everyone gets the same tables.
 
+## Adding a model's ICL results
+
+The expanded-ICL export writes `metrics.csv` (one row per metric), `request_usage.csv` and a cost CSV. `metrics.csv` is large (Sol OFF: 153 MB), so keep it gzipped (1.4 MB):
+
+```
+mkdir runs/results/icl/<model>
+gzip -c <results dir>/metrics.csv > runs/results/icl/<model>/metrics.csv.gz
+gzip -c <results dir>/request_usage.csv > runs/results/icl/<model>/request_usage.csv.gz
+python summarize_icl_run.py --tables runs/results/icl/<model>/metrics.csv.gz
+```
+
+The last command writes `icl_tables.md`:
+- Table 1: reading (A transitions), answering (A and B routes), reporting (B detection, localization) and acting (B necessary updates), by arm, history and reasoning;
+- Table 2: necessary updates for conversations that reported the change vs those that did not;
+- Table 3: by scenario;
+- Table 4: the no-change control (reports no change / replans anyway).
+
+Rates pool numerators over denominators across valid conversations.
+
 ## What these runs used
+
+ICL: the GPT-5.6 Sol OFF grid (Maciej, commit `cd23576`, preparation v3, Azure, 4,096 cap with no truncation): 3 arms × 2 histories × 55 configurations = 330 conversations.
 
 The Sol and Haiku agentic grids ran on 10 Oct 2026 from the `results-freeze` tag:
 - 5 graphs (seeds 8, 13, 25, 0, 1), 3 arms, 5 deterministic + 6 stochastic scenarios, reasoning off and on: 330 runs per model;
