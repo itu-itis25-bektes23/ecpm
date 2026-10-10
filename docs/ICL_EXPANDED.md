@@ -20,7 +20,8 @@ the B tasks, alongside the same observations.
 | `baseline_task` | Answer tasks directly, without a preparation response. | 4 |
 
 The four preparation arms share an approximate 250-word target and the same
-4096-token response allowance. Rules and task format appear before preparation;
+historical default 4096-token response allowance. New Sol ON runs can explicitly
+select 16384 or 32768 tokens as described below. Rules and task format appear before preparation;
 specific route queries appear in the task request. There is no step-by-step
 counting procedure. A word target does not guarantee equal generated tokens or
 reasoning effort, so actual words and usage are saved. Baseline intentionally has
@@ -50,6 +51,51 @@ python3 -B experiments/preview_icl_expanded.py \
 This flags whole-response JSON containing only empty routes and optional change
 fields during preparation. Missing responses remain visible; an unflagged answer
 is not a compliance pass. It neither changes scores nor triggers retries.
+
+## Optional Sol request-defined ON acceptance and output allowance
+
+For new expanded Sol ON runs only, set
+`expanded.reasoning_acceptance_policy` to `sol_request_defined_on_v1` in a
+copy of the verified deployment wrapper. Omit it for all other profiles/modes.
+Existing exact-model support evidence for `reasoning_effort=medium` remains
+required. No endpoint or sampling changes are implied.
+
+For new Sol ON runs, use `--max-tokens 32768` and
+`expanded.output_allowances=[32768]`. Explicit 16384 is also supported, with
+the same value in the CLI and wrapper. Historical 4096 execution remains
+supported. No automatic escalation, retry or response repair is added.
+Set `expanded.control_preflight_output_allowance=8192` and provide
+`expanded.experiment_allowance_source` explaining the saved deployment's
+capacity evidence and reuse of the original 8192-token control preflight.
+Do not edit that preflight request, response or usage. A short preflight
+verifies controls, not long-output stability or future-history capacity.
+
+The saved effective maximum output capacity must cover the selected allowance.
+Each actual full conversation is checked with that output reserve before
+generation; returned prompt usage plus the same reserve must fit the context.
+History is never trimmed. Plans, costs, identities and exports record the
+selected experiment allowance separately from the preflight allowance.
+
+This policy accepts a supported medium-effort request even when the provider
+reports zero reasoning tokens or omits the count. It does not claim observed
+reasoning in those cases. Missing counts stay null, and the original
+`control_check` stays unchanged. Each turn records a separate
+`reasoning_acceptance` decision, checked against the original envelope and
+request by the offline audit. Contradictory controls, invalid counts, blank
+answers, length finishes, transport failures and context failures still fail.
+Malformed nonblank answers remain scored format failures, not reasons to retry.
+
+The policy is recorded in run identity and wrapper hashes, separating new runs
+from the default positive-reasoning policy. Preserve and audit historical runs
+with their original implementation; do not relabel interrupted conversations as
+completed or invent their unsent stages. This change adds no recovery launcher,
+retry, automatic token-limit increase or budget policy.
+
+Offline regression against an original saved ON archive (no extraction or calls):
+
+```sh
+python3 -B test_sol_on_acceptance.py --on-archive /path/to/scoped_v3_pilot_on.zip
+```
 
 ## Sequence and history
 

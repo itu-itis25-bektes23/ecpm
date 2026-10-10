@@ -316,7 +316,9 @@ def context_bound(messages, config, reserve_answer=0, *, output_tokens=8192, all
         raise ValueError("missing bound for replay of the unseen A answer")
     input_bound = sum(len(m["content"].encode()) + overhead for m in messages)
     input_bound += math.ceil(reserve_answer * expansion)
-    if type(output_tokens) is not int or output_tokens not in (4096, 8192):
+    if type(output_tokens) is not int or (output_tokens not in (4096, 8192) and not (
+            output_tokens in (16384, 32768) and config.get('profile') == 'sol'
+            and config.get('effective', {}).get('reasoning_mode') == 'on')):
         raise ValueError("invalid stage output allowance")
     total = input_bound + output_tokens
     return {"method": context["method"], "input_tokens_upper_bound": input_bound,
@@ -593,9 +595,43 @@ def readiness_identity(config, mode):
                 config["effective"], config["profile"], config)["verification_basis"]}
 
 
-def validate_deployment(config, profile, mode):
+SOL_REQUEST_DEFINED_ON = "sol_request_defined_on_v1"
+
+
+def validate_reasoning_acceptance_policy(policy, profile, mode):
+    if policy is not None and (policy != SOL_REQUEST_DEFINED_ON or profile != "sol" or mode != "on"):
+        raise ValueError("request-defined ON acceptance requires the versioned Sol ON policy")
+
+
+def reasoning_acceptance(data, body, config, profile, mode, policy):
+    """Accept a supported request condition, not a claim of observed reasoning."""
+    validate_reasoning_acceptance_policy(policy, profile, mode)
+    observed = reasoning_check(data, mode, config["effective"], profile, config)
+    if policy is None:
+        return {"accepted": observed["mode_verified"] and not observed["control_violation"]}
+    tokens = observed["reasoning_tokens"]
+    settings = {k: v for k, v in body.items() if k not in ("model", "messages")}
+    allowance = settings.get("max_completion_tokens")
+    expected = {**intended_settings("sol", "on", 0, False), "max_completion_tokens": allowance}
+    accepted = (body.get("model") == config["model"]
+        and settings == expected and type(allowance) is int and allowance in (4096, 8192, 16384, 32768)
+        and config["profile"] == "sol" and config["model_id"] == MODELS["sol"]
+        and config["effective"].get("reasoning_mode") == "on"
+        and config["seed_supported"] is False
+        and set(settings).issubset(config["supported_request_fields"])
+        and data.get("model") == config["response_model"]
+        and not observed["control_violation"]
+        and (tokens is None or (type(tokens) is int and tokens >= 0)))
+    return {"policy": policy, "requested_mode": mode, "accepted": bool(accepted),
+            "verification_basis": "supported_medium_request" if accepted else None,
+            "observed_reasoning_tokens": tokens,
+            "observed_reasoning_evidence": observed["evidence"]}
+
+
+def validate_deployment(config, profile, mode, reasoning_acceptance_policy=None):
     """Require explicit operator evidence; this cannot prove server semantics."""
     no_secrets(config)
+    validate_reasoning_acceptance_policy(reasoning_acceptance_policy, profile, mode)
     required = {"profile", "model_id", "model", "response_model", "model_source", "endpoint",
                 "api_version", "supported_request_fields", "seed_supported",
                 "effective", "context", "preflight", "pricing"}
@@ -684,7 +720,8 @@ def validate_deployment(config, profile, mode):
     if (response.get("model") != config["response_model"]
             or choice.get("finish_reason") != "stop"
             or not has_final_content(choice.get("message", {}).get("content"))
-            or not reasoning_check(response, mode, effective, profile, config)["mode_verified"]):
+            or not reasoning_acceptance(response, expected, config, profile, mode,
+                                        reasoning_acceptance_policy)["accepted"]):
         raise ValueError("preflight control not verified; answer correctness is not checked")
     if "I have to answer now." in (provider_reasoning(response, profile) or ""):
         raise ValueError("preflight contains a known forced budget-ending message")

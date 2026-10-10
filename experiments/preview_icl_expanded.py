@@ -25,13 +25,15 @@ def arguments(arm, mode, policy, profile='gemma_e4b'):
         reasoning_mode=mode, history_policy=policy, model_first_condition=arm, timeout=900)
 
 
-def command(seed, mode, scenario, arm, reasoning, policy, profile, tag, config=None, k=10, repeats=1):
+def command(seed, mode, scenario, arm, reasoning, policy, profile, tag, config=None, k=10, repeats=1,
+            output_tokens=design.CAP):
+    design.validate_output_allowance(output_tokens, profile, reasoning)
     args = ['python3', '-B', 'run_pilot.py', '--protocol', design.PROTOCOL,
         '--seed', str(seed), '--mode', mode, '--condition', scenario,
         '--k', str(k), '--budget', str(k), '--evidence-seed', '0',
         '--model-first-condition', arm, '--history-policy', policy,
         '--request-profile', profile, '--reasoning-mode', reasoning,
-        '--repeats', str(repeats), '--sampling-seeds', *map(str, range(repeats)), '--max-tokens', str(design.CAP),
+        '--repeats', str(repeats), '--sampling-seeds', *map(str, range(repeats)), '--max-tokens', str(output_tokens),
         '--provider', 'openai' if config else 'dry-run', '--tag', tag]
     if config:
         args += ['--model', config['model'], '--base-url', config['endpoint'],
@@ -52,33 +54,37 @@ def plan(profile, wrappers=(), k=10, repeats=1):
         key = (mode, policy)
         if key in approved:
             raise ValueError('duplicate readiness mode/history')
-        approved[key] = config
+        approved[key] = wrapper
     rows = []
     for (seed, mode, scenario), arm, history, reasoning in itertools.product(
             design.configurations(), design.ARMS, design.HISTORY_POLICIES, ('off', 'on')):
-        config = approved.get((reasoning, history))
+        wrapper = approved.get((reasoning, history))
+        config = wrapper['deployment'] if wrapper else None
+        cap = wrapper['expanded']['output_allowances'][0] if wrapper else design.CAP
         if wrappers and config is None:
             excluded.append(dict(seed=seed, mode=mode, scenario=scenario, arm=arm,
                                  history=history, reasoning=reasoning, reason='no validated configuration'))
             continue
         tag = f'expanded_{seed}_{mode}_{scenario}_{arm}_{history}_{reasoning}'
-        settings = runner.settings(profile, 0, bool(config and config['seed_supported']), design.CAP, reasoning)
+        if cap != design.CAP:
+            tag += f'_mt{cap}_sol_request_defined_on_v1'
+        settings = runner.settings(profile, 0, bool(config and config['seed_supported']), cap, reasoning)
         stage_ids = [p + '_' + s for p in ('A', 'B') for s in design.stages(arm)]
         rows.append(dict(graph_seed=seed, mode=mode, scenario=scenario, arm=arm,
             history_policy=history, reasoning_mode=reasoning, sampling_seed_label=0,
             sampling_seed_status='unverified_not_applied' if not config else 'supported' if config['seed_supported'] else 'unsupported',
             settings=settings, requests=len(stage_ids) * repeats, repeats=repeats, k=k,
-            sampling_seed_labels=list(range(repeats)), output_allowance_per_request=design.CAP,
+            sampling_seed_labels=list(range(repeats)), output_allowance_per_request=cap,
             stages=stage_ids,
             cost_plan={'status': 'unavailable', 'reason': 'no verified deployment/rates'} if not config else
                 runner.block_cost_plan(design.build_world(seed, mode, scenario, k), arm,
-                    {'deployment': config}, repeats=repeats, history_policy=history, design_api=design),
-            argv=command(seed, mode, scenario, arm, reasoning, history, profile, tag, config, k, repeats),
+                    wrapper, repeats=repeats, history_policy=history, design_api=design, output_tokens=cap),
+            argv=command(seed, mode, scenario, arm, reasoning, history, profile, tag, config, k, repeats, cap),
             deployment_sha256=runner.canonical(config) if config else None))
     return {'protocol': design.PROTOCOL, 'schedule': design.SCHEDULE, 'profile': profile,
         'status': 'validated_configuration_plan_not_live_verification' if wrappers else 'synthetic_illustration_not_provider_plan',
         'conversations': repeats * len(rows), 'responses': sum(r['requests'] for r in rows),
-        'maximum_output_tokens': design.CAP * sum(r['requests'] for r in rows), 'input_tokens': None,
+        'maximum_output_tokens': sum(r['output_allowance_per_request'] * r['requests'] for r in rows), 'input_tokens': None,
         'estimated_cost': None, 'billing_cost': None,
         'cost_note': 'Unknown until admitted inputs and verified rates are supplied; ceilings are not forecasts.',
         'rows': rows, 'excluded': excluded}
@@ -91,6 +97,8 @@ def dimensions(a):
         'repeat_seed_label', 'implementation_commit', 'world_sha256', 'deployment_sha256')} | {
         'run_id': a['run_id'], 'synthetic': a['synthetic'], 'source_sha256': i['source_sha256'],
         'k': i['evidence_settings']['k'], 'evidence_seed': i['evidence_settings']['evidence_seed'],
+        'output_allowance': i.get('output_allowance', design.CAP),
+        'reasoning_acceptance_policy': i.get('reasoning_acceptance_policy'),
         'query_policy': i['query_policy'], 'preparation_word_target': i['preparation_word_target']}
 
 
@@ -228,6 +236,7 @@ def summarize(paths):
             u = t.get('provider_usage', {})
             details = u.get('prompt_tokens_details')
             usage.append(dimensions(a) | dict(group=group, operational_status=status, stage=stage,
+                requested_output_tokens=t.get('max_output_tokens'),
                 prompt_tokens=u.get('prompt_tokens'), completion_tokens=u.get('completion_tokens'),
                 reasoning_tokens=t.get('control_check', {}).get('reasoning_tokens'),
                 cached_tokens=details.get('cached_tokens') if isinstance(details, dict) else None,

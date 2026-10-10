@@ -244,8 +244,8 @@ def prompts(world, period, arm):
             'task': task, 'readout': report}
 
 
-def schedule(world, arm, answers, history_policy=pilot_design.HISTORY_POLICY):
-    flow = runner.requests(world, arm, history_policy, sys.modules[__name__])
+def schedule(world, arm, answers, history_policy=pilot_design.HISTORY_POLICY, output_tokens=CAP):
+    flow = runner.requests(world, arm, history_policy, sys.modules[__name__], output_tokens)
     calls, call = [], next(flow)
     while True:
         calls.append(call)
@@ -436,12 +436,26 @@ def source_hashes():
             'experiments/preview_icl_model_first.py')}
 
 
+def validate_output_allowance(tokens, profile, mode):
+    if type(tokens) is not int or (tokens != CAP and not (
+            tokens in (16384, 32768) and profile == 'sol' and mode == 'on')):
+        raise ValueError('expanded allowance must be historical 4096 or explicit Sol ON 16384/32768')
+    return tokens
+
+
 def identity(world, arm, repeat, args, wrapper):
     if arm not in ARMS or type(repeat) is not int or repeat not in range(1, 6) or args.reasoning_mode not in ('off', 'on'):
         raise ValueError('expanded: repeat 1 to 5 and explicit OFF/ON required')
     pilot_design.check_history_policy(args.history_policy)
     config = wrapper['deployment'] if wrapper else None
-    return {'protocol': PROTOCOL, 'preparation_policy': PREPARATION_POLICY, 'scorer': SCORER,
+    acceptance = wrapper['expanded'].get('reasoning_acceptance_policy') if wrapper else None
+    controls.validate_reasoning_acceptance_policy(acceptance, args.request_profile, args.reasoning_mode)
+    cap = validate_output_allowance(getattr(args, 'max_tokens', CAP), args.request_profile, args.reasoning_mode)
+    if config and wrapper['expanded']['output_allowances'] != [cap]:
+        raise ValueError('command and wrapper output allowances disagree')
+    return {**({'reasoning_acceptance_policy': acceptance} if acceptance is not None else {}),
+        **({'output_allowance': cap, 'control_preflight_output_allowance': 8192} if cap != CAP else {}),
+        'protocol': PROTOCOL, 'preparation_policy': PREPARATION_POLICY, 'scorer': SCORER,
         'schedule': SCHEDULE, 'stages': list(stages(arm)), 'history_policy': args.history_policy,
         'preparation_word_target': None if arm == 'baseline_task' else PREP_WORDS,
         'query_policy': QUERY_POLICY,
@@ -457,28 +471,42 @@ def identity(world, arm, repeat, args, wrapper):
         'deployment_sha256': canonical(wrapper),
         'evidence_sha256': {p: canonical({k: world[p][k] for k in ('nodes', 'start', 'goal', 'menu', 'rows', 'required_pairs')}) for p in ('A', 'B')},
         'prompt_hashes': {'system': canonical(system(world)), **{p: canonical(prompts(world, p, arm)) for p in ('A', 'B')}},
-        'stage_settings': {str(CAP): runner.settings(args.request_profile, repeat - 1,
-            bool(config and config['seed_supported']), CAP, args.reasoning_mode)}}
+        'stage_settings': {str(cap): runner.settings(args.request_profile, repeat - 1,
+            bool(config and config['seed_supported']), cap, args.reasoning_mode)}}
 
 
-def validate_config(wrapper, profile, mode, policy):
+def validate_config(wrapper, profile, mode, policy, output_tokens=None):
     pilot_design.check_history_policy(policy)
     if set(wrapper) != {'deployment', 'expanded'}:
         raise ValueError('expanded deployment and stage/control evidence required')
     evidence = wrapper['expanded']
+    allowances = evidence.get('output_allowances')
+    if not isinstance(allowances, list) or len(allowances) != 1:
+        raise ValueError('one explicit expanded output allowance required')
+    cap = validate_output_allowance(allowances[0] if output_tokens is None else output_tokens, profile, mode)
     required = {'protocol': PROTOCOL, 'preparation_policy': PREPARATION_POLICY,
                 'history_policy': policy, 'reasoning_mode': mode, 'schedule': SCHEDULE,
-                'output_allowances': [CAP]}
+                'output_allowances': [cap]}
     if any(evidence.get(k) != v for k, v in required.items()):
         raise ValueError('expanded mode/schedule/stage identity mismatch')
     # Reuse the strict deployment and fixed preflight validation, without claiming
     # that an operator evidence string itself proves effective semantics.
-    controls.validate_deployment(wrapper['deployment'], profile, mode)
+    controls.validate_deployment(wrapper['deployment'], profile, mode,
+        evidence.get('reasoning_acceptance_policy'))
     # Common non-mode checks also apply on ON, with no mutated evidence.
     if any(not isinstance(evidence.get(k), str) or not evidence[k].strip()
            for k in ('stage_limits_source', 'system_message_source', 'context_source')):
         raise ValueError('stage/system/context evidence required')
     config = wrapper['deployment']
+    if cap != CAP:
+        if (evidence.get('reasoning_acceptance_policy') != controls.SOL_REQUEST_DEFINED_ON
+                or evidence.get('control_preflight_output_allowance') != 8192
+                or type(config['effective'].get('max_output_tokens')) is not int
+                or config['effective']['max_output_tokens'] < cap
+                or type(config['context'].get('tokens')) is not int or config['context']['tokens'] <= cap
+                or not isinstance(evidence.get('experiment_allowance_source'), str)
+                or not evidence['experiment_allowance_source'].strip()):
+            raise ValueError('Sol ON allowance requires capacity provenance and unchanged 8K control preflight')
     if profile == 'gemma_e4b' and not controls.local_context(config):
         raise ValueError('local actual-request tokenizer required')
     if profile in controls.HOSTED_PROFILES and (any(config['pricing'].get(k) is None for k in
@@ -492,7 +520,8 @@ def audit_identity(a):
     i = a['identity']
     world = build_world(i['graph_seed'], i['mode'], i['scenario'], i['evidence_settings']['k'])
     args = SimpleNamespace(history_policy=i['history_policy'], reasoning_mode=i['reasoning_mode'],
-        provider=i['provider'], request_profile=i['profile'], model=i['model'])
+        provider=i['provider'], request_profile=i['profile'], model=i['model'],
+        max_tokens=i.get('output_allowance', CAP))
     expected = identity(world, i['condition'], i['repeat'], args, a['deployment'])
     # Recorded commit/dirty state are provenance, not this auditing checkout.
     expected.update(implementation_commit=i['implementation_commit'], implementation_dirty=i['implementation_dirty'])
@@ -503,11 +532,12 @@ def audit_identity(a):
 
 
 def run_suite(sc, args, outdir):
+    validate_output_allowance(args.max_tokens, args.request_profile, args.reasoning_mode)
     if (args.mode not in SYSTEM or args.pilot_type != 'passive' or args.repeats not in (1, 5)
-            or args.sampling_seeds != list(range(args.repeats)) or args.max_tokens != CAP or args.reasoning_mode not in ('off', 'on')
+            or args.sampling_seeds != list(range(args.repeats)) or args.reasoning_mode not in ('off', 'on')
             or args.model_first_condition not in ARMS or args.request_profile not in controls.MODELS
             or args.provider not in ('dry-run', 'openai')):
-        raise ValueError('expanded: passive det/sto, one or five repeats, sequential seed labels, 4096, explicit arm/profile/OFF or ON')
+        raise ValueError('expanded: passive det/sto, one or five repeats, sequential seed labels, explicit arm/profile/OFF or ON')
     if (args.graph_condition or args.off_reference or args.reasoning_control_json or args.reasoning_control_source
             or args.temperature != 0 or args.top_p is not None or args.top_k is not None
             or args.sampling_seed_support != 'auto' or sc['k'] not in SUPPORTED_K or sc['budget'] != sc['k']
@@ -524,11 +554,12 @@ def run_suite(sc, args, outdir):
         if pilot._git_dirty() or not args.deployment_config:
             raise ValueError('clean commit and verified deployment required')
         wrapper = json.loads(Path(args.deployment_config).read_text())
-        config = validate_config(wrapper, args.request_profile, args.reasoning_mode, args.history_policy)
+        config = validate_config(wrapper, args.request_profile, args.reasoning_mode, args.history_policy, args.max_tokens)
         if args.model != config['model'] or args.base_url.rstrip('/') != config['endpoint'].rstrip('/'):
             raise ValueError('exact model/endpoint mismatch')
     cost_plan = runner.block_cost_plan(world, args.model_first_condition, wrapper, repeats=args.repeats,
-                                      history_policy=args.history_policy, design_api=sys.modules[__name__])
+                                      history_policy=args.history_policy, design_api=sys.modules[__name__],
+                                      output_tokens=args.max_tokens)
     print(json.dumps({'prelaunch_cost_plan': cost_plan}))
     Path(outdir).mkdir(parents=True, exist_ok=False)
     try:

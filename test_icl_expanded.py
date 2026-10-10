@@ -601,7 +601,11 @@ class PreparationScope(unittest.TestCase):
         exec(compile(source, '<published expanded source>', 'exec'), prior.__dict__)
         def unchanged_nodes(text):
             return [ast.dump(n) for n in ast.parse(text).body
-                if not (isinstance(n, ast.FunctionDef) and n.name in ('task_guide', 'prompts'))
+                # Sol acceptance changes only admission/identity plumbing; its
+                # default-equivalence and damaged-input guards have separate tests.
+                if not (isinstance(n, ast.FunctionDef) and n.name in
+                        ('task_guide', 'prompts', 'identity', 'validate_config', 'validate_output_allowance',
+                         'schedule', 'run_suite', 'audit_identity'))
                 and not (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'PREPARATION_POLICY' for t in n.targets))]
         self.assertEqual(unchanged_nodes(source), unchanged_nodes(Path(x.__file__).read_text()))
         self.assertEqual(prior.PREPARATION_POLICY, 'five_arms_length_target_v2')

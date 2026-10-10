@@ -17,7 +17,8 @@ canonical = pilot._canonical_sha256
 
 
 def settings(profile, seed, supported, allowance, reasoning_mode='off'):
-    if type(allowance) is not int or allowance not in (4096, 8192):
+    if type(allowance) is not int or (allowance not in (4096, 8192) and not (
+            allowance in (16384, 32768) and profile == 'sol' and reasoning_mode == 'on')):
         raise ValueError('locked stage allowance required')
     result = controls.intended_settings(profile, reasoning_mode, seed, supported,
                                         allowed_seeds=(0, 1, 2, 3, 4, 999))
@@ -25,9 +26,12 @@ def settings(profile, seed, supported, allowance, reasoning_mode='off'):
     return result
 
 
-def requests(world, arm, history_policy=design.HISTORY_POLICY, design_api=design):
+def requests(world, arm, history_policy=design.HISTORY_POLICY, design_api=design, output_tokens=4096):
     """A coroutine: each send receives only the exact visible final answer."""
     design.check_history_policy(history_policy)
+    if type(output_tokens) is not int or (output_tokens != 4096 and not (
+            design_api is not design and output_tokens in (16384, 32768))):
+        raise ValueError('unsupported protocol stage allowance')
     history = [{'role': 'system', 'content': design_api.system(world) if design_api is not design else design.SYSTEM}]
     for period in ('A', 'B'):
         texts = design_api.prompts(world, period, arm)
@@ -35,7 +39,7 @@ def requests(world, arm, history_policy=design.HISTORY_POLICY, design_api=design
                   getattr(design_api, 'STAGES', ('prepare', 'task', 'readout')))
         for stage in stages:
             msg = {'role': 'user', 'content': texts[stage]}
-            answer = yield {'id': period + '_' + stage, 'max_output_tokens': 4096,
+            answer = yield {'id': period + '_' + stage, 'max_output_tokens': output_tokens,
                             'history_policy': history_policy,
                             'conversation': design.conversation_kind(stage, history_policy),
                             'messages': copy.deepcopy(history + [msg])}
@@ -87,7 +91,8 @@ def copied_fields(data, config, profile, dry=False, reasoning_mode='off'):
             'truncated': choice.get('finish_reason') == 'length', 'control_check': check}
 
 
-def response_checks(turn, body, config, profile, allowance, dry=False, reasoning_mode='off'):
+def response_checks(turn, body, config, profile, allowance, dry=False, reasoning_mode='off',
+                    reasoning_acceptance_policy=None):
     """Operational facts come from the original envelope, never copied scores."""
     checks = {'raw_envelope': False, 'copied_fields': False, 'transport': False,
               'controls': False, 'context': False}
@@ -113,8 +118,12 @@ def response_checks(turn, body, config, profile, allowance, dry=False, reasoning
             checks['transport'] &= (len(data['choices']) == 1 and type(usage.get('completion_tokens')) is int
                 and 0 <= usage['completion_tokens'] <= allowance
                 and type(usage.get('prompt_tokens')) is int and usage['prompt_tokens'] >= 0)
+            acceptance = controls.reasoning_acceptance(data, body, config, profile,
+                                                       reasoning_mode, reasoning_acceptance_policy)
             checks['controls'] = (copied['actual_response_model'] == config['response_model']
-                and copied['control_check']['mode_verified'] and not copied['control_check']['control_violation'])
+                and acceptance['accepted'])
+            if reasoning_acceptance_policy is not None:
+                checks['copied_fields'] &= turn.get('reasoning_acceptance') == acceptance
             count = turn['context_check']
             if controls.local_context(config):
                 match = controls.prompt_usage_check(count, usage)
@@ -207,6 +216,7 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
     ident = (identity(world, arm, repeat, args.request_profile, args.model, wrapper, args.provider, policy)
              if design_api is design else design_api.identity(world, arm, repeat, args, wrapper))
     mode = ident['reasoning_mode']
+    acceptance_policy = ident.get('reasoning_acceptance_policy')
     run_id = f'{design_api.PROTOCOL}_seed{world["seed"]}_{arm}_r{repeat}_{canonical(ident)[:16]}'
     path = Path(outdir) / (run_id + '.json')
     if path.exists():
@@ -215,7 +225,7 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
                 'synthetic': config is None, 'deployment': wrapper, 'world': world,
                 'state': 'initialized', 'turns': {}, 'persistence_events': [], 'run_order': []}
     persist(path, artifact, 'initialized')
-    plan = requests(world, arm, policy, design_api)
+    plan = requests(world, arm, policy, design_api, ident.get('output_allowance', 4096))
     call = next(plan)
     dry_answers = (synthetic_answers(world) if design_api is design else design_api.oracle_answers(world)) if config is None else None
     started = time.monotonic()
@@ -252,12 +262,16 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
             envelope = json.loads(raw)
             turn.update(provider_response=envelope, provider_response_sha256=canonical(envelope),
                         **copied_fields(envelope, config, args.request_profile, config is None, mode))
+            if acceptance_policy is not None:
+                turn['reasoning_acceptance'] = controls.reasoning_acceptance(
+                    envelope, body, config, args.request_profile, mode, acceptance_policy)
             if isinstance(turn['raw_response'], str):
                 turn['response_sha256'] = design.digest(turn['raw_response'])
             if config and controls.local_context(config):
                 turn['prompt_usage_check'] = controls.prompt_usage_check(turn['context_check'], turn['provider_usage'])
             persist(path, artifact, name + ':raw_saved')
-            turn['operational_checks'] = response_checks(turn, body, config, args.request_profile, cap, config is None, mode)
+            turn['operational_checks'] = response_checks(turn, body, config, args.request_profile,
+                cap, config is None, mode, acceptance_policy)
             if not all(turn['operational_checks'].values()):
                 raise RuntimeError('returned answer failed operational checks')
             turn['cost'] = cost(turn['provider_usage'], config, args.request_profile)
@@ -322,7 +336,9 @@ def audit_artifact(a, design_api=design):
             and (dry or (i['implementation_dirty'] is False and i['model'] == config['model'])))
         expected_id = f'{design_api.PROTOCOL}_seed{world["seed"]}_{i["condition"]}_r{i["repeat"]}_{canonical(i)[:16]}'
         checks['identity'] &= a['run_id'] == expected_id
-        plan = design_api.schedule(world, i['condition'], {k: t['raw_response'] for k, t in turns.items()}, policy)
+        schedule_options = {'output_tokens': i.get('output_allowance', 4096)} if design_api is not design else {}
+        plan = design_api.schedule(world, i['condition'], {k: t['raw_response'] for k, t in turns.items()}, policy,
+                                   **schedule_options)
         checks['complete'] = (a['state'] == 'completed' and not a.get('failure')
                               and set(turns) == {c['id'] for c in plan} and a['run_order'] == [c['id'] for c in plan])
         checks.update(history=True, hashes=True, persistence=True, responses=True)
@@ -345,7 +361,8 @@ def audit_artifact(a, design_api=design):
             checks['persistence'] &= all(events.count(e) == 1 for e in required)
             checks['persistence'] &= [events.index(e) for e in required] == sorted(events.index(e) for e in required)
             checks['persistence'] &= events.index(required[-1]) < events.index('completed')
-            checks['responses'] &= all(response_checks(t, body, config, i['profile'], cap, dry, i['reasoning_mode']).values())
+            checks['responses'] &= all(response_checks(t, body, config, i['profile'], cap, dry,
+                i['reasoning_mode'], i.get('reasoning_acceptance_policy')).values())
         controls.no_secrets(a)
         checks['no_secrets'] = True
     except (ValueError, KeyError, TypeError, IndexError, AttributeError):
@@ -387,13 +404,17 @@ def write_summary(outdir, expected=3, design_api=design):
     return summary
 
 
-def block_cost_plan(world, arm, wrapper, repeats=3, history_policy=design.HISTORY_POLICY, design_api=design):
+def block_cost_plan(world, arm, wrapper, repeats=3, history_policy=design.HISTORY_POLICY, design_api=design,
+                    output_tokens=None):
     """Conservative ceiling from the admitted context, not a token-use forecast."""
     supported_repeats = (1, 3) if design_api is design else (1, 5)
     if type(repeats) is not int or repeats not in supported_repeats:
         raise ValueError('one or three repeats required' if design_api is design else 'one or five repeats required')
     answers = synthetic_answers(world) if design_api is design else design_api.oracle_answers(world)
-    calls = design_api.schedule(world, arm, answers, history_policy)
+    if output_tokens is None:
+        output_tokens = wrapper.get('expanded', {}).get('output_allowances', [4096])[0] if wrapper else 4096
+    options = {'output_tokens': output_tokens} if design_api is not design else {}
+    calls = design_api.schedule(world, arm, answers, history_policy, **options)
     completion = repeats * sum(c['max_output_tokens'] for c in calls)
     if wrapper is None:
         return {'status': 'unavailable', 'reason': 'no verified deployment/rates',
