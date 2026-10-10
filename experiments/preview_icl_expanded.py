@@ -93,6 +93,7 @@ def dimensions(a):
         'repeat_seed_label', 'implementation_commit', 'world_sha256', 'deployment_sha256')} | {
         'run_id': a['run_id'], 'synthetic': a['synthetic'], 'source_sha256': i['source_sha256'],
         'output_allowance_per_response': design.artifact_allowance(i),
+        **({'operational_policy': i['operational_policy']} if i.get('operational_policy') else {}),
         'k': i['evidence_settings']['k'], 'evidence_seed': i['evidence_settings']['evidence_seed'],
         'query_policy': i['query_policy'], 'preparation_word_target': i['preparation_word_target']}
 
@@ -227,12 +228,19 @@ def summarize(paths):
                         extraction=score,
                         truth=design.build_world(a['identity']['graph_seed'], a['identity']['mode'],
                             a['identity']['scenario'], a['identity']['evidence_settings']['k'])[period]['graph']))
-        for stage, t in a['turns'].items():
+        for stage, t in ((stage, attempt) for stage, selected in a['turns'].items()
+                         for attempt in selected.get('attempts', [selected])):
             u = t.get('provider_usage', {})
             details = u.get('prompt_tokens_details')
             usage.append(dimensions(a) | dict(group=group, operational_status=status, stage=stage,
                 prompt_tokens=u.get('prompt_tokens'), completion_tokens=u.get('completion_tokens'),
-                reasoning_tokens=t.get('control_check', {}).get('reasoning_tokens'),
+                reasoning_tokens=(t['reasoning_acceptance']['derived_reasoning_tokens']
+                    if 'reasoning_acceptance' in t else t.get('control_check', {}).get('reasoning_tokens')),
+                **({'attempt_ordinal':t['ordinal'], 'actual_output_allowance':t['max_output_tokens'],
+                    'requested_and_observed_reasoning':t.get('reasoning_acceptance'),
+                    'attempt_outcome':t.get('outcome'), 'http_status':t.get('http_status'),
+                    'reservation_id':t.get('reservation_id'), 'exception_type':t.get('exception_type')}
+                   if 'ordinal' in t else {}),
                 cached_tokens=details.get('cached_tokens') if isinstance(details, dict) else None,
                 exposed_reasoning=t.get('provider_reasoning'),
                 reasoning_details=t.get('provider_reasoning_details'),
