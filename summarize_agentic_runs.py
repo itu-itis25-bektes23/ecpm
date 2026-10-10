@@ -31,6 +31,9 @@ def load(run_dir):
             "steps_m0": (m.get("steps_to_goal_m0") or {}).get("mean"), "steps_m1": (m.get("steps_to_goal_m1") or {}).get("mean"),
             "optimal_action_m0": m.get("optimal_action_rate_m0"), "optimal_action_m1": m.get("optimal_action_rate_m1"),
             "regret_m0": m.get("route_regret_m0"), "regret_m1": m.get("route_regret_m1"),
+            # H4: six consecutive failures of the broken link reached in M1, and whether it was chosen again after
+            "h4_reached": (m.get("choices_after_consecutive_failures") or {}).get("reached_in_m1"),
+            "h4_chose_again": (m.get("choices_after_consecutive_failures") or {}).get("chose_again"),
             "exposed": ex.get("exposed"), "must_update": ex.get("must_update"), "m1_attempts": ex.get("m1_attempts"),
             "detection": sc("detection").get("correct"), "localization": sc("localization").get("correct"),
             "preservation": sc("preservation").get("accuracy"),
@@ -106,6 +109,11 @@ def results_tables(rows):
                 + "." + (f" Reasoning tokens with reasoning on: mean {st.mean(on):,.0f}, max {max(on):,.0f} per run." if on else "")
                 + f" Reasoning violations {sum(_b(r['reasoning_violation']) for r in R)}, cut-off calls "
                 f"{sum(int(_f(r['cut_off_calls']) or 0) for r in R)}, retried replies {sum(int(_f(r['retried_attempts']) or 0) for r in R)}.", ""]
+        h4 = [r for r in ch if "h4_reached" in r and r["h4_reached"] not in (None, "")]
+        out += [("**H4 (six consecutive failures of the broken link).** " + (
+                 f"Reached in {sum(_b(r['h4_reached']) for r in h4)} of {len(h4)} runs with a change; the agent chose "
+                 f"the broken link again in {sum(_b(r['h4_chose_again']) for r in h4)} of those."
+                 if h4 else "Not in this CSV (recorded in each run's artifact; regenerate the CSV to include it).")), ""]
     return out
 
 def write_tables(rows, folder):
