@@ -1072,6 +1072,28 @@ def test_results_tables():
             shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
 
 
+def test_icl_tables():
+    """summarize_icl_run.py --tables pools expanded-ICL metrics per arm, also from a gzipped metrics.csv."""
+    import gzip
+    tmp = tempfile.mkdtemp()
+    cols = ["model", "run_id", "history_policy", "reasoning_mode", "scenario", "condition", "operational_status",
+            "period", "query_id", "metric", "numerator", "denominator"]
+    rows = []
+    for run, det, upd in (("r1", "1", "2"), ("r2", "0", "1")):      # two task_only conversations, silent break
+        base = ["m", run, "separate_reports_post_task_v1", "off", "silent_break", "task_only", "valid"]
+        rows += [base + ["B", "null", "detection_correct", det, "1"], base + ["B", "null", "necessary_update_rate", upd, "2"],
+                 base + ["B", "q1", "route_optimal", "1", "1"], base + ["B", "q2", "route_optimal", "0", "1"]]
+    p = os.path.join(tmp, "metrics.csv.gz")
+    with gzip.open(p, "wt", encoding="utf-8", newline="") as fh:
+        w = csv.writer(fh); w.writerow(cols); w.writerows(rows)
+    r = _run_py(["summarize_icl_run.py", "--tables", p])
+    md = open(os.path.join(tmp, "icl_tables.md"), encoding="utf-8").read()
+    check("ICL tables pool detection, updates and route answers",
+          r.returncode == 0 and "| off | task_only | separate | 2 | n/a | n/a | 50% | n/a | 75% | 50% |" in md, md[:600] + r.stderr[-300:])
+    check("ICL tables split reporting vs acting",
+          "| Reported the change (detection correct) | 1 | 100% |" in md and "| Did not report it | 1 | 50% |" in md, md)
+
+
 if __name__ == "__main__":
     test_legacy_prompt_and_scorer_regression()
     test_levels_share_visible_evidence_and_raw_order()
@@ -1098,4 +1120,5 @@ if __name__ == "__main__":
     test_references()
     test_grid_dry()
     test_results_tables()
+    test_icl_tables()
     print("\nALL RUNNER TESTS PASSED")

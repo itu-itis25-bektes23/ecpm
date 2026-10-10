@@ -9,6 +9,7 @@ plus the operational facts that decide whether a cell is readable at all
 
     python3 summarize_icl_run.py pilot_artifacts/icl_graph_sol_det
     python3 summarize_icl_run.py pilot_artifacts/... --json out.json
+    python3 summarize_icl_run.py --tables RESULTS_DIR/metrics.csv[.gz]   # expanded ICL: Results-tab tables
 
 Rates are printed as k/n. Every cell carries its n because a cell without
 its n cannot be read, and n is 3 per level here. These are demonstrations,
@@ -17,9 +18,12 @@ not estimates of a rate.
 
 import argparse
 import collections
+import csv
 import glob
+import gzip
 import json
 import os
+import sys
 
 
 def load(root):
@@ -82,7 +86,84 @@ FIELDS = ("detection", "localization", "preservation",
           "route_a_optimal", "route_b_optimal", "well_formed")
 
 
+ICL_ARMS = ("task_only", "model_first", "graph_given")
+ICL_CHANGED = ("silent_break", "hard_removal", "redirect", "degradation", "irrelevant")
+
+
+def icl_tables(path):
+    """Results-tab tables for expanded ICL, from the metrics.csv its export writes (one row per metric)."""
+    convs = collections.defaultdict(dict)   # conversation -> {(period, metric): (numerator, denominator)}, queries summed
+    meta = {}
+    opener = gzip.open if path.endswith(".gz") else open   # metrics.csv is large; the repo keeps it gzipped
+    for r in csv.DictReader(opener(path, "rt", encoding="utf-8")):
+        if r["operational_status"] != "valid":
+            continue                          # valid conversations only
+        key = (r["model"], r["run_id"], r["history_policy"], r["reasoning_mode"])
+        meta[key] = r
+        num = {"True": 1, "False": 0}.get(r["numerator"], r["numerator"])
+        try:
+            n0, d0 = convs[key].get((r["period"], r["metric"]), (0.0, 0.0))
+            convs[key][(r["period"], r["metric"])] = (n0 + float(num), d0 + float(r["denominator"]))
+        except ValueError:
+            pass
+    def rate(keys, period, metric):           # pooled: summed numerators over summed denominators
+        n = d = 0
+        for k in keys:
+            v = convs[k].get((period, metric))
+            if v and v[1] > 0: n, d = n + v[0], d + v[1]
+        return f"{n / d:.0%}" if d else "n/a"
+    hist = lambda h: "retained" if h.startswith("retained") else "separate"
+    out = []
+    for model in sorted({k[0] for k in convs}):
+        K = [k for k in convs if k[0] == model]
+        ch = [k for k in K if meta[k]["scenario"] != "no_change"]
+        out += [f"## {model}: {len(K)} conversations (expanded ICL)", "",
+                "**Table 1. Reading, reporting and acting by arm (scenarios with a change)**", "",
+                "| Reasoning | Arm | History | Convs | A transitions exact | A routes optimal | B detection | B localization | B necessary updates | B routes optimal |",
+                "|---|---|---|---|---|---|---|---|---|---|"]
+        for rs in sorted({k[3] for k in K}):
+            for a in ICL_ARMS:
+                for h in sorted({k[2] for k in K}):
+                    sub = [k for k in ch if k[3] == rs and k[2] == h and meta[k]["condition"] == a]
+                    if sub:
+                        out.append(f"| {rs} | {a} | {hist(h)} | {len(sub)} | {rate(sub, 'A', 'transition_exact')} "
+                                   f"| {rate(sub, 'A', 'route_optimal')} | {rate(sub, 'B', 'detection_correct')} "
+                                   f"| {rate(sub, 'B', 'localization_correct')} | {rate(sub, 'B', 'necessary_update_rate')} "
+                                   f"| {rate(sub, 'B', 'route_optimal')} |")
+        need = [k for k in ch if (convs[k].get(("B", "necessary_update_rate")) or (0, 0))[1] > 0]
+        said = [k for k in need if (convs[k].get(("B", "detection_correct")) or (0, 0))[0] > 0]
+        missed = [k for k in need if k not in said]
+        out += ["", "**Table 2. Reporting a change vs acting on it (conversations where a route had to change)**", "",
+                "| Conversations | n | Necessary updates made |", "|---|---|---|",
+                f"| Reported the change (detection correct) | {len(said)} | {rate(said, 'B', 'necessary_update_rate')} |",
+                f"| Did not report it | {len(missed)} | {rate(missed, 'B', 'necessary_update_rate')} |", "",
+                "**Table 3. Detection / necessary updates by scenario (history and reasoning pooled)**", "",
+                "| Scenario | Convs per arm | " + " | ".join(f"{a} detection / updates" for a in ICL_ARMS) + " |",
+                "|---|---|" + "---|" * len(ICL_ARMS)]
+        for sc in ICL_CHANGED:
+            cells = [[k for k in K if meta[k]["scenario"] == sc and meta[k]["condition"] == a] for a in ICL_ARMS]
+            if any(cells):
+                out.append(f"| {sc} | {len(cells[0])} | " + " | ".join(
+                    f"{rate(c, 'B', 'detection_correct')} / {rate(c, 'B', 'necessary_update_rate')}" for c in cells) + " |")
+        nc = [k for k in K if meta[k]["scenario"] == "no_change"]
+        if nc:
+            out += ["", "**Table 4. No-change control: reports no change / replans anyway**", "",
+                    "| Reasoning | Convs per arm | " + " | ".join(ICL_ARMS) + " |", "|---|---|" + "---|" * len(ICL_ARMS)]
+            for rs in sorted({k[3] for k in nc}):
+                cells = [[k for k in nc if k[3] == rs and meta[k]["condition"] == a] for a in ICL_ARMS]
+                out.append(f"| {rs} | {len(cells[0])} | " + " | ".join(
+                    f"{rate(c, 'B', 'detection_correct')} / {rate(c, 'B', 'unnecessary_replan_rate')}" for c in cells) + " |")
+        out += ["", f"Rates pool numerators over denominators across conversations. Preparation answers flagged for review: "
+                f"{sum(1 for k in K for p in 'AB' if (convs[k].get((p, 'preparation_needs_review')) or (0, 0))[0] > 0)}.", ""]
+    target = os.path.join(os.path.dirname(os.path.abspath(path)), "icl_tables.md")
+    open(target, "w", encoding="utf-8").write("\n".join(out) + "\n")
+    print("\n".join(out)); print(f"wrote {target} ({len(convs)} conversations)")
+
+
 def main():
+    if "--tables" in sys.argv:
+        rest = [a for a in sys.argv[1:] if a != "--tables"]
+        return icl_tables(rest[0] if rest else "metrics.csv")
     ap = argparse.ArgumentParser()
     ap.add_argument("root", help="run directory holding the artifacts")
     ap.add_argument("--json", default=None, help="also write the rows here")
