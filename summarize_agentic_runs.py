@@ -1,10 +1,12 @@
 """Summarise agentic runs for the Results doc. Stdlib only.
 
     python summarize_agentic_runs.py RUN_DIR
+    python summarize_agentic_runs.py --tables RUN_DIR_OR_agentic_runs.csv   # Results-tab Tables 1-4 only
 
 Writes RUN_DIR/agentic_runs.csv (one row per run, filterable: seed, mode, scenario, arm,
 history, repeat, model, every metric) and RUN_DIR/agentic_summary.md (mean and spread
-per arm, ready to paste into Google Docs as Markdown or into Slack as a code block).
+per arm, ready to paste into Google Docs as Markdown or into Slack as a code block), and
+RUN_DIR/agentic_tables.md (the Results-tab Tables 1-4, one set per model).
 """
 import csv, glob, json, os, statistics as st, sys
 
@@ -49,6 +51,67 @@ def load(run_dir):
     return rows
 
 PRICE_IN, PRICE_OUT = 2.50, 10.00   # USD per million tokens (gpt-4o list price; check yours)
+
+ARMS, CHANGED = ("task_only", "model_first", "graph_given"), ("silent_break", "hard_removal", "redirect", "degradation", "irrelevant")
+_b = lambda v: v is True or v == "True"                      # rows from load() or from agentic_runs.csv
+_f = lambda v: None if v in (None, "") else float(v)
+
+def results_tables(rows):
+    """The Results-tab tables: behaviour and probes by arm, exposure split, scenarios, no-change control, cost."""
+    def rate(sub, key):   # share of True among runs where the probe was scored
+        v = [_b(r[key]) for r in sub if r[key] in (True, False, "True", "False")]
+        return f"{sum(v) / len(v):.0%}" if v else "n/a"
+    def frac(sub, key):
+        v = [_b(r[key]) for r in sub if r[key] in (True, False, "True", "False")]
+        return f"{sum(v) / len(v):.0%} ({sum(v)}/{len(v)})" if v else "n/a"
+    mean = lambda vals: (lambda v: f"{st.mean(v):.2f}" if v else "n/a")([x for x in vals if x is not None])
+    out = []
+    for model in sorted({r["model"] for r in rows}):
+        R = [r for r in rows if r["model"] == model]
+        ch = [r for r in R if r["scenario"] != "no_change"]
+        out += [f"## {model or 'model'}: {len(R)} runs", "",
+                "**Table 1. Behaviour and probes by arm (scenarios with a change)**", "",
+                "| Reasoning | Arm | Runs | Exposed | Detection | Localization | Goal success M1 | Route regret M0 |",
+                "|---|---|---|---|---|---|---|---|"]
+        for rs in sorted({r["reasoning"] for r in R}):
+            for a in ARMS:
+                sub = [r for r in ch if r["arm"] == a and r["reasoning"] == rs]
+                if sub:
+                    out.append(f"| {rs} | {a} | {len(sub)} | {rate(sub, 'exposed')} | {rate(sub, 'detection')} | {rate(sub, 'localization')} "
+                               f"| {mean(_f(r['goal_success_m1']) for r in sub)} | {mean(_f(r['regret_m0']) for r in sub)} |")
+        ex = [r for r in ch if _b(r["exposed"])]; un = [r for r in ch if r["exposed"] in (False, "False")]
+        out += ["", "**Table 2. Exposure decides what the probes can show (all arms and reasoning settings)**", "",
+                "| Runs | n | Detection | Localization |", "|---|---|---|---|",
+                f"| Exposed | {len(ex)} | {frac(ex, 'detection')} | {frac(ex, 'localization')} |",
+                f"| Not exposed | {len(un)} | {frac(un, 'detection')} | {frac(un, 'localization')} |", "",
+                "**Table 3. Exposure / detection by scenario (reasoning settings pooled)**", "",
+                "| Scenario | Runs per arm | " + " | ".join(f"{a} exposed / detection" for a in ARMS) + " |",
+                "|---|---|" + "---|" * len(ARMS)]
+        for sc in CHANGED:
+            cells = [[r for r in R if r["scenario"] == sc and r["arm"] == a] for a in ARMS]
+            if any(cells):
+                out.append(f"| {sc} | {len(cells[0])} | " + " | ".join(f"{rate(c, 'exposed')} / {rate(c, 'detection')}" for c in cells) + " |")
+        nc = [r for r in R if r["scenario"] == "no_change"]
+        if nc:
+            out += ["", "**Table 4. No-change control: correctly reports no change**", "",
+                    "| Reasoning | Runs per arm | " + " | ".join(ARMS) + " |", "|---|---|" + "---|" * len(ARMS)]
+            for rs in sorted({r["reasoning"] for r in nc}):
+                cells = [[r for r in nc if r["arm"] == a and r["reasoning"] == rs] for a in ARMS]
+                out.append(f"| {rs} | {len(cells[0])} | " + " | ".join(rate(c, "detection") for c in cells) + " |")
+        cost = lambda sub: sum(_f(r["cost_usd"]) or 0 for r in sub)
+        on = [_f(r["reasoning_tokens"]) or 0 for r in R if r["reasoning"] == "on"]
+        out += ["", f"**Cost and run quality.** Billed ${cost(R):.2f} in total, about ${cost(R) / len(R):.3f} per run ("
+                + ", ".join(f"{rs} ${cost([r for r in R if r['reasoning'] == rs]):.2f}" for rs in sorted({r['reasoning'] for r in R}))
+                + "). Per run: " + ", ".join(f"{a} ${cost([r for r in R if r['arm'] == a]) / max(1, sum(r['arm'] == a for r in R)):.3f}" for a in ARMS)
+                + "." + (f" Reasoning tokens with reasoning on: mean {st.mean(on):,.0f}, max {max(on):,.0f} per run." if on else "")
+                + f" Reasoning violations {sum(_b(r['reasoning_violation']) for r in R)}, cut-off calls "
+                f"{sum(int(_f(r['cut_off_calls']) or 0) for r in R)}, retried replies {sum(int(_f(r['retried_attempts']) or 0) for r in R)}.", ""]
+    return out
+
+def write_tables(rows, folder):
+    out = os.path.join(folder, "agentic_tables.md")
+    open(out, "w", encoding="utf-8").write("\n".join(results_tables(rows)) + "\n")
+    return out
 
 def num(v):
     if isinstance(v, bool): return float(v)
@@ -115,7 +178,26 @@ def main(run_dir):
         print("\n".join(lines))
     except UnicodeEncodeError:   # some Windows consoles cannot print "±"; the files are still UTF-8
         print("\n".join(lines).encode("ascii", "replace").decode())
-    print(f"\nwrote {out} and agentic_runs.csv ({len(rows)} runs)")
+    print(f"\nwrote {out}, {write_tables(rows, run_dir)} and agentic_runs.csv ({len(rows)} runs)")
+
+def tables_main(path):
+    """--tables: Tables 1-4 from a run folder or from an agentic_runs.csv someone shared."""
+    if path.endswith(".csv"):
+        rows, folder = list(csv.DictReader(open(path, encoding="utf-8"))), os.path.dirname(os.path.abspath(path))
+    else:
+        main(path); return
+    if not rows:
+        sys.exit("no rows in " + path)
+    out = write_tables(rows, folder)
+    try:
+        print(open(out, encoding="utf-8").read())
+    except UnicodeEncodeError:
+        print(open(out, encoding="utf-8").read().encode("ascii", "replace").decode())
+    print(f"wrote {out} ({len(rows)} runs)")
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else ".")
+    if "--tables" in sys.argv:
+        a = [x for x in sys.argv[1:] if x != "--tables"]
+        tables_main(a[0] if a else ".")
+    else:
+        main(sys.argv[1] if len(sys.argv) > 1 else ".")
