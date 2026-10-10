@@ -5,6 +5,7 @@ import hashlib
 import itertools
 import json
 import math
+import subprocess
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -25,6 +26,21 @@ PREPARATION_POLICY = 'five_arms_scoped_preparation_v3'
 SCHEDULE = 'prepare_task_post_task_report_v2'
 STAGES = ('prepare', 'task', 'readout')
 CAP = 4096
+NEW_CAP = 16384
+HISTORICAL_4K_BASE = '05df38907307ec290ede76998f50a6fb1318b4fd'
+
+
+def output_allowance(value):
+    if type(value) is not int or value not in (CAP, NEW_CAP):
+        raise ValueError('expanded output allowance must be 4096 (historical) or 16384')
+    return value
+
+
+def artifact_allowance(identity):
+    caps = list(identity['stage_settings'])
+    if len(caps) != 1 or caps[0] not in ('4096', '16384'):
+        raise ValueError('one explicit expanded output allowance required')
+    return output_allowance(int(caps[0]))
 PREP_WORDS = 250
 SUPPORTED_K = (10,)
 QUERY_POLICY = 'a_only_balanced_queries_v2'
@@ -244,8 +260,8 @@ def prompts(world, period, arm):
             'task': task, 'readout': report}
 
 
-def schedule(world, arm, answers, history_policy=pilot_design.HISTORY_POLICY):
-    flow = runner.requests(world, arm, history_policy, sys.modules[__name__])
+def schedule(world, arm, answers, history_policy=pilot_design.HISTORY_POLICY, output_tokens=CAP):
+    flow = runner.requests(world, arm, history_policy, sys.modules[__name__], output_allowance(output_tokens))
     calls, call = [], next(flow)
     while True:
         calls.append(call)
@@ -436,11 +452,23 @@ def source_hashes():
             'experiments/preview_icl_model_first.py')}
 
 
+@lru_cache(maxsize=16)
+def historical_source_hashes(commit):
+    """Only Git-pinned source bytes, never a caller-supplied source attestation."""
+    if not isinstance(commit, str) or len(commit) != 40 or any(c not in '0123456789abcdef' for c in commit):
+        raise ValueError('full historical commit required')
+    root = Path(__file__).resolve().parent
+    return tuple((name, hashlib.sha256(subprocess.check_output(
+        ['git', 'show', commit + ':' + name], cwd=root, stderr=subprocess.DEVNULL)).hexdigest()
+        ) for name in source_hashes())
+
+
 def identity(world, arm, repeat, args, wrapper):
     if arm not in ARMS or type(repeat) is not int or repeat not in range(1, 6) or args.reasoning_mode not in ('off', 'on'):
         raise ValueError('expanded: repeat 1 to 5 and explicit OFF/ON required')
     pilot_design.check_history_policy(args.history_policy)
     config = wrapper['deployment'] if wrapper else None
+    cap = output_allowance(getattr(args, 'max_tokens', CAP))
     return {'protocol': PROTOCOL, 'preparation_policy': PREPARATION_POLICY, 'scorer': SCORER,
         'schedule': SCHEDULE, 'stages': list(stages(arm)), 'history_policy': args.history_policy,
         'preparation_word_target': None if arm == 'baseline_task' else PREP_WORDS,
@@ -457,23 +485,25 @@ def identity(world, arm, repeat, args, wrapper):
         'deployment_sha256': canonical(wrapper),
         'evidence_sha256': {p: canonical({k: world[p][k] for k in ('nodes', 'start', 'goal', 'menu', 'rows', 'required_pairs')}) for p in ('A', 'B')},
         'prompt_hashes': {'system': canonical(system(world)), **{p: canonical(prompts(world, p, arm)) for p in ('A', 'B')}},
-        'stage_settings': {str(CAP): runner.settings(args.request_profile, repeat - 1,
-            bool(config and config['seed_supported']), CAP, args.reasoning_mode)}}
+        'stage_settings': {str(cap): runner.settings(args.request_profile, repeat - 1,
+            bool(config and config['seed_supported']), cap, args.reasoning_mode, config)}}
 
 
-def validate_config(wrapper, profile, mode, policy):
+def validate_config(wrapper, profile, mode, policy, output_tokens=CAP):
+    cap = output_allowance(output_tokens)
     pilot_design.check_history_policy(policy)
     if set(wrapper) != {'deployment', 'expanded'}:
         raise ValueError('expanded deployment and stage/control evidence required')
     evidence = wrapper['expanded']
     required = {'protocol': PROTOCOL, 'preparation_policy': PREPARATION_POLICY,
                 'history_policy': policy, 'reasoning_mode': mode, 'schedule': SCHEDULE,
-                'output_allowances': [CAP]}
+                'output_allowances': [cap]}
     if any(evidence.get(k) != v for k, v in required.items()):
         raise ValueError('expanded mode/schedule/stage identity mismatch')
     # Reuse the strict deployment and fixed preflight validation, without claiming
     # that an operator evidence string itself proves effective semantics.
-    controls.validate_deployment(wrapper['deployment'], profile, mode)
+    controls.validate_deployment(wrapper['deployment'], profile, mode,
+                                 preflight_output_tokens=NEW_CAP if cap == NEW_CAP else 8192)
     # Common non-mode checks also apply on ON, with no mutated evidence.
     if any(not isinstance(evidence.get(k), str) or not evidence[k].strip()
            for k in ('stage_limits_source', 'system_message_source', 'context_source')):
@@ -481,7 +511,7 @@ def validate_config(wrapper, profile, mode, policy):
     config = wrapper['deployment']
     if profile == 'gemma_e4b' and not controls.local_context(config):
         raise ValueError('local actual-request tokenizer required')
-    if profile in controls.HOSTED_PROFILES and (any(config['pricing'].get(k) is None for k in
+    if profile in controls.EXPANDED_HOSTED_PROFILES and (any(config['pricing'].get(k) is None for k in
         ('input_per_million', 'output_per_million')) or not config['pricing'].get('source')):
         raise ValueError('verified hosted pricing required')
     controls.no_secrets(wrapper)
@@ -492,8 +522,19 @@ def audit_identity(a):
     i = a['identity']
     world = build_world(i['graph_seed'], i['mode'], i['scenario'], i['evidence_settings']['k'])
     args = SimpleNamespace(history_policy=i['history_policy'], reasoning_mode=i['reasoning_mode'],
-        provider=i['provider'], request_profile=i['profile'], model=i['model'])
+        provider=i['provider'], request_profile=i['profile'], model=i['model'], max_tokens=artifact_allowance(i))
     expected = identity(world, i['condition'], i['repeat'], args, a['deployment'])
+    if i['source_sha256'] != expected['source_sha256']:
+        # Admit only the reviewed v3 4K implementation (including descendants
+        # with byte-identical ICL sources), not arbitrary historical code.
+        try:
+            prior = dict(historical_source_hashes(i['implementation_commit']))
+            if (artifact_allowance(i) != CAP or i['source_sha256'] != prior
+                    or prior != dict(historical_source_hashes(HISTORICAL_4K_BASE))):
+                return False
+        except (ValueError, subprocess.CalledProcessError):
+            return False
+        expected['source_sha256'] = prior
     # Recorded commit/dirty state are provenance, not this auditing checkout.
     expected.update(implementation_commit=i['implementation_commit'], implementation_dirty=i['implementation_dirty'])
     dry = i['provider'] == 'dry-run'
@@ -504,10 +545,10 @@ def audit_identity(a):
 
 def run_suite(sc, args, outdir):
     if (args.mode not in SYSTEM or args.pilot_type != 'passive' or args.repeats not in (1, 5)
-            or args.sampling_seeds != list(range(args.repeats)) or args.max_tokens != CAP or args.reasoning_mode not in ('off', 'on')
-            or args.model_first_condition not in ARMS or args.request_profile not in controls.MODELS
+            or args.sampling_seeds != list(range(args.repeats)) or args.max_tokens not in (CAP, NEW_CAP) or args.reasoning_mode not in ('off', 'on')
+            or args.model_first_condition not in ARMS or args.request_profile not in controls.EXPANDED_MODELS
             or args.provider not in ('dry-run', 'openai')):
-        raise ValueError('expanded: passive det/sto, one or five repeats, sequential seed labels, 4096, explicit arm/profile/OFF or ON')
+        raise ValueError('expanded: passive det/sto, one or five repeats, sequential seed labels, 4096/16384, explicit arm/profile/OFF or ON')
     if (args.graph_condition or args.off_reference or args.reasoning_control_json or args.reasoning_control_source
             or args.temperature != 0 or args.top_p is not None or args.top_k is not None
             or args.sampling_seed_support != 'auto' or sc['k'] not in SUPPORTED_K or sc['budget'] != sc['k']
@@ -524,11 +565,11 @@ def run_suite(sc, args, outdir):
         if pilot._git_dirty() or not args.deployment_config:
             raise ValueError('clean commit and verified deployment required')
         wrapper = json.loads(Path(args.deployment_config).read_text())
-        config = validate_config(wrapper, args.request_profile, args.reasoning_mode, args.history_policy)
+        config = validate_config(wrapper, args.request_profile, args.reasoning_mode, args.history_policy, args.max_tokens)
         if args.model != config['model'] or args.base_url.rstrip('/') != config['endpoint'].rstrip('/'):
             raise ValueError('exact model/endpoint mismatch')
     cost_plan = runner.block_cost_plan(world, args.model_first_condition, wrapper, repeats=args.repeats,
-                                      history_policy=args.history_policy, design_api=sys.modules[__name__])
+                                      history_policy=args.history_policy, design_api=sys.modules[__name__], output_tokens=args.max_tokens)
     print(json.dumps({'prelaunch_cost_plan': cost_plan}))
     Path(outdir).mkdir(parents=True, exist_ok=False)
     try:

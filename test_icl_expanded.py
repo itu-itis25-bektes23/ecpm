@@ -248,7 +248,7 @@ class Expanded(unittest.TestCase):
             sc, args, unused = run.call_args.args
             self.assertEqual((sc['seed'], args.mode, sc['condition']), (seed,mode,scenario))
             self.assertEqual((sc['k'], sc['budget'], sc['evidence_seed'], sc['rendering']), (10,10,0,'F2_shuffled'))
-            self.assertEqual((args.repeats,args.sampling_seeds,args.max_tokens), (1,[0],4096))
+            self.assertEqual((args.repeats,args.sampling_seeds,args.max_tokens), (1,[0],16384))
 
     def test_raw_reconciliation_quarantine_and_unknown_usage(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -600,9 +600,14 @@ class PreparationScope(unittest.TestCase):
         prior = types.ModuleType('published_expanded_scope_reference')
         exec(compile(source, '<published expanded source>', 'exec'), prior.__dict__)
         def unchanged_nodes(text):
+            # Provider/allowance plumbing is separately regression-tested. The
+            # scientific functions and all task/readout bytes remain pinned.
+            plumbing = {'output_allowance', 'artifact_allowance', 'historical_source_hashes', 'schedule', 'identity',
+                        'validate_config', 'audit_identity', 'run_suite'}
             return [ast.dump(n) for n in ast.parse(text).body
-                if not (isinstance(n, ast.FunctionDef) and n.name in ('task_guide', 'prompts'))
-                and not (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'PREPARATION_POLICY' for t in n.targets))]
+                if not (isinstance(n, ast.FunctionDef) and n.name in plumbing | {'task_guide', 'prompts'})
+                and not (isinstance(n, ast.Import) and [a.name for a in n.names] == ['subprocess'])
+                and not (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id in ('PREPARATION_POLICY', 'NEW_CAP', 'HISTORICAL_4K_BASE') for t in n.targets))]
         self.assertEqual(unchanged_nodes(source), unchanged_nodes(Path(x.__file__).read_text()))
         self.assertEqual(prior.PREPARATION_POLICY, 'five_arms_length_target_v2')
         self.assertEqual(x.PREPARATION_POLICY, 'five_arms_scoped_preparation_v3')
@@ -672,6 +677,258 @@ class PreparationScope(unittest.TestCase):
             path.write_text('{damaged')
             with self.assertRaises(json.JSONDecodeError):
                 report.review_preparation([folder])
+
+
+class Expanded16K(unittest.TestCase):
+    """Fake envelopes only. These fixtures are never deployment evidence."""
+
+    def deployment(self, profile='deepseek_openrouter', mode='off', policy=old.HISTORY_POLICY):
+        w = wrapper(mode, 'sol', policy)
+        c = w['deployment']
+        c.update(profile=profile, model_id=x.controls.EXPANDED_MODELS[profile],
+                 model=x.controls.EXPANDED_MODELS[profile], response_model=x.controls.EXPANDED_MODELS[profile])
+        if profile == 'deepseek_openrouter':
+            c['endpoint'] = 'https://openrouter.ai/api/v1'
+            c['effective'].update(provider_slug='mock-provider', response_provider='Mock Provider',
+                routing_source='SYNTHETIC TEST ONLY', sampling_source='SYNTHETIC omitted, not greedy')
+        c['effective']['max_output_tokens'] = 16384
+        c['context']['tokens'] = 131072
+        c['supported_request_fields'] = list(runner.settings(profile, 999, False, 16384, mode, c))
+        c['effective']['hosted_evidence'].update(model=c['model'], endpoint=c['endpoint'],
+            request_fields={k:v for k,v in runner.settings(profile,0,False,16384,mode,c).items()
+                            if k in ('reasoning', 'reasoning_effort')})
+        c['preflight']['request'] = {'model':c['model'],
+            'messages':[{'role':'user', 'content':x.controls.PREFLIGHT}],
+            **runner.settings(profile,999,False,16384,mode,c)}
+        c['preflight']['response'] = self.response(c, mode, '301')
+        self.reseal_preflight(c)
+        w['expanded']['output_allowances'] = [16384]
+        return w
+
+    def response(self, c, mode, content):
+        data = envelope(content, 'sol', mode)
+        data['model'] = c['response_model']
+        if c['profile'] == 'deepseek_openrouter':
+            data['provider'] = c['effective']['response_provider']
+            message = data['choices'][0]['message']
+            message['reasoning'] = message.pop('reasoning_content')
+        return data
+
+    def reseal_preflight(self, c):
+        raw = json.dumps(c['preflight']['response'])
+        c['preflight'].update(response_raw=raw, response_raw_sha256=old.digest(raw))
+
+    def test_requests_readiness_and_credential_isolation(self):
+        from test_icl_graph import Reply
+        from experiments.preflight_icl_expanded import prepare
+        for profile, mode in itertools.product(('sol','deepseek_openrouter'), ('off','on')):
+            w = self.deployment(profile, mode); c = w['deployment']
+            body, count, cost = prepare(w)
+            self.assertTrue(count['fits'])
+            self.assertEqual(body, c['preflight']['request'])
+            self.assertEqual(body.get('max_tokens', body.get('max_completion_tokens')), 16384)
+            for field in ('temperature','top_p','top_k','seed','reasoning_budget','response_format'):
+                self.assertNotIn(field, body)
+            x.validate_config(w,profile,mode,old.HISTORY_POLICY,16384)
+            plan=runner.block_cost_plan(x.build_world(8,'det','silent_break'),'model_first',w,1,design_api=x)
+            self.assertEqual(plan['maximum_completion_tokens'],6*16384)
+            with self.assertRaisesRegex(ValueError,'allowance differs'):
+                runner.block_cost_plan(x.build_world(8,'det','silent_break'),'model_first',w,1,design_api=x,output_tokens=4096)
+            if profile == 'deepseek_openrouter':
+                self.assertEqual(body['reasoning'], {'enabled':mode=='on','exclude':False})
+                self.assertEqual(body['provider'], {'only':['mock-provider'], 'require_parameters':True,'allow_fallbacks':False})
+                self.assertEqual(body['plugins'], [{'id':'context-compression','enabled':False}])
+                with self.assertRaisesRegex(ValueError,'seeds'):
+                    runner.settings(profile,0,True,16384,mode,c)
+                key = 'OPENROUTER_API_KEY'
+            else:
+                self.assertEqual(body['reasoning_effort'], 'none' if mode=='off' else 'medium')
+                key = 'OPENAI_API_KEY'
+            with patch.object(runner.os.environ, 'get', side_effect=lambda name: 'fake-test-key' if name==key else self.fail('wrong credential read')), \
+                 patch.object(runner.urllib.request,'build_opener') as opener:
+                opener.return_value.open.return_value = Reply(c['preflight']['response'])
+                status, raw = runner.call_provider(body,c,10)
+                req = opener.return_value.open.call_args.args[0]
+                self.assertEqual(json.loads(req.data),body)
+                self.assertEqual(req.get_header('Authorization'),'Bearer fake-test-key')
+                self.assertEqual(opener.return_value.open.call_count,1)
+                self.assertEqual(status,200)
+            for field in ('routing_source','sampling_source','provider_slug') if profile=='deepseek_openrouter' else ('source',):
+                bad=copy.deepcopy(w); bad['deployment']['effective'][field]=None
+                with self.assertRaises(ValueError): prepare(bad)
+            bad=copy.deepcopy(w); bad['deployment']['effective']['max_output_tokens']=8192
+            with self.assertRaisesRegex(ValueError,'output'): prepare(bad)
+            bad=copy.deepcopy(w); bad['deployment']['preflight']['response_raw']='{}'
+            with self.assertRaisesRegex(ValueError,'raw envelope'):
+                x.validate_config(bad,profile,mode,old.HISTORY_POLICY,16384)
+
+    def test_openrouter_reasoning_unknown_contradictions_and_truncation(self):
+        for mode in ('off','on'):
+            w=self.deployment(mode=mode); c=w['deployment']; p=c['profile']
+            data=self.response(c,mode,'nonblank malformed JSON')
+            data['usage']['completion_tokens_details']=None
+            check=x.controls.reasoning_check(data,mode,c['effective'],p,c)
+            self.assertIsNone(check['reasoning_tokens'])
+            self.assertTrue(check['mode_verified'])
+            self.assertEqual(check['evidence'],'unknown' if mode=='off' else 'true')
+            data['choices'][0]['message']['reasoning']=''
+            if mode=='on':
+                self.assertFalse(x.controls.reasoning_check(data,mode,c['effective'],p,c)['mode_verified'])
+            data['choices'][0]['message']['reasoning_details']=[{'type':'reasoning.encrypted','data':'test'}]
+            check=x.controls.reasoning_check(data,mode,c['effective'],p,c)
+            self.assertEqual(check['mode_verified'],mode=='on')
+            self.assertEqual(check['control_violation'],mode=='off')
+            for mutate in (lambda d:d['choices'][0].update(finish_reason='length'),
+                           lambda d:d.update(provider='different'),
+                           lambda d:d.update(model='different'),
+                           lambda d:d['usage'].update(completion_tokens=16385),
+                           lambda d:d['choices'][0]['message'].update(content=' \n\t')):
+                bad=copy.deepcopy(w); mutate(bad['deployment']['preflight']['response']); self.reseal_preflight(bad['deployment'])
+                with self.assertRaises(ValueError): x.validate_config(bad,p,mode,old.HISTORY_POLICY,16384)
+        bad=self.deployment(); bad['deployment']['effective']['hosted_evidence']['source']=None
+        with self.assertRaises(ValueError): x.validate_config(bad,'deepseek_openrouter','off',old.HISTORY_POLICY,16384)
+
+    def test_context_exact_capacity_and_long_history(self):
+        from test_icl_graph import local_config
+        c=self.deployment()['deployment']
+        w=x.build_world(8,'det','silent_break'); answers=x.oracle_answers(w)
+        answers['A_prepare']='MALFORMED [full text] ' * 2000
+        for policy in x.HISTORY_POLICIES:
+            calls=x.schedule(w,'model_first',answers,policy,16384)
+            messages=next(v['messages'] for v in calls if v['id']=='B_prepare')
+            self.assertIn({'role':'assistant','content':answers['A_prepare']},messages)
+            body={'model':c['model'],'messages':messages,**runner.settings(c['profile'],0,False,16384,'off',c)}
+            count=runner.context_check(body,c,16384)
+            c['context']['tokens']=count['total_upper_bound']
+            self.assertTrue(runner.context_check(body,c,16384)['fits'])
+            c['context']['tokens']-=1
+            self.assertFalse(runner.context_check(body,c,16384)['fits'])
+        local=local_config()
+        body=local['preflight']['request'] | {'max_tokens':16384}
+        for n, fits in ((16384,True),(16385,False)):
+            count=x.controls.local_count_record(body,local,'SYNTHETIC',[1]*n,local['context']['identity'],output_tokens=16384)
+            self.assertEqual(count['fits'],fits)
+            self.assertTrue(x.controls.audit_local_count(count,body,local,output_tokens=16384) if fits else not count['fits'])
+
+    def test_historical_4k_pinned_sources_and_template_remain_unready(self):
+        from experiments.preflight_icl_expanded import prepare
+        template=json.loads((Path(x.__file__).parent/'docs/openrouter_deepseek.template.json').read_text())
+        with self.assertRaises(ValueError): prepare(template)
+        w=x.build_world(8,'det','silent_break')
+        with tempfile.TemporaryDirectory() as folder:
+            a=runner.run_once(w,'model_first',1,report.arguments('model_first','off',old.HISTORY_POLICY),None,folder,x)
+            a['identity']['source_sha256']=dict(x.historical_source_hashes(x.HISTORICAL_4K_BASE))
+            a['identity']['implementation_commit']=x.HISTORICAL_4K_BASE
+            a['identity_sha256']=runner.canonical(a['identity'])
+            a['run_id']=f'{x.PROTOCOL}_seed8_model_first_r1_{a["identity_sha256"][:16]}'
+            self.assertTrue(all(runner.audit_artifact(a,x).values()))
+            a['identity']['source_sha256']['icl_expanded.py']='0'*64
+            a['identity_sha256']=runner.canonical(a['identity'])
+            a['run_id']=f'{x.PROTOCOL}_seed8_model_first_r1_{a["identity_sha256"][:16]}'
+            self.assertFalse(runner.audit_artifact(a,x)['identity'])
+
+    def test_preflight_entry_is_offline_by_default_and_saves_failed_response(self):
+        from experiments import preflight_icl_expanded as tool
+        with tempfile.TemporaryDirectory() as folder:
+            w=self.deployment(); config_path=Path(folder)/'candidate.json'
+            config_path.write_text(json.dumps(w))
+            argv=['preflight_icl_expanded.py','--config',str(config_path),'--out',str(Path(folder)/'prepare')]
+            with patch.object(sys,'argv',argv), patch.object(runner,'call_provider',side_effect=AssertionError('no call')):
+                tool.main()
+            self.assertFalse((Path(folder)/'prepare/validated_wrapper.json').exists())
+            raw=json.dumps(self.response(w['deployment'],'on','wrong OFF control'))
+            argv[-1]=str(Path(folder)/'failed'); argv.append('--execute')
+            with patch.object(sys,'argv',argv), patch.object(runner,'call_provider',return_value=(200,raw)) as provider:
+                with self.assertRaisesRegex(ValueError,'control not verified'): tool.main()
+                self.assertEqual(provider.call_count,1)
+            self.assertEqual((Path(folder)/'failed/response_raw.txt').read_text(),raw)
+            self.assertFalse((Path(folder)/'failed/validated_wrapper.json').exists())
+
+    def test_cli_defaults_and_expanded_only_profile(self):
+        for protocol, expected in (('icl_expanded_v2',16384),('legacy',4096)):
+            argv=['run_pilot.py','--protocol',protocol,'--list-scenarios']
+            # Inspect parsed arguments before scenario listing, without generation.
+            import argparse
+            original=argparse.ArgumentParser.parse_args
+            seen=[]
+            def parse(parser, *args, **kwargs):
+                result=original(parser,*args,**kwargs); seen.append(result); return result
+            with patch.object(sys,'argv',argv), patch.object(argparse.ArgumentParser,'parse_args',parse):
+                with patch('builtins.print'): x.pilot.main()
+            self.assertEqual(seen[0].max_tokens,expected)
+        with patch.object(sys,'argv',['run_pilot.py','--request-profile','deepseek_openrouter']), \
+             patch('sys.stderr'):
+            with self.assertRaises(SystemExit): x.pilot.main()
+
+    def test_both_histories_4k_replay_16k_audits_identity_and_exports(self):
+        world=x.build_world(8,'det','silent_break')
+        with tempfile.TemporaryDirectory() as folder:
+            artifacts=[]
+            for policy,mode,cap in itertools.product(x.HISTORY_POLICIES,('off','on'),(4096,16384)):
+                args=report.arguments('model_first',mode,policy,'sol',cap)
+                a=runner.run_once(world,'model_first',1,args,None,folder,x)
+                artifacts.append(a)
+                self.assertTrue(all(runner.audit_artifact(json.loads(json.dumps(a)),x).values()))
+                self.assertEqual(x.artifact_allowance(a['identity']),cap)
+                self.assertTrue(all(t['request_body']['max_completion_tokens']==cap for t in a['turns'].values()))
+                self.assertEqual(a['scores'],artifacts[0]['scores'])
+                cost=runner.block_cost_plan(world,'model_first',None,1,policy,x,cap)
+                self.assertEqual(cost['maximum_completion_tokens'],6*cap)
+            self.assertEqual(len({a['run_id'] for a in artifacts}),8)
+            result=report.summarize([folder])
+            self.assertEqual({r['output_allowance_per_response'] for r in result['request_usage']},{4096,16384})
+            self.assertTrue(all(r['operational_status']=='valid' for r in result['runs']))
+            damaged=copy.deepcopy(artifacts[-1]); damaged['turns']['B_task']['max_output_tokens']=4096
+            self.assertFalse(all(runner.audit_artifact(damaged,x).values()))
+
+    def test_live_mocked_16k_operational_failure_stops_without_retry(self):
+        world=x.build_world(8,'det','silent_break')
+        for mode,policy in itertools.product(('off','on'),x.HISTORY_POLICIES):
+            w=self.deployment(mode=mode,policy=policy); c=w['deployment']
+            args=report.arguments('model_first',mode,policy,c['profile'],16384)
+            args.provider,args.model='openai',c['model']
+            answers=x.oracle_answers(world); calls=[]
+            def respond(body, config, timeout):
+                self.assertEqual(body['max_tokens'],16384)
+                self.assertNotIn('reasoning',body['messages'][-1])
+                name=list(answers)[len(calls)]; calls.append(body)
+                return 200,json.dumps(self.response(c,mode,answers[name]))
+            with tempfile.TemporaryDirectory() as folder, patch.object(x.pilot,'_git_dirty',return_value=False), \
+                 patch.object(runner,'call_provider',side_effect=respond):
+                a=runner.run_once(world,'model_first',1,args,w,folder,x)
+                self.assertEqual(len(calls),6)
+                self.assertTrue(all(runner.audit_artifact(json.loads(json.dumps(a)),x).values()))
+                bad=json.loads(json.dumps(a)); t=bad['turns']['A_task']
+                t['provider_response']['choices'][0]['finish_reason']='length'
+                t['provider_response_raw']=json.dumps(t['provider_response'])
+                t['provider_response_raw_sha256']=old.digest(t['provider_response_raw'])
+                t['provider_response_sha256']=runner.canonical(t['provider_response'])
+                self.assertFalse(all(runner.audit_artifact(bad,x).values()))
+            with tempfile.TemporaryDirectory() as folder, patch.object(x.pilot,'_git_dirty',return_value=False), \
+                 patch.object(runner,'call_provider',return_value=(200,json.dumps(self.response(c,'off' if mode=='on' else 'on','wrong control')))) as provider:
+                with self.assertRaisesRegex(RuntimeError,'operational failure saved'):
+                    runner.run_once(world,'model_first',1,args,w,folder,x)
+                self.assertEqual(provider.call_count,1)
+                a=json.loads(next(Path(folder).glob('*.json')).read_text())
+                self.assertEqual(a['state'],'incomplete')
+
+    def test_v3_prompt_world_score_and_history_text_preserved(self):
+        source=subprocess.check_output(['git','show','05df38907307ec290ede76998f50a6fb1318b4fd:icl_expanded.py'],text=True)
+        prior=types.ModuleType('prior_16k'); exec(compile(source,'<prior>','exec'),prior.__dict__)
+        self.addCleanup(sys.modules.pop, 'prior_16k', None)
+        sys.modules['prior_16k'] = prior
+        for seed,mode,scenario in x.configurations():
+            w=x.build_world(seed,mode,scenario)
+            self.assertEqual(w,prior.build_world(seed,mode,scenario))
+            answers=x.oracle_answers(w)
+            for arm in x.ARMS:
+                for period in ('A','B'):
+                    self.assertEqual(x.prompts(w,period,arm),prior.prompts(w,period,arm))
+                self.assertEqual(x.score_conversation(w,arm,turns(answers)),prior.score_conversation(w,arm,turns(answers)))
+                for history in x.HISTORY_POLICIES:
+                    after=x.schedule(w,arm,answers,history,16384)
+                    before=prior.schedule(w,arm,answers,history)
+                    self.assertEqual([c['messages'] for c in after],[c['messages'] for c in before])
 
 
 if __name__ == '__main__':

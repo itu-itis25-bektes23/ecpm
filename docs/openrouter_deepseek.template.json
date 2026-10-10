@@ -1,0 +1,59 @@
+{
+  "deployment": {
+    "profile": "deepseek_openrouter",
+    "model_id": "deepseek/deepseek-v4.1-flash",
+    "model": "deepseek/deepseek-v4.1-flash",
+    "response_model": null,
+    "model_source": null,
+    "endpoint": "https://openrouter.ai/api/v1",
+    "api_version": "OpenRouter chat completions v1",
+    "supported_request_fields": [],
+    "seed_supported": false,
+    "effective": {
+      "reasoning_mode": "off",
+      "max_output_tokens": null,
+      "history_truncation": null,
+      "source": null,
+      "runtime": null,
+      "runtime_source": null,
+      "template_sha256": null,
+      "template_source": null,
+      "provider_slug": null,
+      "response_provider": null,
+      "routing_source": null,
+      "sampling_source": null,
+      "output_context_source": null,
+      "no_reasoning_budget_source": null,
+      "hosted_evidence": {
+        "policy": "hosted_readiness_v1",
+        "scope": "exact_model",
+        "model": "deepseek/deepseek-v4.1-flash",
+        "endpoint": "https://openrouter.ai/api/v1",
+        "date": null,
+        "source": null,
+        "effect": "disables_reasoning_computation",
+        "request_fields": {"reasoning": {"enabled": false, "exclude": false}},
+        "reasoning_tokens_source": null
+      }
+    },
+    "context": {
+      "method": "utf8_upper_bound",
+      "tokens": null,
+      "overhead_tokens_per_message": null,
+      "source": null
+    },
+    "preflight": {},
+    "pricing": {"input_per_million": null, "output_per_million": null, "source": null}
+  },
+  "expanded": {
+    "protocol": "icl_expanded_v2",
+    "preparation_policy": "five_arms_scoped_preparation_v3",
+    "schedule": "prepare_task_post_task_report_v2",
+    "history_policy": "separate_reports_post_task_v1",
+    "reasoning_mode": "off",
+    "output_allowances": [16384],
+    "stage_limits_source": null,
+    "system_message_source": null,
+    "context_source": null
+  }
+}

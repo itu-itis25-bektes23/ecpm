@@ -25,6 +25,8 @@ MODELS = {"gemma_e4b": "sunil-pathak/gemma-4-e4b-it",
           "gemma_31b": "google/gemma-4-31B-it", "sol": "gpt-5.6-sol",
           "gemma_31b_together": "google/gemma-4-31B-it"}
 HOSTED_PROFILES = {"gemma_31b", "gemma_31b_together", "sol"}
+EXPANDED_MODELS = {**MODELS, "deepseek_openrouter": "deepseek/deepseek-v4.1-flash"}
+EXPANDED_HOSTED_PROFILES = HOSTED_PROFILES | {"deepseek_openrouter"}
 HOSTED_READINESS_POLICY = "hosted_readiness_v1"
 LOCAL_CONTEXT = "local_backend_tokenizer_v1"
 PREFLIGHT = ("Find the smallest positive integer n that is divisible by 7 and "
@@ -254,8 +256,14 @@ def reference_answer(view, earlier=None):
 
 
 def intended_settings(profile, mode, seed, seed_supported=False, allowed_seeds=(0, 1, 2, 999)):
-    if profile not in MODELS or mode not in ("off", "on") or type(seed) is not int or seed not in allowed_seeds:
+    if profile not in EXPANDED_MODELS or mode not in ("off", "on") or type(seed) is not int or seed not in allowed_seeds:
         raise ValueError("unknown request profile, reasoning mode or seed")
+    if profile == "deepseek_openrouter":
+        if seed_supported:
+            raise ValueError("OpenRouter profile omits unverified provider seeds")
+        return {"max_tokens": 8192, "reasoning": {"enabled": mode == "on", "exclude": False},
+                "provider": {"require_parameters": True, "allow_fallbacks": False},
+                "plugins": [{"id": "context-compression", "enabled": False}]}
     if profile == "sol":
         if seed_supported:
             raise ValueError("Sol profile must omit sampling controls in both modes")
@@ -316,7 +324,7 @@ def context_bound(messages, config, reserve_answer=0, *, output_tokens=8192, all
         raise ValueError("missing bound for replay of the unseen A answer")
     input_bound = sum(len(m["content"].encode()) + overhead for m in messages)
     input_bound += math.ceil(reserve_answer * expansion)
-    if type(output_tokens) is not int or output_tokens not in (4096, 8192):
+    if type(output_tokens) is not int or output_tokens not in (4096, 8192, 16384):
         raise ValueError("invalid stage output allowance")
     total = input_bound + output_tokens
     return {"method": context["method"], "input_tokens_upper_bound": input_bound,
@@ -413,7 +421,7 @@ def _local_snapshot(config, key):
 
 
 def local_count_record(body, config, rendered, tokens, identity, *, output_tokens=8192):
-    if type(output_tokens) is not int or output_tokens not in (4096, 8192):
+    if type(output_tokens) is not int or output_tokens not in (4096, 8192, 16384):
         raise ValueError("invalid stage output allowance")
     if (not isinstance(rendered, str) or not rendered or not isinstance(tokens, list)
             or not tokens or any(type(t) is not int or t < 0 for t in tokens)):
@@ -431,7 +439,7 @@ def count_local_request(body, config, *, output_tokens=8192, allow_system=False)
     """Only metadata, template rendering and tokenization; never generation."""
     validate_local_context(config)
     if (body.get("model") != config["model"] or body.get("max_tokens") != output_tokens
-            or type(output_tokens) is not int or output_tokens not in (4096, 8192)
+            or type(output_tokens) is not int or output_tokens not in (4096, 8192, 16384)
             or body.get("reasoning") != config["effective"]["reasoning_mode"]
             or not body.get("messages") or any(set(m) != {"role", "content"}
                 or m["role"] not in (("system", "user", "assistant") if allow_system else ("user", "assistant"))
@@ -487,7 +495,7 @@ def provider_reasoning(data, profile=None):
     """Together can return either alias; never silently discard a conflicting one."""
     message = data.get("choices", [{}])[0].get("message", {})
     text = message.get("reasoning_content")
-    if profile == "gemma_31b_together":
+    if profile in ("gemma_31b_together", "deepseek_openrouter"):
         other = message.get("reasoning")
         if any(v is not None and not isinstance(v, str) for v in (text, other)):
             raise ValueError("unsupported Together reasoning channel type")
@@ -533,7 +541,7 @@ def reasoning_check(data, mode, effective, profile=None, config=None):
     tokens = (details or {}).get("reasoning_tokens")
     count_known = type(tokens) is int and tokens >= 0
     positive = bool(substantive) or (count_known and tokens > 0)
-    if profile in HOSTED_PROFILES:
+    if profile in EXPANDED_HOSTED_PROFILES:
         evidence = hosted_semantics(config, mode) if config else {}
         # Check both documented reasoning channels, even outside Together.
         other = message.get("reasoning")
@@ -543,6 +551,16 @@ def reasoning_check(data, mode, effective, profile=None, config=None):
             other = re.sub(r"^\s*<\|channel>thought\s*<channel\|>\s*$", "", other)
             positive |= bool(re.sub(r"</?think>|\[/?THINK\]", "", other).strip())
         contradictory = False
+        if profile == "deepseek_openrouter":
+            details = message.get("reasoning_details")
+            if details is not None and not isinstance(details, list):
+                raise ValueError("unsupported OpenRouter reasoning details")
+            for item in details or []:
+                field = {'reasoning.text': 'text', 'reasoning.summary': 'summary',
+                         'reasoning.encrypted': 'data'}.get(item.get('type')) if isinstance(item, dict) else None
+                if field is None or not isinstance(item.get(field), str):
+                    raise ValueError('unsupported OpenRouter reasoning detail entry')
+                positive |= bool(item[field].strip())
         expected = {**evidence.get("request_fields", {}), "reasoning_enabled": mode == "on"}
         for box in (data, data.get("metadata", {})):
             if isinstance(box, dict):
@@ -593,14 +611,23 @@ def readiness_identity(config, mode):
                 config["effective"], config["profile"], config)["verification_basis"]}
 
 
-def validate_deployment(config, profile, mode):
-    """Require explicit operator evidence; this cannot prove server semantics."""
+def openrouter_routing(config):
+    """A single evidenced backing provider, not a catalogue-wide capability union."""
+    effective = config['effective']
+    for field in ('provider_slug', 'response_provider', 'routing_source', 'sampling_source'):
+        if not isinstance(effective.get(field), str) or not effective[field].strip():
+            raise ValueError('OpenRouter requires verified ' + field)
+    return {'only': [effective['provider_slug']], 'require_parameters': True, 'allow_fallbacks': False}
+
+
+def deployment_preflight_request(config, profile, mode, *, preflight_output_tokens=8192):
+    """Check non-generation prerequisites; this is NOT preflight acceptance."""
     no_secrets(config)
     required = {"profile", "model_id", "model", "response_model", "model_source", "endpoint",
                 "api_version", "supported_request_fields", "seed_supported",
                 "effective", "context", "preflight", "pricing"}
     if (set(config) != required or config["profile"] != profile
-            or config["model_id"] != MODELS[profile]):
+            or config["model_id"] != EXPANDED_MODELS[profile]):
         raise ValueError("deployment config fields/profile mismatch")
     url = urllib.parse.urlsplit(config["endpoint"])
     if (url.scheme not in ("http", "https") or not url.hostname or url.username
@@ -615,6 +642,12 @@ def validate_deployment(config, profile, mode):
             or url.path.rstrip("/") != "/v1" or config["model"] != MODELS[profile]
             or config["response_model"] != MODELS[profile]):
         raise ValueError("Together requires its documented endpoint and exact Gemma 31B model")
+    if profile == 'deepseek_openrouter' and (
+            config['endpoint'].rstrip('/') != 'https://openrouter.ai/api/v1'
+            or config['model'] != EXPANDED_MODELS[profile]):
+        raise ValueError('OpenRouter requires its exact endpoint and DeepSeek model')
+    if type(preflight_output_tokens) is not int or preflight_output_tokens not in (8192, 16384):
+        raise ValueError('unsupported preflight allowance')
     if not all(config[k] and isinstance(config[k], str) for k in
                ("model", "response_model", "model_source", "api_version")):
         raise ValueError("exact endpoint model and verification source required")
@@ -624,7 +657,7 @@ def validate_deployment(config, profile, mode):
     if not set(settings).issubset(config["supported_request_fields"]):
         raise ValueError("unverified request fields; no silent dropping")
     effective = config["effective"]
-    hosted = profile in HOSTED_PROFILES
+    hosted = profile in EXPANDED_HOSTED_PROFILES
     if hosted:
         hosted_semantics(config, mode)
         for key in ("runtime", "template_sha256"):
@@ -636,7 +669,8 @@ def validate_deployment(config, profile, mode):
             raise ValueError("invalid hosted runtime metadata")
     if (effective.get("reasoning_mode") != mode or not effective.get("source")
             or (not hosted and not effective.get("runtime"))
-            or effective.get("max_output_tokens", 0) < 8192
+            or type(effective.get("max_output_tokens")) is not int
+            or effective.get("max_output_tokens", 0) < preflight_output_tokens
             or effective.get("history_truncation") is not False):
         raise ValueError("effective reasoning/output/template/history controls unverified")
     if not (hosted and effective.get("template_sha256") is None) and not re.fullmatch(
@@ -675,11 +709,34 @@ def validate_deployment(config, profile, mode):
             raise ValueError("local context target is 32768")
     expected = {"model": config["model"], "messages": [{"role": "user", "content": PREFLIGHT}],
                 **intended_settings(profile, mode, 999, config["seed_supported"])}
+    expected['max_completion_tokens' if profile == 'sol' else 'max_tokens'] = preflight_output_tokens
+    if profile == 'deepseek_openrouter':
+        expected['provider'] = openrouter_routing(config)
+    return expected
+
+
+def validate_deployment(config, profile, mode, *, preflight_output_tokens=8192):
+    """Require explicit operator evidence; this cannot prove server semantics."""
+    expected = deployment_preflight_request(config, profile, mode,
+                                           preflight_output_tokens=preflight_output_tokens)
+    effective = config['effective']
+    hosted = profile in EXPANDED_HOSTED_PROFILES
     pre = config["preflight"]
     if (pre.get("request") != expected or pre.get("http_status") != 200
             or pre.get("network_retries") != [] or not pre.get("source")):
         raise ValueError("fixed preflight request/transport not verified")
     response = pre.get("response", {})
+    if preflight_output_tokens == 16384:
+        raw = pre.get('response_raw')
+        if (not isinstance(raw, str) or json.loads(raw) != response
+                or pilot.sha256_text(raw) != pre.get('response_raw_sha256')):
+            raise ValueError('16K preflight raw envelope/hash mismatch')
+        if (len(response.get('choices', [])) != 1 or response.get('error')
+                or response['choices'][0].get('error')
+                or response['choices'][0].get('native_finish_reason') in ('length', 'max_tokens')):
+            raise ValueError('16K preflight provider failure or truncation')
+    if profile == 'deepseek_openrouter' and response.get('provider') != effective['response_provider']:
+        raise ValueError('OpenRouter preflight backing provider mismatch')
     choice = response.get("choices", [{}])[0]
     if (response.get("model") != config["response_model"]
             or choice.get("finish_reason") != "stop"
@@ -695,21 +752,21 @@ def validate_deployment(config, profile, mode):
                 or not isinstance(count, dict)
                 or not all(k in count for k in ("rendered_prompt", "token_ids", "input_tokens"))
                 or validation.get("preflight_response_sha256") != pilot._canonical_sha256(response)
-                or not audit_local_count(count, expected, config)
+                or not audit_local_count(count, expected, config, output_tokens=preflight_output_tokens)
                 or type(response.get("usage", {}).get("prompt_tokens")) is not int
                 or response.get("usage", {}).get("prompt_tokens") != count["input_tokens"]):
             raise ValueError("local counting/generation path not verified against saved preflight")
         bound = count
     else:
-        bound = context_bound(expected["messages"], config)
+        bound = context_bound(expected["messages"], config, output_tokens=preflight_output_tokens)
     if hosted:
         usage = response.get("usage", {})
         if (any(not isinstance(effective.get(k), str) or not effective[k].strip()
                 for k in ("output_context_source", "no_reasoning_budget_source"))
                 or not bound["fits"] or type(usage.get("prompt_tokens")) is not int
-                or not 0 <= usage["prompt_tokens"] <= config["context"]["tokens"] - 8192
+                or not 0 <= usage["prompt_tokens"] <= config["context"]["tokens"] - preflight_output_tokens
                 or type(usage.get("completion_tokens")) is not int
-                or not 0 <= usage["completion_tokens"] <= 8192):
+                or not 0 <= usage["completion_tokens"] <= preflight_output_tokens):
             raise ValueError("hosted output/context/budget evidence required")
     return config
 

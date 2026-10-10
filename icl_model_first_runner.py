@@ -16,16 +16,18 @@ import run_pilot as pilot
 canonical = pilot._canonical_sha256
 
 
-def settings(profile, seed, supported, allowance, reasoning_mode='off'):
-    if type(allowance) is not int or allowance not in (4096, 8192):
+def settings(profile, seed, supported, allowance, reasoning_mode='off', config=None):
+    if type(allowance) is not int or allowance not in (4096, 8192, 16384):
         raise ValueError('locked stage allowance required')
     result = controls.intended_settings(profile, reasoning_mode, seed, supported,
                                         allowed_seeds=(0, 1, 2, 3, 4, 999))
     result['max_completion_tokens' if profile == 'sol' else 'max_tokens'] = allowance
+    if profile == 'deepseek_openrouter' and config is not None:
+        result['provider'] = controls.openrouter_routing(config)
     return result
 
 
-def requests(world, arm, history_policy=design.HISTORY_POLICY, design_api=design):
+def requests(world, arm, history_policy=design.HISTORY_POLICY, design_api=design, output_tokens=4096):
     """A coroutine: each send receives only the exact visible final answer."""
     design.check_history_policy(history_policy)
     history = [{'role': 'system', 'content': design_api.system(world) if design_api is not design else design.SYSTEM}]
@@ -35,7 +37,7 @@ def requests(world, arm, history_policy=design.HISTORY_POLICY, design_api=design
                   getattr(design_api, 'STAGES', ('prepare', 'task', 'readout')))
         for stage in stages:
             msg = {'role': 'user', 'content': texts[stage]}
-            answer = yield {'id': period + '_' + stage, 'max_output_tokens': 4096,
+            answer = yield {'id': period + '_' + stage, 'max_output_tokens': output_tokens,
                             'history_policy': history_policy,
                             'conversation': design.conversation_kind(stage, history_policy),
                             'messages': copy.deepcopy(history + [msg])}
@@ -80,11 +82,16 @@ def copied_fields(data, config, profile, dry=False, reasoning_mode='off'):
     check = ({'mode_verified': False, 'evidence': 'unknown', 'reasoning_tokens': None,
               'control_violation': False, 'status': 'not_applied_synthetic'} if dry else
              controls.reasoning_check(data, reasoning_mode, config['effective'], profile, config))
-    return {'raw_response': message.get('content'), 'provider_finish_reason': choice.get('finish_reason'),
+    fields = {'raw_response': message.get('content'), 'provider_finish_reason': choice.get('finish_reason'),
             'provider_usage': copy.deepcopy(data.get('usage', {})),
             'provider_reasoning': controls.provider_reasoning(data, profile),
             'actual_response_model': data.get('model'), 'system_fingerprint': data.get('system_fingerprint'),
             'truncated': choice.get('finish_reason') == 'length', 'control_check': check}
+    if profile == 'deepseek_openrouter':
+        fields.update(actual_response_provider=data.get('provider'),
+                      native_finish_reason=choice.get('native_finish_reason'),
+                      provider_reasoning_details=copy.deepcopy(message.get('reasoning_details')))
+    return fields
 
 
 def response_checks(turn, body, config, profile, allowance, dry=False, reasoning_mode='off'):
@@ -113,8 +120,16 @@ def response_checks(turn, body, config, profile, allowance, dry=False, reasoning
             checks['transport'] &= (len(data['choices']) == 1 and type(usage.get('completion_tokens')) is int
                 and 0 <= usage['completion_tokens'] <= allowance
                 and type(usage.get('prompt_tokens')) is int and usage['prompt_tokens'] >= 0)
+            if allowance == 16384:
+                reasoning_tokens = copied['control_check']['reasoning_tokens']
+                checks['transport'] &= (reasoning_tokens is None or
+                    (type(reasoning_tokens) is int and 0 <= reasoning_tokens <= usage.get('completion_tokens', -1)))
             checks['controls'] = (copied['actual_response_model'] == config['response_model']
                 and copied['control_check']['mode_verified'] and not copied['control_check']['control_violation'])
+            if profile == 'deepseek_openrouter':
+                checks['controls'] &= copied['actual_response_provider'] == config['effective']['response_provider']
+                checks['transport'] &= (not data.get('error') and not data['choices'][0].get('error')
+                    and copied['native_finish_reason'] not in ('length', 'max_tokens'))
             count = turn['context_check']
             if controls.local_context(config):
                 match = controls.prompt_usage_check(count, usage)
@@ -173,7 +188,10 @@ def call_provider(body, config, timeout):
         # Do not even read either hosted credential on this path.
         key_name = 'ECPM_LOCAL_API_KEY'
     else:
-        key_name = 'TOGETHER_API_KEY' if config['profile'] == 'gemma_31b_together' else 'OPENAI_API_KEY'
+        key_name = {'gemma_31b_together': 'TOGETHER_API_KEY',
+                    'deepseek_openrouter': 'OPENROUTER_API_KEY'}.get(config['profile'], 'OPENAI_API_KEY')
+        if config['profile'] == 'deepseek_openrouter' and config['endpoint'].rstrip('/') != 'https://openrouter.ai/api/v1':
+            raise ValueError('OpenRouter credential cannot leave its endpoint')
     key = os.environ.get(key_name)
     if not key and not local:
         raise ValueError('provider credential not configured')
@@ -215,7 +233,8 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
                 'synthetic': config is None, 'deployment': wrapper, 'world': world,
                 'state': 'initialized', 'turns': {}, 'persistence_events': [], 'run_order': []}
     persist(path, artifact, 'initialized')
-    plan = requests(world, arm, policy, design_api)
+    allowance = design_api.output_allowance(args.max_tokens) if hasattr(design_api, 'output_allowance') and hasattr(args, 'max_tokens') else 4096
+    plan = requests(world, arm, policy, design_api, allowance)
     call = next(plan)
     dry_answers = (synthetic_answers(world) if design_api is design else design_api.oracle_answers(world)) if config is None else None
     started = time.monotonic()
@@ -304,7 +323,8 @@ def audit_artifact(a, design_api=design):
         wrapper = a['deployment']
         policy = design.check_history_policy(i.get('history_policy'))
         config = ((validate_config(wrapper, i['profile'], policy) if design_api is design else
-                   design_api.validate_config(wrapper, i['profile'], i['reasoning_mode'], policy)) if wrapper else None)
+                   design_api.validate_config(wrapper, i['profile'], i['reasoning_mode'], policy,
+                       output_tokens=design_api.artifact_allowance(i))) if wrapper else None)
         dry = i['provider'] == 'dry-run'
         if design_api is not design:
             checks['identity'] = design_api.audit_identity(a)
@@ -322,14 +342,15 @@ def audit_artifact(a, design_api=design):
             and (dry or (i['implementation_dirty'] is False and i['model'] == config['model'])))
         expected_id = f'{design_api.PROTOCOL}_seed{world["seed"]}_{i["condition"]}_r{i["repeat"]}_{canonical(i)[:16]}'
         checks['identity'] &= a['run_id'] == expected_id
-        plan = design_api.schedule(world, i['condition'], {k: t['raw_response'] for k, t in turns.items()}, policy)
+        extra = {'output_tokens': design_api.artifact_allowance(i)} if hasattr(design_api, 'artifact_allowance') else {}
+        plan = design_api.schedule(world, i['condition'], {k: t['raw_response'] for k, t in turns.items()}, policy, **extra)
         checks['complete'] = (a['state'] == 'completed' and not a.get('failure')
                               and set(turns) == {c['id'] for c in plan} and a['run_order'] == [c['id'] for c in plan])
         checks.update(history=True, hashes=True, persistence=True, responses=True)
         for c in plan:
             name, cap = c['id'], c['max_output_tokens']
             t = turns[name]
-            request_settings = settings(i['profile'], i['repeat_seed_label'], bool(config and config['seed_supported']), cap, i['reasoning_mode'])
+            request_settings = settings(i['profile'], i['repeat_seed_label'], bool(config and config['seed_supported']), cap, i['reasoning_mode'], config)
             body = {'model': i['model'], 'messages': c['messages'], **request_settings}
             parent = c['messages'][:-1]
             checks['identity'] &= i['stage_settings'][str(cap)] == request_settings
@@ -387,13 +408,19 @@ def write_summary(outdir, expected=3, design_api=design):
     return summary
 
 
-def block_cost_plan(world, arm, wrapper, repeats=3, history_policy=design.HISTORY_POLICY, design_api=design):
+def block_cost_plan(world, arm, wrapper, repeats=3, history_policy=design.HISTORY_POLICY, design_api=design, output_tokens=None):
     """Conservative ceiling from the admitted context, not a token-use forecast."""
     supported_repeats = (1, 3) if design_api is design else (1, 5)
     if type(repeats) is not int or repeats not in supported_repeats:
         raise ValueError('one or three repeats required' if design_api is design else 'one or five repeats required')
+    recorded_cap = wrapper.get('expanded', {}).get('output_allowances') if wrapper else None
+    if output_tokens is None:
+        output_tokens = recorded_cap[0] if recorded_cap else 4096
+    if recorded_cap is not None and recorded_cap != [output_tokens]:
+        raise ValueError('cost plan output allowance differs from readiness')
     answers = synthetic_answers(world) if design_api is design else design_api.oracle_answers(world)
-    calls = design_api.schedule(world, arm, answers, history_policy)
+    extra = {'output_tokens': output_tokens} if hasattr(design_api, 'output_allowance') else {}
+    calls = design_api.schedule(world, arm, answers, history_policy, **extra)
     completion = repeats * sum(c['max_output_tokens'] for c in calls)
     if wrapper is None:
         return {'status': 'unavailable', 'reason': 'no verified deployment/rates',
@@ -407,7 +434,7 @@ def block_cost_plan(world, arm, wrapper, repeats=3, history_policy=design.HISTOR
               'repeats': repeats, 'requests': len(calls) * repeats, 'maximum_completion_tokens': completion,
               'admitted_input_token_ceiling': ceiling,
               'assumption': 'every actual policy-specific request fills its admitted context and completion allowance; uncached prices; preflight excluded'}
-    if config['profile'] in controls.HOSTED_PROFILES:
+    if config['profile'] in controls.EXPANDED_HOSTED_PROFILES:
         result.update(usd_ceiling=(ceiling * prices['input_per_million'] + completion * prices['output_per_million']) / 1e6,
                       rate_source=prices['source'])
     return result
