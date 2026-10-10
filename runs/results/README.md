@@ -7,7 +7,7 @@ runs/results/
   agentic/
     openai-gpt-5.6-sol/           agentic_runs.csv, agentic_summary.md, agentic_tables.md
     anthropic-claude-haiku-5.5/   (same three files)
-    deepseek-deepseek-v4.1-flash/ (same three files)
+    deepseek-deepseek-v4.1-flash/ (same three files; 255 runs by Christian + 75 by Efe, see agentic_summary.md)
   icl/
     openai-gpt-5.6-sol/           metrics.csv.gz, request_usage.csv.gz, costs.csv, icl_tables.md
 ```
@@ -28,6 +28,13 @@ python summarize_agentic_runs.py --tables runs/results/agentic/<model>/agentic_r
 ```
 
 The last command writes `agentic_tables.md` next to the CSV. It works from any shared `agentic_runs.csv`, so everyone gets the same tables.
+
+## Running many ICL commands at once
+
+`run_agentic_cost_check.py --commands jobs.txt --workers N` runs a list of commands, one per line (for example the `run_pilot.py --protocol icl_expanded_v2 ...` lines from the ICL plan), N at a time. Every flag stays exactly as written.
+- A line counts as done when `<out>/<tag>/summary.json` shows every conversation completed. Finished lines are skipped on restart.
+- A line that fails is listed in `output/_commands/failed.txt` and not retried (ICL answers are never retried; `--retries 1` reruns transport failures in the same session). An interrupted line's partial folder is moved to `<out>/_failed_attempts/`, since the runner refuses an existing folder.
+- Logs, lock and `failed.txt` go to `output/_commands/`, which git ignores, because a real ICL run requires a clean working tree. Keep `--out` outside the repo or in an ignored folder, and do not pull or switch branches while a batch runs.
 
 ## Adding a model's ICL results
 

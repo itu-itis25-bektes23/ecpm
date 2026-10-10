@@ -2,6 +2,7 @@
 
     python summarize_agentic_runs.py RUN_DIR
     python summarize_agentic_runs.py --tables RUN_DIR_OR_agentic_runs.csv   # Results-tab Tables 1-4 only
+    python summarize_agentic_runs.py --compare A.csv B.csv ... --out compare.md   # one table set across models
 
 Writes RUN_DIR/agentic_runs.csv (one row per run, filterable: seed, mode, scenario, arm,
 history, repeat, model, every metric) and RUN_DIR/agentic_summary.md (mean and spread
@@ -113,8 +114,51 @@ def results_tables(rows):
         out += [("**H4 (six consecutive failures of the broken link).** " + (
                  f"Reached in {sum(_b(r['h4_reached']) for r in h4)} of {len(h4)} runs with a change; the agent chose "
                  f"the broken link again in {sum(_b(r['h4_chose_again']) for r in h4)} of those."
+                 + (f" H4 is recorded for {len(h4)} of {len(ch)} runs with a change; regenerate the CSV from the run "
+                    "folders to include the rest." if len(h4) < len(ch) else "")
                  if h4 else "Not in this CSV (recorded in each run's artifact; regenerate the CSV to include it).")), ""]
     return out
+
+def compare_tables(rows):
+    """Cross-model view for the Results doc: the same rates as Tables 1-2 side by side, plus cost and run quality."""
+    def rate(sub, key):
+        v = [_b(r[key]) for r in sub if r.get(key) in (True, False, "True", "False")]
+        return f"{sum(v) / len(v):.0%}" if v else "n/a"
+    def frac(sub, key):
+        v = [_b(r[key]) for r in sub if r.get(key) in (True, False, "True", "False")]
+        return f"{sum(v)}/{len(v)}" if v else "n/a"
+    models = sorted({r["model"] for r in rows})
+    ch = [r for r in rows if r["scenario"] != "no_change"]
+    out = ["**Table C1. Exposure decides what the probes can show (scenarios with a change, all arms and reasoning settings)**", "",
+           "| Model | Exposed runs | Detection (exposed) | Localization (exposed) | Not exposed runs | Detection (not exposed) | Localization (not exposed) |",
+           "|---|---|---|---|---|---|---|"]
+    for m in models:
+        ex = [r for r in ch if r["model"] == m and _b(r["exposed"])]
+        un = [r for r in ch if r["model"] == m and r["exposed"] in (False, "False")]
+        out.append(f"| {m} | {len(ex)} | {rate(ex, 'detection')} ({frac(ex, 'detection')}) | {rate(ex, 'localization')} "
+                   f"| {len(un)} | {rate(un, 'detection')} ({frac(un, 'detection')}) | {rate(un, 'localization')} |")
+    out += ["", "**Table C2. Exposure, detection and localization by arm (scenarios with a change; exposed / detection / localization)**", "",
+            "| Reasoning | Arm | " + " | ".join(models) + " |", "|---|---|" + "---|" * len(models)]
+    for rs in sorted({r["reasoning"] for r in rows}):
+        for a in ARMS:
+            cells = [[r for r in ch if r["model"] == m and r["arm"] == a and r["reasoning"] == rs] for m in models]
+            out.append(f"| {rs} | {a} | " + " | ".join(
+                f"{rate(c, 'exposed')} / {rate(c, 'detection')} / {rate(c, 'localization')}" for c in cells) + " |")
+    out += ["", "**Table C3. Cost and run quality**", "",
+            "| Model | Runs | Billed total | Per run | Reasoning tokens per run (on, mean) | Cut-off calls | Retried replies | Goal success M1 | H4 reached / chose again |",
+            "|---|---|---|---|---|---|---|---|---|"]
+    for m in models:
+        R = [r for r in rows if r["model"] == m]
+        cost = sum(_f(r["cost_usd"]) or 0 for r in R)
+        on = [_f(r["reasoning_tokens"]) or 0 for r in R if r["reasoning"] == "on"]
+        goal = [x for x in (_f(r["goal_success_m1"]) for r in R) if x is not None]
+        h4 = [r for r in R if r["scenario"] != "no_change" and r.get("h4_reached") not in (None, "")]
+        h4s = (f"{sum(_b(r['h4_reached']) for r in h4)} / {sum(_b(r['h4_chose_again']) for r in h4)}"
+               + ("" if len(h4) == sum(r["scenario"] != "no_change" for r in R) else f" (of {len(h4)} recorded)")) if h4 else "n/a"
+        out.append(f"| {m} | {len(R)} | ${cost:.2f} | ${cost / len(R):.3f} | {st.mean(on):,.0f} | "
+                   f"{sum(int(_f(r['cut_off_calls']) or 0) for r in R)} | {sum(int(_f(r.get('retried_attempts')) or 0) for r in R)} | "
+                   f"{st.mean(goal):.2f} | {h4s} |" if on else f"| {m} | {len(R)} | ${cost:.2f} | ${cost / len(R):.3f} | n/a | | | | {h4s} |")
+    return out + [""]
 
 def write_tables(rows, folder):
     out = os.path.join(folder, "agentic_tables.md")
@@ -204,6 +248,14 @@ def tables_main(path):
     print(f"wrote {out} ({len(rows)} runs)")
 
 if __name__ == "__main__":
+    if "--compare" in sys.argv:   # --compare A.csv B.csv ... [--out file.md]
+        a = sys.argv[sys.argv.index("--compare") + 1:]
+        target = a[a.index("--out") + 1] if "--out" in a else "agentic_compare.md"
+        paths = [p for p in a if p.endswith(".csv")]
+        rows = [r for p in paths for r in csv.DictReader(open(p, encoding="utf-8"))]
+        open(target, "w", encoding="utf-8").write("\n".join(compare_tables(rows)) + "\n")
+        print(open(target, encoding="utf-8").read()); print(f"wrote {target} ({len(rows)} runs, {len(paths)} files)")
+        sys.exit(0)
     if "--tables" in sys.argv:
         a = [x for x in sys.argv[1:] if x != "--tables"]
         tables_main(a[0] if a else ".")

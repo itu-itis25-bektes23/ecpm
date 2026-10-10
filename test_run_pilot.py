@@ -1062,6 +1062,10 @@ def test_results_tables():
         r = _run_py(["summarize_agentic_runs.py", "--tables", old])
         check("an older CSV without H4 columns still works", r.returncode == 0 and "Not in this CSV" in r.stdout, r.stderr[-300:])
         os.remove(old)
+        cmp_md = os.path.join(d, "compare.md")
+        r = _run_py(["summarize_agentic_runs.py", "--compare", os.path.join(d, "agentic_runs.csv"), "--out", cmp_md])
+        check("--compare writes the cross-model tables", r.returncode == 0
+              and all(t in open(cmp_md, encoding="utf-8").read() for t in ("Table C1.", "Table C2.", "Table C3.")), r.stderr[-300:])
         os.remove(os.path.join(d, "agentic_tables.md"))
         r = _run_py(["summarize_agentic_runs.py", "--tables", os.path.join(d, "agentic_runs.csv")])
         check("--tables from a CSV gives the same tables", r.returncode == 0
@@ -1094,6 +1098,26 @@ def test_icl_tables():
           "| Reported the change (detection correct) | 1 | 100% |" in md and "| Did not report it | 1 | 50% |" in md, md)
 
 
+def test_commands_icl_dry():
+    """--commands runs ICL lines N at a time: done when summary.json is complete, failures listed, resume skips."""
+    tmp = tempfile.mkdtemp(); out = os.path.join(tmp, "out"); state = os.path.join(tmp, "state")
+    base = ("python3 -B run_pilot.py --protocol icl_expanded_v2 --condition silent_break --mode det --k 10 --budget 10 "
+            "--history-policy retained_reports_v2 --request-profile gemma_e4b --reasoning-mode off --repeats 1 "
+            f"--sampling-seeds 0 --max-tokens 4096 --provider dry-run --out {out} --seed 8")
+    cmds = os.path.join(tmp, "cmds.txt")
+    open(cmds, "w").write("\n".join([f"{base} --model-first-condition model_first --tag a",
+                                      f"{base} --model-first-condition task_only --tag b",
+                                      f"{base} --model-first-condition no_such_arm --tag bad"]) + "\n")
+    args = ["run_agentic_cost_check.py", "--commands", cmds, "--workers", "2", "--state", state]
+    r = _run_py(args)
+    check("commands: two ICL lines complete, the bad one is listed as failed",
+          "commands done: 2/3 lines complete, 1 failed this session" in r.stdout
+          and "no_such_arm" in open(os.path.join(state, "failed.txt")).read(), r.stdout[-500:] + r.stderr[-300:])
+    r = _run_py(args)
+    check("commands: a restart runs nothing again", "2 already done, 1 failed earlier" in r.stdout
+          and "commands done: 2/3 lines complete, 0 failed this session" in r.stdout, r.stdout[-400:])
+
+
 if __name__ == "__main__":
     test_legacy_prompt_and_scorer_regression()
     test_levels_share_visible_evidence_and_raw_order()
@@ -1121,4 +1145,5 @@ if __name__ == "__main__":
     test_grid_dry()
     test_results_tables()
     test_icl_tables()
+    test_commands_icl_dry()
     print("\nALL RUNNER TESTS PASSED")
