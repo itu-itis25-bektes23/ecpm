@@ -1041,6 +1041,27 @@ def test_grid_dry():
             shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
 
 
+def test_results_tables():
+    """summarize_agentic_runs.py writes the Results-tab tables, also from a shared agentic_runs.csv."""
+    runs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs")
+    before = set(os.listdir(runs)) if os.path.isdir(runs) else set()
+    try:
+        r = _run_py(["run_agentic_cost_check.py", "--dry", "--yes", "--seeds", "8"])
+        check("dry batch for the tables", r.returncode == 0, r.stdout[-300:] + r.stderr[-300:])
+        d = [os.path.join(runs, x) for x in set(os.listdir(runs)) - before if os.path.isdir(os.path.join(runs, x))][0]
+        r = _run_py(["summarize_agentic_runs.py", d])
+        md = open(os.path.join(d, "agentic_tables.md"), encoding="utf-8").read()
+        check("summary also writes agentic_tables.md", r.returncode == 0 and "Table 1." in md and "Table 2." in md, r.stderr[-300:])
+        os.remove(os.path.join(d, "agentic_tables.md"))
+        r = _run_py(["summarize_agentic_runs.py", "--tables", os.path.join(d, "agentic_runs.csv")])
+        check("--tables from a CSV gives the same tables", r.returncode == 0
+              and open(os.path.join(d, "agentic_tables.md"), encoding="utf-8").read() == md, r.stderr[-300:])
+    finally:
+        for x in set(os.listdir(runs)) - before:
+            p = os.path.join(runs, x)
+            shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
+
+
 if __name__ == "__main__":
     test_legacy_prompt_and_scorer_regression()
     test_levels_share_visible_evidence_and_raw_order()
@@ -1066,4 +1087,5 @@ if __name__ == "__main__":
     test_seed_eligibility_family()
     test_references()
     test_grid_dry()
+    test_results_tables()
     print("\nALL RUNNER TESTS PASSED")
