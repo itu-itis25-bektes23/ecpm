@@ -13,9 +13,9 @@ runs/results/
 ```
 
 - **Folder names** are the OpenRouter model ID with `/` replaced by `-`, as in the run folders.
-- **`agentic_runs.csv`**: one row per run, with the settings (seed, mode, scenario, arm, history, reasoning, model), behaviour, exposure, probe results, reasoning tokens, billed cost, output cap and cut-offs. This is the file to analyse.
+- **`agentic_runs.csv`**: one row per run, with the settings (seed, mode, scenario, arm, history, reasoning, model), behaviour, exposure, probe results, H4 (`h4_reached`, `h4_chose_again`), reasoning tokens, billed cost, output cap and cut-offs. This is the file to analyse. CSVs written before the H4 columns existed still work; regenerate them from the run folders (`python summarize_agentic_runs.py <run folder>`) to add H4.
 - **`agentic_summary.md`**: mean and spread per arm, one table set per scenario, mode and reasoning setting.
-- **`agentic_tables.md`**: the Results-tab Tables 1–4 (behaviour and probes by arm, exposed vs not exposed, by scenario, no-change control) and the cost line.
+- **`agentic_tables.md`**: the Results-tab Tables 1–4 (behaviour and probes by arm, exposed vs not exposed, by scenario, no-change control), the cost line and an H4 line.
 
 ## Adding a model's agentic results
 

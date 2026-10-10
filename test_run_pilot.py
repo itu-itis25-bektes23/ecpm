@@ -1052,6 +1052,16 @@ def test_results_tables():
         r = _run_py(["summarize_agentic_runs.py", d])
         md = open(os.path.join(d, "agentic_tables.md"), encoding="utf-8").read()
         check("summary also writes agentic_tables.md", r.returncode == 0 and "Table 1." in md and "Table 2." in md, r.stderr[-300:])
+        rows = list(csv.DictReader(open(os.path.join(d, "agentic_runs.csv"), encoding="utf-8")))
+        check("CSV carries the H4 columns from the artifacts", rows and all("h4_reached" in x and "h4_chose_again" in x for x in rows)
+              and "**H4 (six consecutive failures of the broken link).** Reached in" in md, md[-400:])
+        old = os.path.join(d, "old_runs.csv")   # a CSV written before the H4 columns existed still gives tables
+        with open(old, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, [k for k in rows[0] if not k.startswith("h4_")], extrasaction="ignore")
+            w.writeheader(); w.writerows(rows)
+        r = _run_py(["summarize_agentic_runs.py", "--tables", old])
+        check("an older CSV without H4 columns still works", r.returncode == 0 and "Not in this CSV" in r.stdout, r.stderr[-300:])
+        os.remove(old)
         os.remove(os.path.join(d, "agentic_tables.md"))
         r = _run_py(["summarize_agentic_runs.py", "--tables", os.path.join(d, "agentic_runs.csv")])
         check("--tables from a CSV gives the same tables", r.returncode == 0
