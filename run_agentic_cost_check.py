@@ -29,6 +29,11 @@ All options (combine freely):
                       --mode, --condition and --reasoning then take lists (defaults det,sto / all / off,on)
   --workers N         with --grid: batches run at once (default 8)
   --since YYYY-MM-DD  with --grid: finished runs in batch folders from this date on count (default today)
+  --commands FILE     run any command list (e.g. ICL run_pilot.py lines, one per line) --workers at a time
+  --state DIR         with --commands: logs, lock and failed.txt (default output/_commands, ignored by git)
+  --retries N         with --commands: reruns of a failed line in one session (default 0, as ICL answers are not retried)
+  --cwd DIR           with --commands: run the lines in another checkout (e.g. a branch that has the ICL profile);
+                      nothing is written there except the runs' own --out folders
 Every option is recorded in the run folder name and in each run's artifact.
 
 What it does:
@@ -63,7 +68,7 @@ YES = "--yes" in sys.argv          # skip the one confirmation after the first r
 if "--help" in sys.argv or "-h" in sys.argv:
     print(__doc__); sys.exit(0)
 VALUE_FLAGS = {"--seeds", "--mode", "--condition", "--history", "--reasoning", "--reasoning-control", "--max-tokens",
-               "--openrouter", "--price-in", "--price-out", "--workers", "--since"}
+               "--openrouter", "--price-in", "--price-out", "--workers", "--since", "--commands", "--state", "--retries", "--cwd"}
 SWITCH_FLAGS = {"--dry", "--yes", "--matched-prep", "--help", "-h", "--grid"}
 GRID = "--grid" in sys.argv
 _rest = sys.argv[1:]
@@ -321,9 +326,11 @@ def _done_arms(mode, scenario, reasoning, seed, since):
                  (os.listdir(os.path.join(ROOT, "runs", d, f"s{seed}_{a}_r0")) if os.path.isdir(os.path.join(ROOT, "runs", d, f"s{seed}_{a}_r0")) else []))}
     return done
 
+GLOG_DIR = os.path.join(ROOT, "runs", "_grid_logs")
+
 def glog(msg):   # the grid's own log (log() writes into a single batch folder)
     line = f"{datetime.datetime.now():%H:%M:%S} {msg}"; print(line, flush=True)
-    with open(os.path.join(ROOT, "runs", "_grid_logs", "grid_log.txt"), "a") as fh: fh.write(line + "\n")
+    with open(os.path.join(GLOG_DIR, "grid_log.txt"), "a") as fh: fh.write(line + "\n")
 
 def grid():
     import time
@@ -409,6 +416,94 @@ def _combine(jobs, since, out):
     subprocess.run([sys.executable, "-B", "summarize_agentic_runs.py", out], cwd=ROOT, stdout=subprocess.DEVNULL)
     shutil.make_archive(out, "zip", out)
 
+# ---- --commands: any command list (ICL run_pilot.py lines), N at a time ----------------------------------
+def _line_out(line, cwd=None):
+    """(argv, output folder) for one command line; the folder is --out/--tag as run_pilot.py writes it."""
+    import shlex
+    a = [t.strip('"') for t in shlex.split(line, posix=os.name != "nt")]
+    if a and os.path.basename(a[0]).lower().startswith("python"):
+        a[0] = sys.executable   # the same interpreter as this script
+    out = a[a.index("--out") + 1] if "--out" in a else "pilot_artifacts"
+    tag = a[a.index("--tag") + 1] if "--tag" in a else None
+    return a, (os.path.join(out if os.path.isabs(out) else os.path.join(cwd or ROOT, out), tag) if tag else None)
+
+def _line_done(d):
+    """An ICL line is done when its summary.json shows every expected conversation completed."""
+    try:
+        sm = json.load(open(os.path.join(d, "summary.json")))
+        return sm.get("completed_conversations") == sm.get("expected_conversations")
+    except (OSError, ValueError, TypeError):
+        return False
+
+def commands(path):
+    import time
+    global GLOG_DIR
+    GLOG_DIR = _arg("--state", os.path.join(ROOT, "output", "_commands"))   # output/ is git-ignored: real ICL runs need a clean tree
+    workers, retries = int(_arg("--workers", "8")), int(_arg("--retries", "0"))
+    cwd = os.path.abspath(_arg("--cwd", ROOT))   # where the lines run; scheduler state stays here, out of that tree
+    _out = lambda l: _line_out(l, cwd)
+    os.makedirs(GLOG_DIR, exist_ok=True)
+    lines = [l.strip() for l in open(path, encoding="utf-8") if l.strip() and not l.strip().startswith("#")]
+    failed_txt = os.path.join(GLOG_DIR, "failed.txt")
+    earlier = set(open(failed_txt, encoding="utf-8").read().splitlines()) if os.path.exists(failed_txt) else set()
+    bad = [l for l in lines if _out(l)[1] is None]
+    if bad:
+        sys.exit("every line needs --tag (its output folder), e.g.: " + bad[0][:120])
+    lock = os.path.join(GLOG_DIR, "commands.lock")
+    if os.path.exists(lock) and _alive(int(open(lock).read() or 0)):
+        sys.exit(f"another command run is active (PID {open(lock).read()}); stop it first (Ctrl+C in its window)")
+    open(lock, "w").write(str(os.getpid()))
+    if os.name == "nt":
+        import ctypes; ctypes.windll.kernel32.SetThreadExecutionState(ctypes.c_uint(0x80000001))
+    elif shutil.which("caffeinate"): subprocess.Popen(["caffeinate", "-i", "-w", str(os.getpid())])
+    def online():
+        if not any("openrouter.ai" in l and "dry-run" not in l for l in lines): return True   # only real OpenRouter lines
+        import urllib.request
+        try: urllib.request.urlopen(urllib.request.Request(OPENROUTER_URL + "/models", method="HEAD"), timeout=20); return True
+        except Exception: return False
+    def set_aside(d):   # run_suite refuses an existing folder: keep a partial attempt, never overwrite it
+        if os.path.exists(d) and not _line_done(d):
+            base = os.path.join(os.path.dirname(d), "_failed_attempts"); os.makedirs(base, exist_ok=True)
+            n = 1
+            while os.path.exists(os.path.join(base, f"{os.path.basename(d)}_{n}")): n += 1
+            shutil.move(d, os.path.join(base, f"{os.path.basename(d)}_{n}"))
+    pending = [i for i, l in enumerate(lines) if not _line_done(_out(l)[1]) and l not in earlier]
+    running, tries, failed = {}, {}, []
+    glog(f"commands: {len(lines)} lines, {len(lines) - len(pending) - len(earlier & set(lines))} already done, "
+         f"{len(earlier & set(lines))} failed earlier (skipped; remove them from {failed_txt} to retry), up to {workers} at once")
+    shown = 0
+    try:
+        while pending or running:
+            for i, p in list(running.items()):
+                if p.poll() is not None:
+                    del running[i]
+                    if not _line_done(_out(lines[i])[1]):
+                        if tries[i] <= retries: pending.append(i)
+                        else:
+                            failed.append(lines[i]); set_aside(_out(lines[i])[1])
+                            open(failed_txt, "a", encoding="utf-8").write(lines[i] + "\n")
+                            glog(f"FAILED (kept in _failed_attempts, listed in failed.txt): {lines[i][:120]}")
+            while pending and len(running) < workers:
+                while not online():
+                    glog("network down: no new lines; checking again in 3 minutes"); time.sleep(180)
+                i = pending.pop(0); a, d = _out(lines[i])
+                set_aside(d); tries[i] = tries.get(i, 0) + 1
+                running[i] = subprocess.Popen(a, cwd=cwd, stdin=subprocess.DEVNULL, start_new_session=os.name != "nt",
+                                              stdout=open(os.path.join(GLOG_DIR, f"{os.path.basename(d)}.txt"), "a"),
+                                              stderr=subprocess.STDOUT)
+            if time.time() - shown >= 30:
+                done_n = sum(_line_done(_out(l)[1]) for l in lines)
+                glog(f"lines running {len(running)}/{workers} | done {done_n}/{len(lines)} | waiting {len(pending)} | failed {len(failed)}")
+                shown = time.time()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        glog("stopping: ending every running line"); [_stop(p) for p in running.values()]; return 130
+    finally:
+        if os.path.exists(lock): os.remove(lock)
+    glog(f"commands done: {sum(_line_done(_out(l)[1]) for l in lines)}/{len(lines)} lines complete, {len(failed)} failed this session")
+    return 1 if failed else 0
+
 if __name__ == "__main__":
+    if "--commands" in sys.argv: sys.exit(commands(_arg("--commands", "")))
     if GRID: sys.exit(grid())
     main()
