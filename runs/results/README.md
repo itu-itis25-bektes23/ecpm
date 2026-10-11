@@ -1,5 +1,8 @@
 # Results
 
+Audited [DeepSeek expanded ICL results](icl/deepseek-deepseek-v4.1-flash/README.md)
+include full coverage and attempt accounting, with raw evidence linked separately.
+
 Final result files, one folder per arm and model, so all results are in one place. They live under `runs/`, which the repository keeps tracked for curated results (see `.gitignore`).
 
 ```

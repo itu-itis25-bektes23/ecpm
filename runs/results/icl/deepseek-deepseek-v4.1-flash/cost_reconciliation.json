@@ -1,0 +1,174 @@
+{
+  "authorization_usd": "20",
+  "carried_exposure_after_evidence_reconciliation_usd": "0.06029674",
+  "included_historical_pilots_outside_batch_reported_cost_usd": "0.01826054",
+  "ledger_exposure_usd": "13.27498871",
+  "new_provider_reported_cost_usd": "12.14809357",
+  "note": "Top-level usage.cost is the ledger charge. Upstream cost_details are retained separately, not added again. Reported charges are not invoice reconciliation. Calibration verification spending is outside this batch ledger.",
+  "original_exposure_before_migration_usd": "0.73168876",
+  "released_original_reservation_usd": "0.67139202",
+  "remaining_authorization_usd": "6.72501129",
+  "unknown_charge_requests": [
+    {
+      "attempt_id": "deepseek_separate_sto_no_change_s0_task_only_on__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "0.0000011",
+        "six_request_reservation_usd": "0.7274496"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "72d258388f9e239eb1625b5e3b78fcc529809d0874a7e18264682a666f65de36",
+      "reservation_id": "deepseek_separate_sto_no_change_s0_task_only_on__recovery_1/B_task/1",
+      "reserved_usd": "0.1376256",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "B_task",
+      "started_unix": 1791619884.472471,
+      "status": "unknown_charge"
+    },
+    {
+      "attempt_id": "deepseek_separate_sto_no_change_s0_graph_given_on__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "0.0000011",
+        "six_request_reservation_usd": "0.7274496"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "f00045aa73162db6927fb68e520d30050a1d63ad9bd488b60296bc82076ad09c",
+      "reservation_id": "deepseek_separate_sto_no_change_s0_graph_given_on__recovery_1/A_readout/1",
+      "reserved_usd": "0.1376256",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "A_readout",
+      "started_unix": 1791620302.17262,
+      "status": "unknown_charge"
+    },
+    {
+      "attempt_id": "deepseek_separate_sto_redirect_s1_model_first_on__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "0.0000011",
+        "six_request_reservation_usd": "0.7274496"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "1f19cdc8929e5cdbd447d9fbb38ae401a90a8c2d4590349e4ed2c4d3da79af8d",
+      "reservation_id": "deepseek_separate_sto_redirect_s1_model_first_on__recovery_1/A_prepare/1",
+      "reserved_usd": "0.1376256",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "A_prepare",
+      "started_unix": 1791640416.4961479,
+      "status": "unknown_charge"
+    },
+    {
+      "attempt_id": "deepseek_separate_sto_degradation_s0_task_only_off__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "0.0000011",
+        "six_request_reservation_usd": "0.7274496"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "9ea843c0c5fdef4047e3ba972d50c2e5e0ac9be6ba55342bfd5fc9f94414ca81",
+      "reservation_id": "deepseek_separate_sto_degradation_s0_task_only_off__recovery_1/A_prepare/1",
+      "reserved_usd": "0.1376256",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "A_prepare",
+      "started_unix": 1791644831.665558,
+      "status": "unknown_charge"
+    },
+    {
+      "attempt_id": "deepseek_separate_sto_degradation_s0_graph_given_on__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "0.0000011",
+        "six_request_reservation_usd": "0.7274496"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "b04d5b16af81a05a26bd6b7702a1ea28ffe7e3fd62a59a25418aa43b319e20a0",
+      "reservation_id": "deepseek_separate_sto_degradation_s0_graph_given_on__recovery_1/B_prepare/1",
+      "reserved_usd": "0.1376256",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "B_prepare",
+      "started_unix": 1791645287.024298,
+      "status": "unknown_charge"
+    },
+    {
+      "attempt_id": "deepseek_retained_sto_irrelevant_s25_graph_given_off__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "7.5E-7",
+        "six_request_reservation_usd": "0.69304320"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "0dc9b751ccf6910cde5f4515b748a0b5513392d2672b78b0b9f08623b2d120be",
+      "reservation_id": "deepseek_retained_sto_irrelevant_s25_graph_given_off__recovery_1/B_prepare/1",
+      "reserved_usd": "0.12615680",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "B_prepare",
+      "started_unix": 1791663049.7306151,
+      "status": "unknown_charge"
+    },
+    {
+      "attempt_id": "deepseek_retained_sto_irrelevant_s1_graph_given_off__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "7.5E-7",
+        "six_request_reservation_usd": "0.69304320"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "aba82918b3fa23fbca28be415facbeaff64fdeaae8f0797b09c8f58b371ffa45",
+      "reservation_id": "deepseek_retained_sto_irrelevant_s1_graph_given_off__recovery_1/A_task/1",
+      "reserved_usd": "0.12615680",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "A_task",
+      "started_unix": 1791665229.058953,
+      "status": "unknown_charge"
+    },
+    {
+      "attempt_id": "deepseek_retained_sto_hard_removal_s8_task_only_off__recovery_1",
+      "exception_type": null,
+      "http_status": 429,
+      "max_output_tokens": 32768,
+      "ordinal": 1,
+      "quote": {
+        "input_per_token_usd": "1E-7",
+        "output_per_token_usd": "7.5E-7",
+        "six_request_reservation_usd": "0.69304320"
+      },
+      "reported_cost_usd": null,
+      "request_sha256": "80fae62b4a4a5a879cf138403106dd0641aafe34f5fd17a29a51465b74d11bfc",
+      "reservation_id": "deepseek_retained_sto_hard_removal_s8_task_only_off__recovery_1/A_task/1",
+      "reserved_usd": "0.12615680",
+      "response_raw_sha256": "f3d36ed973f56205c8061147740067c62daa2d173c5fe71e6f8b458e7e7e65fe",
+      "stage": "A_task",
+      "started_unix": 1791671651.350202,
+      "status": "unknown_charge"
+    }
+  ],
+  "unresolved_new_reservations_usd": "1.06659840"
+}
