@@ -9,3 +9,5 @@ metrics.csv.gz and request_usage.csv.gz were exported from the 655 completed con
 Answer format with reasoning off: 1,097 of 1,316 OFF task and readout answers are well-formed (all 1,304 ON answers are); 31 OFF answers start with prose before the JSON.
 
 The ICL arms are matched in turns: every arm has six stages, including two preparation turns.
+
+**Content re-score (secondary):** metrics_content.csv.gz and icl_tables_content.md re-read every answer that fails the strict parse from its last complete JSON object carrying the answer field (the same idea as the agentic parser) and re-score it with the run's own scorer. The strict files stay the primary record. Haiku: 433 of 626 malformed answers recovered; with reasoning off, graph-given B detection rises from 7-24% to 100% and necessary updates from 3-10% to 70-81%. DeepSeek: 218 of 219 recovered; its low OFF update rate (about 25% in graph-given) is unchanged, so it is behavior, not format. Sol has almost no malformed answers (at most 3 of 108 per stage), so its strict scores already are its content scores.
