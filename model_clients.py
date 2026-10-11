@@ -127,16 +127,21 @@ def call_azure(deployment, messages, max_tokens, endpoint, api_version,
     return _content_or_retry(data), data.get("usage", {})
 
 
-def call_openai(model, messages, max_tokens, base_url, timeout):
+def call_openai(model, messages, max_tokens, base_url, timeout, extra=None):
     """OpenAI-compatible chat endpoint. Also covers LM Studio and any other
     local server exposing /v1/chat/completions -- point --base-url at it; the
-    key falls back to a placeholder, which local servers ignore."""
+    key falls back to a placeholder, which local servers ignore.
+
+    extra: validated reasoning-control fields (e.g. OpenRouter
+    {"reasoning": {"enabled": false}}), merged into the request body."""
     body = {"model": model, "messages": messages}
     if _is_gpt_reasoning(model):
         body["max_completion_tokens"] = max_tokens
     else:
         body["max_tokens"] = max_tokens
         body["temperature"] = 0
+    if extra:
+        body.update(extra)
     req = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions",
         data=json.dumps(body).encode(),
