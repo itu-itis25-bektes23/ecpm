@@ -1,0 +1,16 @@
+{
+  "regenerated_table_original_sha256": {
+    "icl_tables.md": "a5a14f809979499fb5004f5e83d31593108ee6caa1c024b024772b849486de10",
+    "icl_tables_content.md": "c8d6beb230e63d631664f8d33ec8cc9d869de4acd8b40a41a20a33f0515a7732"
+  },
+  "scope": "Main import bytes preserved. Secondary content scores are post hoc and distinct from original strict scores. The audited handoff supplies full historical validation and attempt accounting.",
+  "secondary_content_pr": 65,
+  "source_main_commit": "9a723f14e031158c1977d0cd5674f68f2f1bd32a",
+  "strict_import_pr": 63,
+  "unchanged_files_sha256": {
+    "costs.csv": "3a593d7a9fed133758e86bcf37db26157b96a032cacbde796311a19b282c3f89",
+    "metrics.csv.gz": "dceb209408adf8935da277cda3b5f03c17bd6edcdfbfdb2a276abf31fd86faab",
+    "metrics_content.csv.gz": "dfdcd45cec96b93fadc4ae43f32113c735fbfa9f36da8218de862ed869a1e2ac",
+    "request_usage.csv.gz": "8770c1a167293d60f3ea9617b613e00fededadb17f08f9d600bd34c3bd492f8a"
+  }
+}

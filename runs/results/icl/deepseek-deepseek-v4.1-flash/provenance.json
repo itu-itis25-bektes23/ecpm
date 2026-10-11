@@ -21,9 +21,9 @@
     "usage_totals.json": "e05e5aca72f2fab26c47e4c36641204497158778ea2b73595b61edfc06856307"
   },
   "transformations": [
-    "metrics.csv.gz decompresses byte-for-byte to the audited scientific CSV",
+    "audited_metrics.csv.gz decompresses byte-for-byte to the audited scientific CSV; renamed from PR #59 metrics.csv.gz without changing bytes",
     "cells.csv retains every audited cell field",
-    "request_usage includes current attempts plus the superseded failed 16K conversation; no requests are silently deduplicated",
+    "request_attempts.csv.gz includes current attempts plus the superseded failed 16K conversation; renamed from PR #59 request_usage.csv.gz without changing bytes; no requests are silently deduplicated",
     "public request/failure records omit configuration paths and large context/control objects; original envelopes remain in the raw archive"
   ]
 }

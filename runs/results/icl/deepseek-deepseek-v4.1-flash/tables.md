@@ -2,11 +2,22 @@
 
 Generated from saved metric rows, without reparsing or rescoring.
 
-| Arm | Completed / planned | Incomplete |
-|---|---:|---:|
-| model_first | 220/220 | 0/220 |
-| task_only | 216/220 | 4/220 |
-| graph_given | 219/220 | 1/220 |
+| Arm | New completed | Historical completed | All completed / planned | Incomplete |
+|---|---:|---:|---:|---:|
+| model_first | 217/220 | 3/220 | 220/220 | 0/220 |
+| task_only | 216/220 | 0/220 | 216/220 | 4/220 |
+| graph_given | 219/220 | 0/220 | 219/220 | 1/220 |
+| Total | 652/660 | 3/660 | 655/660 | 5/660 |
+
+## Incomplete cells (unscored)
+
+| Cell | Failed stage | Failed-stage caps / finish reasons |
+|---|---|---|
+| deepseek_separate_sto_no_change_s0_task_only_on | B_readout | 32768 / error |
+| deepseek_separate_sto_irrelevant_s13_graph_given_on | A_task | 32768 / error |
+| deepseek_separate_sto_silent_break_s13_task_only_off | B_readout | 32768 / error |
+| deepseek_retained_sto_no_change_s0_task_only_on | B_readout | 32768 / error |
+| deepseek_retained_sto_redirect_s0_task_only_on | B_readout | 32768 / length; 65536 / length |
 
 ## Scientific results by cohort
 
@@ -42,7 +53,7 @@ Each cell shows numerator/denominator, not an independent-sample confidence inte
 | 16384 | model_first | separate | off | sto | 1 | 0/16 | 0/16 | 1/4 | 1/4 | 0/1 | 0/1 | 0/4 | 0/4 | 0/1 |
 | 16384 | model_first | separate | on | det | 1 | 16/16 | 16/16 | 4/4 | 4/4 | 1/1 | 1/1 | 4/4 | 4/4 | 1/1 |
 
-Full conditional destination/MAE/regret, parsing, self/truth exact and tolerance Preservation, and query-level metrics remain in metrics.csv.gz and aggregates.csv.gz. No failed case or malformed answer was rescued.
+Full conditional destination/MAE/regret, parsing, self/truth exact and tolerance Preservation, and query-level metrics remain in audited_metrics.csv.gz and aggregates.csv.gz. No failed case or malformed answer was rescued.
 
 ## Accounting
 
@@ -51,9 +62,12 @@ Full conditional destination/MAE/regret, parsing, self/truth exact and tolerance
 | New reported charges | 12.14809357 | 3978 known requests |
 | Unknown-charge reservations | 1.06659840 | 8 requests |
 | Historical carry | 0.06029674 | completed/failed original batch attempts |
+| Known reported charges in batch | 12.20839031 | excludes earlier pilots and unknown charges |
 | Ledger exposure | 13.27498871 | cumulative batch |
 | Remaining authorization | 6.72501129 | cumulative batch |
 | Earlier pilots outside batch | 0.01826054 | 2 conversations |
+
+All preserved provider-reported charges: USD 12.22665085 across 4001/4009 requests with reported cost, including the two earlier pilots. This is not the ledger exposure or an invoice total.
 
 Top-level provider charges are not invoice reconciliation. Upstream cost_details are not added again. Unknown charges retain reservations. Raw inconsistent reasoning subcounts are preserved, not normalized.
 

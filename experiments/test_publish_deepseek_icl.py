@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import publish_deepseek_icl as report
 
@@ -50,7 +51,7 @@ class Publication(unittest.TestCase):
             root = Path(tmp)
             for name in ('cells.csv','provenance.json'):
                 (root/name).write_bytes((report.DEFAULT/name).read_bytes())
-            report.gz_write(root/'metrics.csv.gz', b'cell_id\n')
+            report.gz_write(root/'audited_metrics.csv.gz', b'cell_id\n')
             with self.assertRaisesRegex(ValueError, 'metric export hash'):
                 report.generate(root)
             provenance = report.read(root/'provenance.json')
@@ -58,6 +59,52 @@ class Publication(unittest.TestCase):
             report.dump(root/'provenance.json', provenance)
             with self.assertRaisesRegex(ValueError, 'metric row count'):
                 report.generate(root)
+
+    def test_arm_denominators_and_failure_identity(self):
+        counts = report.arm_coverage(self.cells)
+        self.assertEqual(counts, {
+            'model_first': {'completed': 217, 'historical_completed': 3},
+            'task_only': {'completed': 216, 'failed_terminal': 4},
+            'graph_given': {'completed': 219, 'failed_terminal': 1}})
+        failures = report.read(report.DEFAULT/'failures.json')
+        report.validate_failures(failures, self.cells)
+        bad = copy.deepcopy(failures)
+        exhausted = next(f for f in bad if any(q['max_output_tokens'] == 65536 for q in f['failing_stage_attempts']))
+        exhausted['scenario'] = 'silent_break'
+        with self.assertRaisesRegex(ValueError, 'failure identity'):
+            report.validate_failures(bad, self.cells)
+
+    def test_imported_scores_and_secondary_files_preserved(self):
+        check = report.reconcile_main_import(report.DEFAULT, self.cells)
+        self.assertEqual(check['unchanged_scientific_rows'], 200164)
+        self.assertEqual(check['historical_import_quarantine_rows'], 3)
+        self.assertEqual(check['scored_import_conversations'], 652)
+        original_rows = report.rows
+        def damaged_rows(path):
+            damaged = False
+            for row in original_rows(path):
+                if path.name == 'metrics.csv.gz' and row['operational_status'] == 'valid' and not damaged:
+                    row['numerator'] = '99999'
+                    damaged = True
+                yield row
+        with patch.object(report, 'rows', damaged_rows):
+            with self.assertRaisesRegex(ValueError, 'scientific score mismatch'):
+                report.reconcile_main_import(report.DEFAULT, self.cells)
+
+    def test_imported_tables_use_each_arms_denominators(self):
+        tables = report.imported_tables(report.DEFAULT)
+        self.assertIn('| on | task_only | 18 |', tables)
+        self.assertIn('| on | model_first | 20 |', tables)
+        self.assertIn('| on | graph_given | 20 |', tables)
+        self.assertIn('| redirect | task_only | 39 |', tables)
+        self.assertIn('| redirect | model_first | 40 |', tables)
+        self.assertIn('| redirect | graph_given | 40 |', tables)
+        self.assertEqual(tables, (report.DEFAULT/'icl_tables.md').read_text())
+        secondary = report.imported_tables(report.DEFAULT, secondary=True)
+        self.assertIn('SECONDARY post hoc content scores', secondary)
+        self.assertIn('| on | task_only | 18 |', secondary)
+        self.assertIn('| on | model_first | 20 |', secondary)
+        self.assertEqual(secondary, (report.DEFAULT/'icl_tables_content.md').read_text())
 
     def test_nulls_and_boolean_numerators(self):
         self.assertIsNone(report.number('null'))
