@@ -11,7 +11,6 @@ runs/results/
   icl/
     openai-gpt-5.6-sol/           metrics.csv.gz, request_usage.csv.gz, costs.csv, icl_tables.md
     anthropic-claude-haiku-5.5/   metrics.csv.gz, request_usage.csv.gz, costs.csv (billed), icl_tables.md, NOTE.md
-    deepseek-deepseek-v4.1-flash/ metrics.csv.gz, request_usage.csv.gz, costs.csv (billed), icl_tables.md, NOTE.md
 ```
 
 - **Folder names** are the OpenRouter model ID with `/` replaced by `-`, as in the run folders.
@@ -67,3 +66,7 @@ The Sol and Haiku agentic grids ran on 10 Oct 2026 from the `results-freeze` tag
 - output cap 32,768 (DeepSeek: 65,536, set by its runner).
 
 Each run's artifact records its commit, cap and per-call `finish_reason`.
+
+## Confirmatory tests
+
+runs/results/confirmatory/agentic_h4_h6/: the pre-registered H4 and H6 tests on 51 held-out seeds (stochastic, silent break and degradation, reasoning off), per model, without a preparation turn (no_prep, the pre-registered grid) and with matched preparation turns (matched_prep). confirmatory_tests.md has the test table.
