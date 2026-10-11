@@ -37,5 +37,5 @@
 
 **Cost and run quality.** Billed $6.86 in total, about $0.021 per run (off $1.28, on $5.59). Per run: task_only $0.036, model_first $0.021, graph_given $0.005. Reasoning tokens with reasoning on: mean 37,918, max 378,563 per run. Reasoning violations 0, cut-off calls 62, retried replies 93.
 
-**H4 (six consecutive failures of the broken link).** Reached in 5 of 75 runs with a change; the agent chose the broken link again in 5 of those. H4 is recorded for 75 of 270 runs with a change; regenerate the CSV from the run folders to include the rest.
+**H4 (six consecutive failures of the broken link).** Reached in 10 of 270 runs with a change; the agent chose the broken link again in 10 of those.
 
