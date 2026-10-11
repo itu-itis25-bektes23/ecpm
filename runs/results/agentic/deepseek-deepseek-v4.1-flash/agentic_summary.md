@@ -1,8 +1,8 @@
 # DeepSeek V4.1 Flash agentic grid: per-cell summaries
 
-330 runs, cap 65,536, in two parts: 255 runs by Christian (reasoning off: all 165; reasoning on: deterministic and stochastic no_change) and the remaining 75 stochastic reasoning-on runs (irrelevant, silent_break, hard_removal, redirect, degradation) by Efe, with the same tool and settings. The combined per-run data is agentic_runs.csv; Tables 1-4 are in agentic_tables.md.
+330 runs, output cap 65,536, all from the code tagged results-freeze (10c93b5): 255 runs (reasoning off: all 165; reasoning on: deterministic and stochastic no_change) and the remaining 75 stochastic reasoning-on runs, with the same tool and settings. Both parts are summarized from their run files with the same summarizer. The per-run data is agentic_runs.csv; Tables 1-4 are in agentic_tables.md.
 
-## Part 1: 255 runs (Christian)
+## Part 1: 255 runs
 
 #### scenario degradation · mode sto · reasoning off (15 runs)
 
@@ -498,7 +498,7 @@ Values are mean ± standard deviation across runs. Exposed runs only (10 of 15):
 | Preservation accuracy | 0.75 ± 0.00 | 0.83 ± 0.14 | 1.00 ± 0.00 |
 
 
-## Part 2: 75 runs, stochastic, reasoning on (Efe)
+## Part 2: 75 runs, stochastic, reasoning on
 
 #### scenario degradation (15 runs)
 
