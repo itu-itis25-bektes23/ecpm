@@ -13,3 +13,5 @@
 **Settings.** Every request used an output cap of 16,384 tokens, as recorded in the model.max_tokens field of all 1,251 run artifacts (stage2_runner.py v2). The runs were made on 11 October 2026, with artifact timestamps from 16:56 to 17:13 UTC.
 
 **Reasoning.** Every run records reasoning off with zero violations, from commit 09fc3a8, after the fix that makes the legacy path send the control. first_attempt_reasoning_audit.txt records the earlier attempt, which did not send it and is not used.
+
+**Runner and prompts.** experiments/stage2_runner.py is the runner that made these runs (v2, after the fix). Each run is one call of run_pilot.py --protocol legacy. A dry run of run_pilot.py at 09fc3a8 reproduces the prompts these runs sent exactly: for seed 33, every probe prompt of core2, core1 and counts2 is identical to the prompt recorded in the run artifacts of all three models.
