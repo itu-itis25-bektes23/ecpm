@@ -12,7 +12,8 @@ models within each hypothesis.
   H2  Localization, counts given (counts2) minus core (core2), K=10     prediction > 0
   H3  optimal Period B route, single-turn (core1) minus two-turn (core2) prediction > 0
   H5  Localization, K=20 (k20) minus K=5 (k5)                           prediction > 0
-Runs whose reasoning control was not honoured ("off" but reasoning tokens > 0) are counted and listed.
+Secondary (plan rule 7): the same tests over seeds where both answers parsed. Runs whose reasoning
+control was not honoured ("off" but reasoning tokens > 0) are counted.
 Stdlib only.
 """
 import csv, glob, json, os, random, sys
@@ -23,6 +24,7 @@ HYPS = [("H2", "localization", "counts2", "core2", "Localization, counts given m
         ("H5", "localization", "k20", "k5", "Localization, K=20 minus K=5")]
 NAMES = {"sol": "GPT-5.6 Sol", "haiku": "Claude Haiku 5.5", "deepseek": "DeepSeek V4.1 Flash"}
 B, ALPHA = 10_000, 0.05
+UNPARSED = {None, "malformed_json", "invalid_object", "too_long"}   # parser statuses: no answer was read
 
 
 def load(root):
@@ -34,10 +36,17 @@ def load(root):
         probes = a.get("probes") or {}
         loc = ((probes.get("localization") or {}).get("scored") or {}).get("correct")
         route = ((probes.get("adaptation") or {}).get("scored") or {}).get("is_optimal")
+        loc_status = ((probes.get("localization") or {}).get("scored") or {}).get("status")
+        route_status = ((probes.get("adaptation") or {}).get("scored") or {}).get("status")
+        det = ((probes.get("detection") or {}).get("parsed") or {}).get("changed")
         rc = a.get("reasoning_control") or {}
         rows.append({"model": model, "condition": cond, "seed": int(seed[1:]),
                      "localization": 1 if loc is True else 0,       # parse failure or wrong = 0
                      "route": 1 if route is True else 0,
+                     "localization_parsed": int(loc_status == "ok"),
+                     "route_parsed": int(route_status not in UNPARSED),
+                     "route_status": route_status,
+                     "detection_changed": None if det is None else int(det is True),
                      "reasoning_mode": rc.get("mode"), "reasoning_tokens": rc.get("reasoning_tokens_total"),
                      "violation": rc.get("violation"), "commit": (a.get("env") or {}).get("git_head")})
     return rows
@@ -81,13 +90,18 @@ def main():
              "instance; an unparsed answer counts as incorrect. Paired differences over seeds with both runs, "
              f"95% percentile bootstrap ({B:,} resamples, seed 0), one-sided bootstrap p, Holm across models. "
              "Script: experiments/stage2_tests.py.", "",
+             "## Primary: unparsed answers count as incorrect", "",
              "| Hyp. | Quantity | Model | Seeds | Treatment | Comparison | Difference | 95% interval | p (Holm) | Reading |",
              "|---|---|---|---|---|---|---|---|---|---|"]
-    for hyp, metric, treat, comp, label in HYPS:
+    def table(only_parsed):
+      out_lines = []
+      for hyp, metric, treat, comp, label in HYPS:
         res = []
         for m in models:
             t, c = by.get((m, treat), {}), by.get((m, comp), {})
             seeds = sorted(set(t) & set(c))
+            if only_parsed:
+                seeds = [x for x in seeds if t[x][metric + "_parsed"] and c[x][metric + "_parsed"]]
             if not seeds:
                 continue
             diffs = [t[s][metric] - c[s][metric] for s in seeds]
@@ -96,17 +110,25 @@ def main():
         adj = holm([r[7] for r in res])
         for (m, seeds, tr, cr, est, lo, hi, p), pa in zip(res, adj):
             reading = "supported" if pa < ALPHA else "not shown"
-            lines.append(f"| {hyp} | {label} | {NAMES[m]} | {len(seeds)} | {tr:.2f} | {cr:.2f} | {est:+.2f} | "
-                         f"[{lo:+.2f}, {hi:+.2f}] | {pa:.3f} | {reading} |")
+            out_lines.append(f"| {hyp} | {label} | {NAMES[m]} | {len(seeds)} | {tr:.2f} | {cr:.2f} | {est:+.2f} | "
+                             f"[{lo:+.2f}, {hi:+.2f}] | {pa:.3f} | {reading} |")
+      return out_lines
+    header = ["| Hyp. | Quantity | Model | Seeds | Treatment | Comparison | Difference | 95% interval | p (Holm) | Reading |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
+    lines += table(False)
+    lines += ["", "## Secondary: seeds where both answers parsed", ""] + header + table(True)
     lines += ["", "## Runs per model and condition", "",
-              "| Model | Condition | Runs | Localization | Optimal route | Reasoning off violated |",
-              "|---|---|---|---|---|---|"]
+              "| Model | Condition | Runs | Reports a change | Localization | Localization unparsed | Optimal route | Route through broken link | Route unparsed | Reasoning off violated |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
     for m in models:
         for cond in ("core2", "counts2", "core1", "k5", "k20"):
             rs = list(by.get((m, cond), {}).values())
             if rs:
-                lines.append(f"| {NAMES[m]} | {cond} | {len(rs)} | {sum(r['localization'] for r in rs) / len(rs):.2f} | "
-                             f"{sum(r['route'] for r in rs) / len(rs):.2f} | {sum(bool(r['violation']) for r in rs)} |")
+                n = len(rs)
+                lines.append(f"| {NAMES[m]} | {cond} | {n} | {sum(r['detection_changed'] or 0 for r in rs) / n:.2f} | "
+                             f"{sum(r['localization'] for r in rs) / n:.2f} | {n - sum(r['localization_parsed'] for r in rs)} | "
+                             f"{sum(r['route'] for r in rs) / n:.2f} | {sum(r['route_status'] == 'silent_broken_edge' for r in rs)} | "
+                             f"{n - sum(r['route_parsed'] for r in rs)} | {sum(bool(r['violation']) for r in rs)} |")
     unrecorded = sum(r["reasoning_mode"] is None for r in rows)
     commits = sorted({r["commit"] for r in rows if r["commit"]})
     lines += ["", f"Runs: {len(rows)}. Runs without a recorded reasoning control (made before the fix): "
