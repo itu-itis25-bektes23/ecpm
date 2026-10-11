@@ -1,0 +1,17 @@
+model     cond      runs  reasoned  median    max  no usage
+deepseek  core1        5         5   10414  13182         0
+deepseek  core2        6         6   13685  14374         0
+deepseek  counts2      2         2   13435  13806         0
+deepseek  k5          10        10   13873  16875         0
+haiku     core1       84        84    4656   8110         0
+haiku     core2       84        84    3058   5600         0
+haiku     counts2     84        84    1901   3035         0
+haiku     k20         81        81    2617   6468         0
+haiku     k5          84        84    3746   6704         0
+sol       core1       84        84    2638   8273         0
+sol       core2       84        84    1566   3721         0
+sol       counts2     84        84    1256   4425         0
+sol       k20         81        81    3441   5087         0
+sol       k5          84        84    1066   5028         0
+
+'reasoned' = runs with reasoning_tokens > 0 summed over probes. For a 'reasoning off' run this should be 0.

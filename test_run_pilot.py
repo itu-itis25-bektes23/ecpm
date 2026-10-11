@@ -91,6 +91,56 @@ def test_legacy_prompt_and_scorer_regression():
     print("PASS legacy prompt hashes and frozen scorer regression")
 
 
+def test_legacy_path_sends_reasoning_control():
+    """The legacy (two-turn) path sends the validated reasoning control and records it."""
+    import model_clients
+    captured = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def read(self):
+            return json.dumps({"choices": [{"message": {"content": "{}"},
+                                            "finish_reason": "stop"}],
+                               "usage": {}}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured.append(json.loads(request.data))
+        return FakeResponse()
+
+    args = SimpleNamespace(provider="openai", model="deepseek/deepseek-v4.1-flash",
+                           base_url="https://openrouter.ai/api/v1", max_tokens=4096,
+                           timeout=30, reasoning_mode="off",
+                           reasoning_control_json='{"reasoning": {"enabled": false}}',
+                           reasoning_control_source="test")
+    original = model_clients.urllib.request.urlopen
+    try:
+        model_clients.urllib.request.urlopen = fake_urlopen
+        run_pilot.dispatch(args, None, "detection", None,
+                           [{"role": "user", "content": "x"}])
+    finally:
+        model_clients.urllib.request.urlopen = original
+    assert captured[0]["reasoning"] == {"enabled": False}
+    assert captured[0]["max_tokens"] == 4096 and captured[0]["temperature"] == 0
+    # with no control (unspecified mode) the request body is unchanged
+    captured.clear()
+    plain = SimpleNamespace(**{**vars(args), "reasoning_mode": "unspecified",
+                               "reasoning_control_json": None,
+                               "reasoning_control_source": None})
+    try:
+        model_clients.urllib.request.urlopen = fake_urlopen
+        run_pilot.dispatch(plain, None, "detection", None,
+                           [{"role": "user", "content": "x"}])
+    finally:
+        model_clients.urllib.request.urlopen = original
+    assert "reasoning" not in captured[0]
+    print("PASS legacy path sends the reasoning control")
+
+
 def test_levels_share_visible_evidence_and_raw_order():
     sc, record, view = record_and_view()
     queried = run_pilot.queried_pairs_for_icl(record, sc)
@@ -819,9 +869,9 @@ def check(name, cond, detail=""):
     assert cond, f"FAIL {name}: {detail}"
 
 
-def _run_py(args):
+def _run_py(args, *, env=None):
     return subprocess.run([sys.executable, "-B"] + args, cwd=os.path.dirname(os.path.abspath(__file__)),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, env=env)
 
 
 class Step:
@@ -1015,6 +1065,26 @@ def test_references():
           data["rows"] and all({"rate", "transition", "bayes", "generator"} <= set(r) for r in data["rows"]))
 
 
+def test_references_hash_seeds():
+    """Hash randomization must not alter the serialized reference scores."""
+    with tempfile.TemporaryDirectory() as tmp:
+        outputs = []
+        for hash_seed in (0, 1, 2, 3, 5, 7, 11, 42):
+            path = os.path.join(tmp, f"references_hash_{hash_seed}.json")
+            result = _run_py([
+                "experiments/baseline_k_sweep.py", "--references", "--seeds", "31-40",
+                "--k", "10", "--modes", "sto", "--json", path,
+            ], env={**os.environ, "PYTHONHASHSEED": str(hash_seed)})
+            check(f"references hash seed {hash_seed} exits 0", result.returncode == 0,
+                  result.stderr[-300:])
+            with open(path, "rb") as handle:
+                outputs.append(handle.read())
+            check(f"references hash seed {hash_seed} has nonempty rows",
+                  bool(json.loads(outputs[-1])["rows"]))
+            check(f"references bytes agree across hash seeds 0 and {hash_seed}",
+                  outputs[-1] == outputs[0])
+
+
 def test_grid_dry():
     """--grid: parallel batches, same runs as a sequential batch, resume, combined table, one grid at a time."""
     runs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs")
@@ -1127,6 +1197,7 @@ if __name__ == "__main__":
     test_period_boundary_and_prompt_neutrality()
     test_five_pairs_stable_and_no_change_counterfactual()
     test_availability_and_no_change_dry_answers()
+    test_legacy_path_sends_reasoning_control()
     test_combined_parser_component_independence_and_pair_errors()
     test_visible_and_truth_probability_mae()
     test_nullable_localization_and_route_belief_diagnostics()
@@ -1142,6 +1213,7 @@ if __name__ == "__main__":
     test_family_cli()
     test_seed_eligibility_family()
     test_references()
+    test_references_hash_seeds()
     test_grid_dry()
     test_results_tables()
     test_icl_tables()

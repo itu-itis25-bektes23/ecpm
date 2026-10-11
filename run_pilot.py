@@ -820,7 +820,8 @@ def dispatch(args, record, probe, queried, messages):
                           reasoning=args.azure_reasoning_model)
     if args.provider == "openai":
         return call_openai(args.model, messages, args.max_tokens,
-                           args.base_url, args.timeout)
+                           args.base_url, args.timeout,
+                           extra=reasoning_provenance(args)["request_fields"])
     return dry_run_answer(record, probe, queried), {}
 
 
@@ -1803,6 +1804,16 @@ def run_pilot(sc, deterministic, args):
         r["probe"]: r["score"] for r in rows}
     artifact["metrics_final"]["per_phase_status"] = {
         r["probe"]: r["status"] for r in rows}
+    # Record the reasoning control the legacy path sent, and whether the
+    # provider honoured it, as the agentic path already does.
+    reasoning_tokens = sum(
+        int((((p.get("provider_usage") or {}).get("completion_tokens_details")
+              or {}).get("reasoning_tokens")) or 0)
+        for p in artifact["probes"].values())
+    ctl = reasoning_provenance(args)
+    artifact["reasoning_control"] = {
+        **ctl, "reasoning_tokens_total": reasoning_tokens,
+        "violation": ctl["mode"] == "off" and reasoning_tokens > 0}
     return artifact
 
 

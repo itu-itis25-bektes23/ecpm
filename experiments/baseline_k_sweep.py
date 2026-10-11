@@ -135,7 +135,8 @@ def periods(pv):
 
 def tv(a, b):
     na, nb = sum(a.values()), sum(b.values())
-    keys = set(a) | set(b)
+    # Fix addition order: hash-randomized set iteration changes float rounding.
+    keys = sorted(set(a) | set(b))
     return 0.5 * sum(abs(a.get(k, 0) / na - b.get(k, 0) / nb) for k in keys)
 
 
