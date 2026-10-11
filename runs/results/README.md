@@ -70,3 +70,9 @@ Each run's artifact records its commit, cap and per-call `finish_reason`.
 ## Confirmatory tests
 
 runs/results/confirmatory/agentic_h4_h6/: the pre-registered H4 and H6 tests on 51 held-out seeds (stochastic, silent break and degradation, reasoning off), per model, without a preparation turn (no_prep, the pre-registered grid) and with matched preparation turns (matched_prep). confirmatory_tests.md has the test table.
+
+## Confirmatory tests: two-turn ICL (H2, H3, H5)
+
+runs/results/confirmatory/icl_h2_h3_h5/: the pre-registered H2, H3 and H5 tests on the 84 eligible held-out seeds (stochastic silent break, eight-node family, reasoning off, one answer per instance), per model. Conditions: core two-turn K=10 (core2), counts given (counts2, H2), single-turn (core1, H3), K=5 and K=20 (k5, k20, H5; K=20 pairs 81 seeds, as the evidence generator cannot reach coverage on seeds 60, 81 and 122). confirmatory_tests.md has the test table, stage2_runs.csv one row per run. Script: experiments/stage2_tests.py.
+
+These runs use the legacy path after the fix that makes it send the reasoning control (fix-legacy-reasoning-control). A first attempt before the fix did not send it, so its runs used each provider's default; it is not used, and first_attempt_reasoning_audit.txt records its reasoning tokens.
