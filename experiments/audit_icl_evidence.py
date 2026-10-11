@@ -1,16 +1,21 @@
 """Evidence review of the Haiku 5.5 expanded-ICL runs: checks every run record against the claims of its NOTE.md.
 
-    python experiments/audit_icl_evidence.py   (run from the folder that holds ecpm-haiku-runs/)
+    python experiments/audit_icl_evidence.py [RUN_FOLDER]
+
+RUN_FOLDER is the ecpm-haiku-runs folder itself (default: ./ecpm-haiku-runs if it exists, else the current
+folder). The audit fails if it finds no runs or fewer than the expected 660.
 
 Read-only. Checks per run: completed, operational gate and audit flags, model, commit (clean), protocol,
 profile, scorer, provider pinned to Anthropic with fallbacks off, the reasoning request of each mode, and per
 answer: response model and provider, output cap 16,384, HTTP 200, finish reason, control violations and
 reasoning tokens.
 """
-import json, glob, collections, re
+import json, glob, collections, re, os, sys
+EXPECTED = 660
+root = sys.argv[1] if len(sys.argv) > 1 else ('ecpm-haiku-runs' if os.path.isdir('ecpm-haiku-runs') else '.')
 C = collections.Counter(); bad = collections.defaultdict(list); dates = collections.Counter()
 cells = set(); reasoning_on = [0, 0]; off_nonzero = 0; ts = []
-for d in sorted(glob.glob('ecpm-haiku-runs/*/')):
+for d in sorted(glob.glob(os.path.join(root, 'haiku_*', ''))):
     s = json.load(open(d + 'summary.json', encoding='utf-8-sig'))
     files = glob.glob(d + 'icl_*.json')
     C['dirs'] += 1
@@ -48,6 +53,9 @@ print('dirs', C['dirs'], '| completed', C['completed'], '| incomplete', C['incom
 print('modes', C['mode_off'], C['mode_on'], '| distinct cells', len(cells), '| turns', C['turns'])
 print('finish reasons', {k: v for k, v in C.items() if k.startswith('finish_')})
 print('ON answers with reasoning', reasoning_on[1], 'of', reasoning_on[0], '| OFF answers with reasoning tokens', off_nonzero)
-print('run timestamps', min(ts) if ts else None, 'to', max(ts) if ts else None, '| n', len(ts))
 for k, v in bad.items(): print('PROBLEM', k, len(v), v[:3])
-if not bad: print('No problems found in any check.')
+if C['dirs'] != EXPECTED:
+    sys.exit(f'FAILED: found {C["dirs"]} run folders under {os.path.abspath(root)}, expected {EXPECTED}.')
+if bad:
+    sys.exit('FAILED: see the problems above.')
+print('No problems found in any check.')
