@@ -10,6 +10,7 @@ runs/results/
     deepseek-deepseek-v4.1-flash/ (same three files; 255 runs by Christian + 75 by Efe, see agentic_summary.md)
   icl/
     openai-gpt-5.6-sol/           metrics.csv.gz, request_usage.csv.gz, costs.csv, icl_tables.md
+    anthropic-claude-haiku-5.5/   metrics.csv.gz, request_usage.csv.gz, costs.csv (billed), icl_tables.md, NOTE.md
 ```
 
 - **Folder names** are the OpenRouter model ID with `/` replaced by `-`, as in the run folders.
