@@ -19,8 +19,13 @@ def prepare(wrapper):
             or spec.get('protocol') != design.PROTOCOL
             or spec.get('preparation_policy') != design.PREPARATION_POLICY
             or spec.get('schedule') != design.SCHEDULE
-            or spec.get('output_allowances') != [design.NEW_CAP]):
-        raise ValueError('current expanded 16K wrapper required')
+            or spec.get('output_allowances') not in ([design.NEW_CAP], [32768])):
+        raise ValueError('current expanded 16K or 32K wrapper required')
+    cap = spec['output_allowances'][0]
+    if cap == 32768 and (spec.get('control_preflight_output_tokens') != design.NEW_CAP
+            or type(config['effective'].get('max_output_tokens')) is not int
+            or config['effective']['max_output_tokens'] < cap or config['context']['tokens'] <= cap):
+        raise ValueError('32K capacity and explicit retained 16K control preflight required')
     design.pilot_design.check_history_policy(spec['history_policy'])
     for key in ('stage_limits_source', 'system_message_source', 'context_source'):
         if not isinstance(spec.get(key), str) or not spec[key].strip():
@@ -78,7 +83,7 @@ def main():
         http_status=status, network_retries=[], source='Saved request.json, response_raw.txt and transport.json',
         response_raw=raw, response_raw_sha256=design.pilot_design.digest(raw))
     design.validate_config(completed, config['profile'], spec['reasoning_mode'],
-                           spec['history_policy'], design.NEW_CAP)
+                           spec['history_policy'], spec['output_allowances'][0])
     save(out / 'validated_wrapper.json', completed)
     print('Preflight accepted, not a long-conversation or pilot validation. No experiment launched.')
 

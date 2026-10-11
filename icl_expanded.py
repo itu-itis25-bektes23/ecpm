@@ -31,14 +31,14 @@ HISTORICAL_4K_BASE = '05df38907307ec290ede76998f50a6fb1318b4fd'
 
 
 def output_allowance(value):
-    if type(value) is not int or value not in (CAP, NEW_CAP):
-        raise ValueError('expanded output allowance must be 4096 (historical) or 16384')
+    if type(value) is not int or value not in (CAP, NEW_CAP, 32768):
+        raise ValueError('expanded output allowance must be 4096, 16384 or 32768')
     return value
 
 
 def artifact_allowance(identity):
     caps = list(identity['stage_settings'])
-    if len(caps) != 1 or caps[0] not in ('4096', '16384'):
+    if len(caps) != 1 or caps[0] not in ('4096', '16384', '32768'):
         raise ValueError('one explicit expanded output allowance required')
     return output_allowance(int(caps[0]))
 PREP_WORDS = 250
@@ -483,6 +483,8 @@ def identity(world, arm, repeat, args, wrapper):
         'synthetic_reference': 'oracle_reference' if config is None else None,
         'sampling_seed_status': 'not_applied_synthetic' if config is None else 'supported' if config['seed_supported'] else 'unsupported',
         'deployment_sha256': canonical(wrapper),
+        **({'operational_policy': wrapper['expanded']['operational_policy']}
+           if wrapper and wrapper['expanded'].get('operational_policy') else {}),
         **({'context_admission': dict(config['context'])} if config and controls.estimated_context(config) else {}),
         'evidence_sha256': {p: canonical({k: world[p][k] for k in ('nodes', 'start', 'goal', 'menu', 'rows', 'required_pairs')}) for p in ('A', 'B')},
         'prompt_hashes': {'system': canonical(system(world)), **{p: canonical(prompts(world, p, arm)) for p in ('A', 'B')}},
@@ -501,10 +503,28 @@ def validate_config(wrapper, profile, mode, policy, output_tokens=CAP):
                 'output_allowances': [cap]}
     if any(evidence.get(k) != v for k, v in required.items()):
         raise ValueError('expanded mode/schedule/stage identity mismatch')
+    if evidence.get('operational_policy'):
+        import icl_recovery as recovery
+        if (evidence['operational_policy'] != recovery.specification() or cap != 32768
+                or profile not in ('sol','deepseek_openrouter')
+                or wrapper['deployment']['effective']['max_output_tokens'] < 65536
+                or wrapper['deployment']['context']['tokens'] <= 65536):
+            raise ValueError('explicit bounded recovery policy and 64K capacity required')
+    # A retained 16K control preflight is not evidence of a 32K response.
+    # Keep its exact request/envelope; admit the larger stage cap separately.
+    if cap == 32768:
+        config = wrapper['deployment']
+        if evidence.get('control_preflight_output_tokens') != NEW_CAP:
+            raise ValueError('32K stages require an explicitly recorded 16K control preflight')
+        if (type(config['effective'].get('max_output_tokens')) is not int
+                or config['effective']['max_output_tokens'] < cap
+                or config['context']['tokens'] <= cap):
+            raise ValueError('deployment output/context capacity cannot admit 32K stages')
     # Reuse the strict deployment and fixed preflight validation, without claiming
     # that an operator evidence string itself proves effective semantics.
     controls.validate_deployment(wrapper['deployment'], profile, mode,
-                                 preflight_output_tokens=NEW_CAP if cap == NEW_CAP else 8192)
+                                 preflight_output_tokens=NEW_CAP if cap in (NEW_CAP, 32768) else 8192,
+                                 operational_policy=evidence.get('operational_policy', {}).get('version'))
     # Common non-mode checks also apply on ON, with no mutated evidence.
     if any(not isinstance(evidence.get(k), str) or not evidence[k].strip()
            for k in ('stage_limits_source', 'system_message_source', 'context_source')):
@@ -526,12 +546,16 @@ def audit_identity(a):
         provider=i['provider'], request_profile=i['profile'], model=i['model'], max_tokens=artifact_allowance(i))
     expected = identity(world, i['condition'], i['repeat'], args, a['deployment'])
     if i['source_sha256'] != expected['source_sha256']:
-        # Admit only the reviewed v3 4K implementation (including descendants
-        # with byte-identical ICL sources), not arbitrary historical code.
+        # Admit only pinned historical sources at their original allowance.
+        # A historical 16K artifact must never be relabelled as a 32K run.
         try:
             prior = dict(historical_source_hashes(i['implementation_commit']))
-            if (artifact_allowance(i) != CAP or i['source_sha256'] != prior
-                    or prior != dict(historical_source_hashes(HISTORICAL_4K_BASE))):
+            pins = {CAP: (HISTORICAL_4K_BASE,), NEW_CAP: (
+                'a2a0340eee721af5eb3152adfcb2262de7ef22fc',
+                'a3e32493ad8a10e960a5b5abff3434053e020cb9')}
+            if (i['source_sha256'] != prior or not any(
+                    prior == dict(historical_source_hashes(pin))
+                    for pin in pins.get(artifact_allowance(i), ()))):
                 return False
         except (ValueError, subprocess.CalledProcessError):
             return False
@@ -546,10 +570,10 @@ def audit_identity(a):
 
 def run_suite(sc, args, outdir):
     if (args.mode not in SYSTEM or args.pilot_type != 'passive' or args.repeats not in (1, 5)
-            or args.sampling_seeds != list(range(args.repeats)) or args.max_tokens not in (CAP, NEW_CAP) or args.reasoning_mode not in ('off', 'on')
+            or args.sampling_seeds != list(range(args.repeats)) or args.max_tokens not in (CAP, NEW_CAP, 32768) or args.reasoning_mode not in ('off', 'on')
             or args.model_first_condition not in ARMS or args.request_profile not in controls.EXPANDED_MODELS
             or args.provider not in ('dry-run', 'openai')):
-        raise ValueError('expanded: passive det/sto, one or five repeats, sequential seed labels, 4096/16384, explicit arm/profile/OFF or ON')
+        raise ValueError('expanded: passive det/sto, one or five repeats, sequential seed labels, 4096/16384/32768, explicit arm/profile/OFF or ON')
     if (args.graph_condition or args.off_reference or args.reasoning_control_json or args.reasoning_control_source
             or args.temperature != 0 or args.top_p is not None or args.top_k is not None
             or args.sampling_seed_support != 'auto' or sc['k'] not in SUPPORTED_K or sc['budget'] != sc['k']

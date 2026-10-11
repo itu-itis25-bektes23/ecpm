@@ -17,7 +17,7 @@ canonical = pilot._canonical_sha256
 
 
 def settings(profile, seed, supported, allowance, reasoning_mode='off', config=None):
-    if type(allowance) is not int or allowance not in (4096, 8192, 16384):
+    if type(allowance) is not int or allowance not in (4096, 8192, 16384, 32768, 65536):
         raise ValueError('locked stage allowance required')
     result = controls.intended_settings(profile, reasoning_mode, seed, supported,
                                         allowed_seeds=(0, 1, 2, 3, 4, 999))
@@ -97,7 +97,7 @@ def copied_fields(data, config, profile, dry=False, reasoning_mode='off'):
     return fields
 
 
-def response_checks(turn, body, config, profile, allowance, dry=False, reasoning_mode='off'):
+def response_checks(turn, body, config, profile, allowance, dry=False, reasoning_mode='off', operational_policy=None):
     """Operational facts come from the original envelope, never copied scores."""
     checks = {'raw_envelope': False, 'copied_fields': False, 'transport': False,
               'controls': False, 'context': False}
@@ -123,12 +123,21 @@ def response_checks(turn, body, config, profile, allowance, dry=False, reasoning
             checks['transport'] &= (len(data['choices']) == 1 and type(usage.get('completion_tokens')) is int
                 and 0 <= usage['completion_tokens'] <= allowance
                 and type(usage.get('prompt_tokens')) is int and usage['prompt_tokens'] >= 0)
-            if allowance == 16384:
+            if allowance in (16384, 32768, 65536) and operational_policy is None:
                 reasoning_tokens = copied['control_check']['reasoning_tokens']
                 checks['transport'] &= (reasoning_tokens is None or
                     (type(reasoning_tokens) is int and 0 <= reasoning_tokens <= usage.get('completion_tokens', -1)))
             checks['controls'] = (copied['actual_response_model'] == config['response_model']
                 and copied['control_check']['mode_verified'] and not copied['control_check']['control_violation'])
+            if operational_policy is not None:
+                import icl_recovery as recovery
+                observed = recovery.observations(data, config, profile, reasoning_mode)
+                expected = settings(profile, 0, False, allowance, reasoning_mode, config)
+                checks['controls'] = (operational_policy == recovery.POLICY
+                    and copied['actual_response_model'] == config['response_model']
+                    and body == {'model':config['model'], 'messages':body['messages'], **expected}
+                    and observed['request_condition_accepted'])
+                checks['copied_fields'] &= turn.get('reasoning_acceptance') == observed
             if profile == 'deepseek_openrouter':
                 checks['controls'] &= copied['actual_response_provider'] == config['effective']['response_provider']
                 checks['transport'] &= (not data.get('error') and not data['choices'][0].get('error')
@@ -181,6 +190,12 @@ def persist(path, artifact, event=None):
     if event:
         artifact['persistence_events'].append(event)
     pilot._write_json_atomic(str(path), artifact)
+    if artifact.get('identity', {}).get('operational_policy'):
+        with Path(path).open('rb') as stream:
+            os.fsync(stream.fileno())
+        fd = os.open(Path(path).parent, os.O_RDONLY)
+        try: os.fsync(fd)
+        finally: os.close(fd)
 
 
 def call_provider(body, config, timeout):
@@ -231,6 +246,7 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
     ident = (identity(world, arm, repeat, args.request_profile, args.model, wrapper, args.provider, policy)
              if design_api is design else design_api.identity(world, arm, repeat, args, wrapper))
     mode = ident['reasoning_mode']
+    recovery_policy = ident.get('operational_policy')
     run_id = f'{design_api.PROTOCOL}_seed{world["seed"]}_{arm}_r{repeat}_{canonical(ident)[:16]}'
     path = Path(outdir) / (run_id + '.json')
     if path.exists():
@@ -264,7 +280,12 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
             if config and not turn['context_check']['fits']:
                 raise RuntimeError('actual conversation cannot fit; no generation')
             began = time.monotonic()
-            if config:
+            if config and recovery_policy:
+                import icl_recovery as recovery
+                status, raw = recovery.stage(turn, artifact, name, path, config, mode,
+                    getattr(args, 'recovery_coordinator', None))
+                body, cap = turn['request_body'], turn['max_output_tokens']
+            elif config:
                 status, raw = call_provider(body, config, args.timeout)
             else:
                 status, raw = None, json.dumps({'synthetic': True, 'model': args.model,
@@ -284,7 +305,8 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
             elif config and controls.estimated_context(config):
                 turn['prompt_usage_check'] = controls.estimate_usage_check(turn['context_check'], turn['provider_usage'])
             persist(path, artifact, name + ':raw_saved')
-            turn['operational_checks'] = response_checks(turn, body, config, args.request_profile, cap, config is None, mode)
+            turn['operational_checks'] = response_checks(turn, body, config, args.request_profile, cap, config is None, mode,
+                recovery_policy['version'] if recovery_policy else None)
             if not all(turn['operational_checks'].values()):
                 raise RuntimeError('returned answer failed operational checks')
             turn['cost'] = cost(turn['provider_usage'], config, args.request_profile)
@@ -308,6 +330,8 @@ def run_once(world, arm, repeat, args, wrapper, outdir, design_api=design):
     except Exception as exc:
         artifact['state'] = 'incomplete'
         artifact['failure'] = {'type': type(exc).__name__, 'stage': call['id'], 'network_retries': []}
+        if recovery_policy:
+            artifact['failure'].update(reason=getattr(exc, 'reason', 'implementation_error'), pause=getattr(exc, 'pause', True))
         if isinstance(exc, urllib.error.HTTPError):
             raw = exc.read().decode('utf-8', errors='replace')
             try:
@@ -355,13 +379,26 @@ def audit_artifact(a, design_api=design):
         checks['complete'] = (a['state'] == 'completed' and not a.get('failure')
                               and set(turns) == {c['id'] for c in plan} and a['run_order'] == [c['id'] for c in plan])
         checks.update(history=True, hashes=True, persistence=True, responses=True)
+        recovery_policy = i.get('operational_policy')
         for c in plan:
             name, cap = c['id'], c['max_output_tokens']
             t = turns[name]
+            if recovery_policy:
+                import icl_recovery as recovery
+                base_body = {'model':i['model'], 'messages':c['messages'], **i['stage_settings'][str(cap)]}
+                checks['responses'] &= recovery.audit_attempts(t, config, i['reasoning_mode'], base_body)
+                events = a['persistence_events']
+                for suffix in ('attempt_prepared','attempt_dispatched','attempt_raw_saved','attempt_classified'):
+                    checks['persistence'] &= events.count(name+':'+suffix) == len(t.get('attempts',[]))
+                for n in range(len(t.get('attempts',[]))):
+                    indexes = [[i for i,e in enumerate(events) if e == name+':'+suffix][n]
+                        for suffix in ('attempt_prepared','attempt_dispatched','attempt_raw_saved','attempt_classified')]
+                    checks['persistence'] &= indexes == sorted(indexes)
+                cap = t['max_output_tokens']
             request_settings = settings(i['profile'], i['repeat_seed_label'], bool(config and config['seed_supported']), cap, i['reasoning_mode'], config)
             body = {'model': i['model'], 'messages': c['messages'], **request_settings}
             parent = c['messages'][:-1]
-            checks['identity'] &= i['stage_settings'][str(cap)] == request_settings
+            checks['identity'] &= (cap in (32768,65536) if recovery_policy else i['stage_settings'][str(cap)] == request_settings)
             checks['history'] &= (t['history_policy'] == policy and t['conversation'] == c['conversation']
                 and t['request_body'] == body and t['parent_history'] == parent
                 and t['parent_history_id'] == 'history_' + canonical(parent)
@@ -374,7 +411,8 @@ def audit_artifact(a, design_api=design):
             checks['persistence'] &= all(events.count(e) == 1 for e in required)
             checks['persistence'] &= [events.index(e) for e in required] == sorted(events.index(e) for e in required)
             checks['persistence'] &= events.index(required[-1]) < events.index('completed')
-            checks['responses'] &= all(response_checks(t, body, config, i['profile'], cap, dry, i['reasoning_mode']).values())
+            checks['responses'] &= all(response_checks(t, body, config, i['profile'], cap, dry, i['reasoning_mode'],
+                recovery_policy['version'] if recovery_policy else None).values())
         controls.no_secrets(a)
         checks['no_secrets'] = True
     except (ValueError, KeyError, TypeError, IndexError, AttributeError):
@@ -429,13 +467,21 @@ def block_cost_plan(world, arm, wrapper, repeats=3, history_policy=design.HISTOR
     answers = synthetic_answers(world) if design_api is design else design_api.oracle_answers(world)
     extra = {'output_tokens': output_tokens} if hasattr(design_api, 'output_allowance') else {}
     calls = design_api.schedule(world, arm, answers, history_policy, **extra)
-    completion = repeats * sum(c['max_output_tokens'] for c in calls)
+    caps = [c['max_output_tokens'] for c in calls]
+    adaptive = bool(wrapper and wrapper.get('expanded', {}).get('operational_policy'))
+    if adaptive:
+        import icl_recovery as recovery
+        if wrapper['expanded']['operational_policy'] != recovery.specification() or output_tokens != 32768:
+            raise ValueError('unknown recovery cost policy')
+        # Worst case: initial 32K, length escalation, two transient repeats at 64K.
+        caps = [cap for _ in calls for cap in (32768,65536,65536,65536)]
+    completion = repeats * sum(caps)
     if wrapper is None:
         return {'status': 'unavailable', 'reason': 'no verified deployment/rates',
                 'history_policy': history_policy,
                 'repeats': repeats, 'requests': len(calls) * repeats, 'maximum_completion_tokens': completion}
     config = wrapper['deployment']
-    ceiling = repeats * sum(config['context']['tokens'] - c['max_output_tokens'] for c in calls)
+    ceiling = repeats * sum(config['context']['tokens'] - cap for cap in caps)
     prices = config['pricing']
     result = {'status': 'local_unpriced' if config['profile'] == 'gemma_e4b' else 'estimated',
               'history_policy': history_policy,
@@ -445,6 +491,9 @@ def block_cost_plan(world, arm, wrapper, repeats=3, history_policy=design.HISTOR
     if config['profile'] in controls.EXPANDED_HOSTED_PROFILES:
         result.update(usd_ceiling=(ceiling * prices['input_per_million'] + completion * prices['output_per_million']) / 1e6,
                       rate_source=prices['source'])
+    if adaptive:
+        result.update(maximum_http_requests=repeats*len(caps), operational_policy=recovery.POLICY,
+            assumption='All four bounded HTTP attempts per stage fill context/output, including failed calls. Request-level durable reservations govern actual dispatch.')
     return result
 
 

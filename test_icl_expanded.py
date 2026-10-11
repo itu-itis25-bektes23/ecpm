@@ -931,6 +931,135 @@ class Expanded16K(unittest.TestCase):
                     self.assertEqual([c['messages'] for c in after],[c['messages'] for c in before])
 
 
+class Expanded32K(unittest.TestCase):
+    """Mock providers only; a larger request is not proof it will finish."""
+
+    def wrapper(self, mode='off', policy=old.HISTORY_POLICY, profile='deepseek_openrouter'):
+        w = (OpenRouterEstimate().wrapper(mode, policy) if profile == 'deepseek_openrouter'
+             else Expanded16K().deployment(profile, mode, policy))
+        w['deployment']['effective']['max_output_tokens'] = 65536
+        w['expanded'].update(output_allowances=[32768], control_preflight_output_tokens=16384)
+        return w
+
+    def test_requests_capacity_and_unchanged_control_preflight(self):
+        from experiments.preflight_icl_expanded import prepare
+        for profile, mode in itertools.product(('deepseek_openrouter', 'sol'), ('off', 'on')):
+            w = self.wrapper(mode, profile=profile); c = w['deployment']
+            saved = copy.deepcopy(c['preflight'])
+            x.validate_config(w, profile, mode, old.HISTORY_POLICY, 32768)
+            self.assertEqual(prepare(w)[0], saved['request'])
+            self.assertEqual(c['preflight'], saved)
+            self.assertEqual(saved['request'].get('max_tokens', saved['request'].get('max_completion_tokens')), 16384)
+            key = 'max_completion_tokens' if profile == 'sol' else 'max_tokens'
+            before = runner.settings(profile, 0, False, 16384, mode, c)
+            after = runner.settings(profile, 0, False, 32768, mode, c)
+            self.assertEqual(after, before | {key: 32768})
+            for damage in ('preflight_cap', 'capacity', 'context', 'relabel'):
+                bad = copy.deepcopy(w)
+                if damage == 'preflight_cap': del bad['expanded']['control_preflight_output_tokens']
+                if damage == 'capacity': bad['deployment']['effective']['max_output_tokens'] = 16384
+                if damage == 'context': bad['deployment']['context']['tokens'] = 32768
+                if damage == 'relabel': bad['deployment']['preflight']['request'][key] = 32768
+                with self.assertRaises(ValueError): x.validate_config(bad, profile, mode, old.HISTORY_POLICY, 32768)
+        for cap in (True, 32768.0, 65536):
+            with self.assertRaises(ValueError): x.output_allowance(cap)
+
+    def test_context_and_full_history_capacity(self):
+        world = x.build_world(8, 'sto', 'no_change'); answers = x.oracle_answers(world)
+        answers['A_prepare'] = 'not JSON {\n é\t  '
+        for profile, policy in itertools.product(('sol', 'deepseek_openrouter'), x.HISTORY_POLICIES):
+            c = self.wrapper(policy=policy, profile=profile)['deployment']
+            calls = x.schedule(world, 'model_first', answers, policy, 32768)
+            for call in calls:
+                self.assertEqual(call['max_output_tokens'], 32768)
+                if call['id'] != 'A_prepare':
+                    self.assertIn({'role':'assistant', 'content':answers['A_prepare']}, call['messages'])
+            body = {'messages': calls[-1]['messages']}
+            count = runner.context_check(body, c, 32768)
+            total = count.get('total_token_units_estimate', count.get('total_upper_bound'))
+            c['context']['tokens'] = total * (4 if profile == 'deepseek_openrouter' else 1)
+            self.assertTrue(runner.context_check(body, c, 32768)['fits'])
+            c['context']['tokens'] -= 1
+            self.assertFalse(runner.context_check(body, c, 32768)['fits'])
+
+    def test_both_histories_all_cohorts_audit_export_and_cost(self):
+        world = x.build_world(8, 'sto', 'no_change')
+        with tempfile.TemporaryDirectory() as folder:
+            records = []
+            for policy, mode, cap in itertools.product(x.HISTORY_POLICIES, ('off', 'on'), (4096, 16384, 32768)):
+                args = report.arguments('model_first', mode, policy, 'deepseek_openrouter', cap)
+                a = runner.run_once(world, 'model_first', 1, args, None, folder, x)
+                records.append(a)
+                self.assertTrue(all(runner.audit_artifact(json.loads(json.dumps(a)), x).values()))
+                self.assertEqual(a['scores'], records[0]['scores'])
+                self.assertTrue(all(t['request_body']['max_tokens'] == cap for t in a['turns'].values()))
+            self.assertEqual(len({a['run_id'] for a in records}), 12)
+            result = report.summarize([folder])
+            self.assertEqual({r['output_allowance_per_response'] for r in result['request_usage']}, {4096,16384,32768})
+            self.assertEqual(len(result['runs']), 12)
+        w = self.wrapper(); c = w['deployment']
+        plan = runner.block_cost_plan(world, 'model_first', w, 1, design_api=x)
+        self.assertEqual(plan['maximum_completion_tokens'], 6 * 32768)
+        self.assertEqual(plan['admitted_input_token_ceiling'], 6 * (c['context']['tokens'] - 32768))
+        self.assertEqual(plan['usd_ceiling'], (6 * (c['context']['tokens'] - 32768)
+            * c['pricing']['input_per_million'] + 6 * 32768 * c['pricing']['output_per_million']) / 1e6)
+
+    def test_pinned_16k_replay_not_32k_relabelling(self):
+        world = x.build_world(8, 'sto', 'no_change')
+        with tempfile.TemporaryDirectory() as folder:
+            a = runner.run_once(world, 'model_first', 1,
+                report.arguments('model_first', 'on', old.HISTORY_POLICY, 'sol', 16384), None, folder, x)
+        for pin in ('a2a0340eee721af5eb3152adfcb2262de7ef22fc', 'a3e32493ad8a10e960a5b5abff3434053e020cb9'):
+            b = copy.deepcopy(a)
+            b['identity'].update(source_sha256=dict(x.historical_source_hashes(pin)), implementation_commit=pin)
+            b['identity_sha256'] = runner.canonical(b['identity'])
+            b['run_id'] = f'{x.PROTOCOL}_seed8_model_first_r1_{b["identity_sha256"][:16]}'
+            self.assertTrue(all(runner.audit_artifact(b, x).values()))
+            settings = b['identity']['stage_settings'].pop('16384')
+            settings['max_completion_tokens'] = 32768
+            b['identity']['stage_settings']['32768'] = settings
+            b['identity_sha256'] = runner.canonical(b['identity'])
+            self.assertFalse(x.audit_identity(b))
+
+    def test_live_mocked_pair_and_unverified_or_truncated_stops(self):
+        world = x.build_world(8, 'sto', 'no_change'); answers = x.oracle_answers(world)
+        for mode, failure in itertools.product(('off', 'on'), (None, 'length', 'accounting', 'control')):
+            w = self.wrapper(mode); c = w['deployment']; calls = []
+            args = report.arguments('model_first', mode, old.HISTORY_POLICY, c['profile'], 32768)
+            args.provider, args.model = 'openai', c['model']
+            def respond(body, config, timeout):
+                name = list(answers)[len(calls)]; calls.append(body)
+                self.assertEqual(body['max_tokens'], 32768)
+                d = Expanded16K().response(c, mode, answers[name]); d['usage']['prompt_tokens'] = 100
+                if name == 'B_task' and failure:
+                    if failure == 'length':
+                        d['choices'][0].update(finish_reason='length')
+                        d['choices'][0]['message']['content'] = None
+                    if failure == 'accounting':
+                        d['usage']['completion_tokens'] = 32768
+                        d['usage']['completion_tokens_details'] = {'reasoning_tokens':32769}
+                    if failure == 'control':
+                        d['choices'][0]['message']['reasoning'] = 'contradiction' if mode == 'off' else None
+                        d['usage']['completion_tokens_details'] = {'reasoning_tokens':5 if mode == 'off' else None}
+                return 200, json.dumps(d)
+            with tempfile.TemporaryDirectory() as folder, patch.object(x.pilot, '_git_dirty', return_value=False), \
+                 patch.object(runner, 'call_provider', side_effect=respond):
+                if failure:
+                    with self.assertRaisesRegex(RuntimeError, 'operational failure saved'):
+                        runner.run_once(world, 'model_first', 1, args, w, folder, x)
+                    a = json.loads(next(Path(folder).glob('*.json')).read_text())
+                    self.assertEqual(a['state'], 'incomplete')
+                    self.assertEqual(len(calls), 5)
+                    self.assertNotIn('B_readout', a['turns'])
+                    if failure == 'accounting':
+                        raw = json.loads(a['turns']['B_task']['provider_response_raw'])
+                        self.assertEqual(raw['usage']['completion_tokens_details']['reasoning_tokens'], 32769)
+                else:
+                    a = runner.run_once(world, 'model_first', 1, args, w, folder, x)
+                    self.assertEqual(len(calls), 6)
+                    self.assertTrue(all(runner.audit_artifact(json.loads(json.dumps(a)), x).values()))
+
+
 class OpenRouterEstimate(unittest.TestCase):
     """Only synthetic envelopes; never deployment evidence."""
 

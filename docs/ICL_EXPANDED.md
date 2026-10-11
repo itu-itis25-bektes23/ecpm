@@ -20,7 +20,8 @@ the B tasks, alongside the same observations.
 | `baseline_task` | Answer tasks directly, without a preparation response. | 4 |
 
 The four preparation arms share an approximate 250-word target and the same
-16,384-token response allowance for new runs. Historical 4,096-token runs retain
+16,384-token default response allowance, or an explicit matched 32,768-token
+allowance for a separate cohort. Historical 4,096-token runs retain
 their recorded allowance and separate identities. Rules and task format appear before preparation;
 specific route queries appear in the task request. There is no step-by-step
 counting procedure. A word target does not guarantee equal generated tokens or
@@ -197,12 +198,27 @@ and set a cost limit using verified prices. Save every raw request, final answer
 exposed reasoning, usage and available cost evidence. Estimates, cache counts and
 provider billing remain separate; unknown values remain null.
 New expanded CLI runs default to 16,384 per response, in both modes and all stages.
+Explicit `--max-tokens 32768` supports a separate cohort, with the same allowance
+in OFF and ON. Its readiness wrapper must record `output_allowances: [32768]`
+and `control_preflight_output_tokens: 16384`. The retained control preflight
+stays byte-for-byte 16K evidence, not a completed 32K test. Deployment output
+capacity must admit 32K; every actual full conversation is checked with 32K
+reserved for completion. Unknown hosted overhead remains unknown. The opt-in
+OpenRouter estimate still uses UTF-8 bytes plus 4,096 units per message and a
+25% context admission limit. No history is trimmed. A longer allowance does
+not guarantee completion; length finishes, missing final answers and invalid
+token accounting still stop the run without retrying.
 Explicit `--max-tokens 4096` remains available for historical reproduction, not
 the new pilot. Allowances are included in identities, audits, costs and exports;
 do not pool different limits. Earlier protocols retain their original defaults.
 The reviewed v3 4K source tree at `05df38907307ec290ede76998f50a6fb1318b4fd`
 can be audited with this version only when recorded source hashes match that Git
-tree exactly; other historical versions still require their original checkout.
+tree exactly. The same pinned-source rule admits 16K artifacts from
+`a2a0340eee721af5eb3152adfcb2262de7ef22fc` and
+`a3e32493ad8a10e960a5b5abff3434053e020cb9` only at their original allowance.
+Other historical versions still require their original checkout. A completed
+16K run never counts as a completed 32K cell. Keep earlier failed responses and
+budget reservations unchanged when planning a fresh matched pair.
 Pricing calculations use the supplied uncached input and completion rates.
 If a deployment has long-context or other tiered rates, use verified conservative
 rates covering the entire planned input range for the ceiling. Treat the resulting
@@ -211,6 +227,30 @@ billing separately. The ceiling excludes deployment preflight calls.
 
 This extension is passive ICL only. Larger graphs and agentic integration are
 separate follow-ups.
+
+### Optional bounded recovery
+
+`icl_bounded_recovery_v1` is an exploratory amendment motivated by pilot
+failures, not a preregistered rule. It starts every stage at 32K and permits
+one identical-history repeat at 64K only after an explicit length finish.
+Two transient retries are allowed, with at most four HTTP attempts per stage
+and a 30-minute timeout per attempt. Wrong or malformed stop answers are not
+retried. Truncated preparation is diagnostic only, never replayed as an answer.
+
+ON denotes a supported reasoning-enabled request. Zero and missing reasoning
+counts remain distinct observations, not exclusion criteria. OFF reasoning
+channel contradictions still stop dispatch. Raw token-accounting anomalies
+are flagged; invalid derived counts are null. Historical acceptance remains
+unchanged. Reports distinguish policy, actual caps and recovery attempts.
+
+[The serial recovery launcher](../experiments/run_icl_recovery.py) reserves
+each request durably under one cumulative budget, preserves unknown charges,
+and exports cell, conversation-attempt and HTTP-attempt records. Terminal
+cells do not block independent cells or requeue on restart. Authentication,
+identity/control, evidence, budget and repeated systemic failures pause new
+dispatch. Uncertain interrupted requests remain reserved and are not replayed.
+Four-worker execution is not implemented. Private configurations and ledgers
+remain outside Git; use a pinned clean commit and the existing private manifest.
 See [final run readiness](FINAL_RUN_READINESS.md) for the boundary between this
 ICL lock and the existing agentic workflow.
 

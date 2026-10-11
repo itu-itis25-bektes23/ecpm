@@ -324,7 +324,7 @@ def context_bound(messages, config, reserve_answer=0, *, output_tokens=8192, all
         raise ValueError("missing bound for replay of the unseen A answer")
     input_bound = sum(len(m["content"].encode()) + overhead for m in messages)
     input_bound += math.ceil(reserve_answer * expansion)
-    if type(output_tokens) is not int or output_tokens not in (4096, 8192, 16384):
+    if type(output_tokens) is not int or output_tokens not in (4096, 8192, 16384, 32768, 65536):
         raise ValueError("invalid stage output allowance")
     total = input_bound + output_tokens
     return {"method": context["method"], "input_tokens_upper_bound": input_bound,
@@ -348,14 +348,14 @@ def hosted_context_check(messages, config, *, output_tokens=8192, allow_system=F
     if (config.get("profile") != "deepseek_openrouter"
             or config.get("model") != EXPANDED_MODELS["deepseek_openrouter"]
             or config.get("endpoint") != "https://openrouter.ai/api/v1"
-            or output_tokens != 16384 or type(output_tokens) is not int
+            or output_tokens not in (16384, 32768, 65536) or type(output_tokens) is not int
             or c.get("overhead_tokens_per_message") is not None
             or type(c.get("engineering_reserve_per_message")) is not int
             or c["engineering_reserve_per_message"] != 4096
             or c.get("admission_fraction") != 0.25
             or type(c.get("tokens")) is not int or c["tokens"] < output_tokens
             or not isinstance(c.get("source"), str) or not c["source"].strip()):
-        raise ValueError("explicit OpenRouter 16K estimate policy and fixed safety margins required")
+        raise ValueError("explicit OpenRouter 16K/32K/64K estimate policy and fixed safety margins required")
     if not messages or any(set(m) != {"role", "content"}
             or m["role"] not in (("system", "user", "assistant") if allow_system else ("user", "assistant"))
             or not isinstance(m["content"], str) for m in messages):
@@ -766,7 +766,7 @@ def deployment_preflight_request(config, profile, mode, *, preflight_output_toke
     return expected
 
 
-def validate_deployment(config, profile, mode, *, preflight_output_tokens=8192):
+def validate_deployment(config, profile, mode, *, preflight_output_tokens=8192, operational_policy=None):
     """Require explicit operator evidence; this cannot prove server semantics."""
     expected = deployment_preflight_request(config, profile, mode,
                                            preflight_output_tokens=preflight_output_tokens)
@@ -789,10 +789,16 @@ def validate_deployment(config, profile, mode, *, preflight_output_tokens=8192):
     if profile == 'deepseek_openrouter' and response.get('provider') != effective['response_provider']:
         raise ValueError('OpenRouter preflight backing provider mismatch')
     choice = response.get("choices", [{}])[0]
+    accepted = reasoning_check(response, mode, effective, profile, config)["mode_verified"]
+    if operational_policy is not None:
+        import icl_recovery as recovery
+        if operational_policy != recovery.POLICY or profile not in ('sol','deepseek_openrouter'):
+            raise ValueError('unsupported requested-condition policy')
+        accepted = recovery.observations(response,config,profile,mode)['request_condition_accepted']
     if (response.get("model") != config["response_model"]
             or choice.get("finish_reason") != "stop"
             or not has_final_content(choice.get("message", {}).get("content"))
-            or not reasoning_check(response, mode, effective, profile, config)["mode_verified"]):
+            or not accepted):
         raise ValueError("preflight control not verified; answer correctness is not checked")
     if "I have to answer now." in (provider_reasoning(response, profile) or ""):
         raise ValueError("preflight contains a known forced budget-ending message")
