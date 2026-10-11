@@ -869,9 +869,9 @@ def check(name, cond, detail=""):
     assert cond, f"FAIL {name}: {detail}"
 
 
-def _run_py(args):
+def _run_py(args, *, env=None):
     return subprocess.run([sys.executable, "-B"] + args, cwd=os.path.dirname(os.path.abspath(__file__)),
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, env=env)
 
 
 class Step:
@@ -1065,6 +1065,26 @@ def test_references():
           data["rows"] and all({"rate", "transition", "bayes", "generator"} <= set(r) for r in data["rows"]))
 
 
+def test_references_hash_seeds():
+    """Hash randomization must not alter the serialized reference scores."""
+    with tempfile.TemporaryDirectory() as tmp:
+        outputs = []
+        for hash_seed in (0, 1, 2, 3, 5, 7, 11, 42):
+            path = os.path.join(tmp, f"references_hash_{hash_seed}.json")
+            result = _run_py([
+                "experiments/baseline_k_sweep.py", "--references", "--seeds", "31-40",
+                "--k", "10", "--modes", "sto", "--json", path,
+            ], env={**os.environ, "PYTHONHASHSEED": str(hash_seed)})
+            check(f"references hash seed {hash_seed} exits 0", result.returncode == 0,
+                  result.stderr[-300:])
+            with open(path, "rb") as handle:
+                outputs.append(handle.read())
+            check(f"references hash seed {hash_seed} has nonempty rows",
+                  bool(json.loads(outputs[-1])["rows"]))
+            check(f"references bytes agree across hash seeds 0 and {hash_seed}",
+                  outputs[-1] == outputs[0])
+
+
 def test_grid_dry():
     """--grid: parallel batches, same runs as a sequential batch, resume, combined table, one grid at a time."""
     runs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs")
@@ -1193,6 +1213,7 @@ if __name__ == "__main__":
     test_family_cli()
     test_seed_eligibility_family()
     test_references()
+    test_references_hash_seeds()
     test_grid_dry()
     test_results_tables()
     test_icl_tables()
