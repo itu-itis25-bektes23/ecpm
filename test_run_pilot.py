@@ -91,6 +91,56 @@ def test_legacy_prompt_and_scorer_regression():
     print("PASS legacy prompt hashes and frozen scorer regression")
 
 
+def test_legacy_path_sends_reasoning_control():
+    """The legacy (two-turn) path sends the validated reasoning control and records it."""
+    import model_clients
+    captured = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def read(self):
+            return json.dumps({"choices": [{"message": {"content": "{}"},
+                                            "finish_reason": "stop"}],
+                               "usage": {}}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured.append(json.loads(request.data))
+        return FakeResponse()
+
+    args = SimpleNamespace(provider="openai", model="deepseek/deepseek-v4.1-flash",
+                           base_url="https://openrouter.ai/api/v1", max_tokens=4096,
+                           timeout=30, reasoning_mode="off",
+                           reasoning_control_json='{"reasoning": {"enabled": false}}',
+                           reasoning_control_source="test")
+    original = model_clients.urllib.request.urlopen
+    try:
+        model_clients.urllib.request.urlopen = fake_urlopen
+        run_pilot.dispatch(args, None, "detection", None,
+                           [{"role": "user", "content": "x"}])
+    finally:
+        model_clients.urllib.request.urlopen = original
+    assert captured[0]["reasoning"] == {"enabled": False}
+    assert captured[0]["max_tokens"] == 4096 and captured[0]["temperature"] == 0
+    # with no control (unspecified mode) the request body is unchanged
+    captured.clear()
+    plain = SimpleNamespace(**{**vars(args), "reasoning_mode": "unspecified",
+                               "reasoning_control_json": None,
+                               "reasoning_control_source": None})
+    try:
+        model_clients.urllib.request.urlopen = fake_urlopen
+        run_pilot.dispatch(plain, None, "detection", None,
+                           [{"role": "user", "content": "x"}])
+    finally:
+        model_clients.urllib.request.urlopen = original
+    assert "reasoning" not in captured[0]
+    print("PASS legacy path sends the reasoning control")
+
+
 def test_levels_share_visible_evidence_and_raw_order():
     sc, record, view = record_and_view()
     queried = run_pilot.queried_pairs_for_icl(record, sc)
@@ -1127,6 +1177,7 @@ if __name__ == "__main__":
     test_period_boundary_and_prompt_neutrality()
     test_five_pairs_stable_and_no_change_counterfactual()
     test_availability_and_no_change_dry_answers()
+    test_legacy_path_sends_reasoning_control()
     test_combined_parser_component_independence_and_pair_errors()
     test_visible_and_truth_probability_mae()
     test_nullable_localization_and_route_belief_diagnostics()
