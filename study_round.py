@@ -30,14 +30,16 @@ class Round:
     def __init__(self, a):
         self.a, self.rnd = a, a.round
         self.seeds = SEEDS[self.rnd]
-        self.out = ROOT.parent / "ecpm-study-runs" / self.rnd
+        # Dry runs write to their own tree, so their fake answers can never sit where a real round looks for work.
+        self.base = ROOT.parent / "ecpm-study-runs" / ("_dry" if a.dry else "")
+        self.out = self.base / self.rnd
         self.wt = ROOT.parent / "ecpm-study-wt" / self.rnd
         self.out.mkdir(parents=True, exist_ok=True)
         self.log_path = self.out / "round_log.txt"
         self.procs = {}
         self.start_usage = None
         self.since = datetime.date.today().isoformat()      # runs from the round's first day count as done
-        self.env = dict(os.environ, STUDY_RUNS_DIR=str(self.out.parent),
+        self.env = dict(os.environ, STUDY_RUNS_DIR=str(self.base),
                         STUDY_PRIVATE_DIR=str(ROOT.parent / "ecpm-study-private"))
 
     # ---------------------------------------------------------------- helpers
@@ -87,6 +89,10 @@ class Round:
     # ---------------------------------------------------------------- 1. checks
     def checks(self):
         self.log(f"round {self.rnd}: {len(self.seeds)} seeds {self.seeds}")
+        if not self.a.dry:                                   # leftovers of an older dry run in the real folder
+            for f in list((self.out / "icl").glob("*/icl_*.json"))[:200]:
+                if '"dry-run"' in f.read_text(encoding="utf-8", errors="ignore")[:20000]:
+                    self.stop(f"dry-run conversations found in {self.out / 'icl'}; move {self.out} away first")
         if self.git("status", "--porcelain", "--untracked-files=no").stdout.strip():
             self.stop("the checkout has uncommitted changes; commit or stash them first")
         branch = self.git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
