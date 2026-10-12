@@ -1,0 +1,8 @@
+# Evidence-only reference agent
+
+`reference_agent.py` acts in the same worlds, episodes (4 M0 and 4 M1, H = 20) and change conditions as the language-model agents. It sees only what a model sees: the action labels on its current node's menu and each attempt's outcome. It never reads the world's success probabilities.
+
+It keeps a posterior over each action's success probability under the generator's prior, uniform on [0.60, 0.95]. It drops an action once the posterior that the action is broken exceeds 0.95, which happens after six consecutive failures, as in the H4 threshold. In deterministic mode, which the models are told about, one failure is enough. It routes by fewest expected attempts over actions whose destination it has seen, and explores untried actions when no known route exists. Metrics come from `explore_metrics.py`, the functions the model runs use. Runner: `experiments/reference_agent_runs.py`. There are no API calls.
+
+- **`exploratory/`:** the ten exploratory seeds, all 11 cells. The agent never chose a link again after six failures, in any cell (0 of 8 qualifying runs). M1 goal success was 0.90 to 1.00.
+- **`h4h6_seeds/`:** the 51 seeds of the confirmatory H4/H6 grids, stochastic silent break and degradation. The agent chose the changed link again in **1 of 23 qualifying runs**, against 82 to 90 percent for the three models (no preparation). In that one run (seed 54), both actions at the node had failed six times in a row, the working alternative by chance. With every option looking broken, the agent took the least likely broken one. The H4 measure therefore holds a small rational component, and the models' rates are far above it.
