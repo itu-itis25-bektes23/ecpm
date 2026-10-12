@@ -1,0 +1,29 @@
+{
+  "audited_source_commit": "3dbaafcc71de094b7336e3a82d6fc0034e39be74",
+  "code_dependencies": [
+    "PR #46: OpenRouter/16K",
+    "PR #50: context estimate",
+    "PR #58 / 3dbaafcc: 32K/64K bounded recovery and request-defined ON acceptance"
+  ],
+  "drive_permissions": "Archive link supplied by the owner; recipient access not verified by this offline export.",
+  "handoff_manifest_sha256": "c8f938d20b8343e8cd35fd83f0d8a0ce5c58910200e847756f39ca4918993ddd",
+  "historical_commit": "a3e32493ad8a10e960a5b5abff3434053e020cb9",
+  "metric_rows_verified_against_saved_scores": 201090,
+  "raw_archive": "https://drive.google.com/drive/folders/1AfRR4Mi-ykLaiLb47z6ARB_4Mz7yUwij",
+  "schema": "deepseek_icl_curated_v1",
+  "source_export_sha256": {
+    "cells.json": "4008eeaa9ee0e020e1799df57f2cb973431a36f18cdf44b8cf261cddf03e3195",
+    "cost_reconciliation.json": "ec0ff960fc3dea1a010fac0011f6040bf9908679a9310095dea72a7be59a5c08",
+    "failures.json": "723bdc36c1bbf203ea258deb376fde572fb8b870cc23aebae77fa071b3575322",
+    "historical_failed_requests.json": "dbaf69e462f85cec21a9315adca22d23fdfd965c3c0e7b3efdb5d727fcd832e7",
+    "request_attempts.json": "19bad7b4fa70a627e37e68a11485679d8eaeb3fafa201f9732de969277b9da67",
+    "scientific_metrics.csv": "43792f1b426863bec63093efcfb321094daaa1c0438f48e3ddba26671503233d",
+    "usage_totals.json": "e05e5aca72f2fab26c47e4c36641204497158778ea2b73595b61edfc06856307"
+  },
+  "transformations": [
+    "audited_metrics.csv.gz decompresses byte-for-byte to the audited scientific CSV; renamed from PR #59 metrics.csv.gz without changing bytes",
+    "cells.csv retains every audited cell field",
+    "request_attempts.csv.gz includes current attempts plus the superseded failed 16K conversation; renamed from PR #59 request_usage.csv.gz without changing bytes; no requests are silently deduplicated",
+    "public request/failure records omit configuration paths and large context/control objects; original envelopes remain in the raw archive"
+  ]
+}

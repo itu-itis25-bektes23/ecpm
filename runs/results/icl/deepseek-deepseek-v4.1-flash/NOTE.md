@@ -1,10 +1,12 @@
 # DeepSeek V4.1 Flash, expanded ICL
 
-655 of 660 conversations completed: 652 run from commit 3dbaafc (output allowance 32,768, raised to 65,536 for the 32 conversations that needed it) and 3 earlier pilot conversations from commit a3e3249 (16,384). OpenRouter, profile deepseek_openrouter, pinned provider. The run used a bounded recovery policy (icl_bounded_recovery_v1): a failed stage could be retried within the same conversation, and every attempt is kept in the raw evidence.
+See the [audited coverage and accounting](tables.md) for new and historical completions, incomplete cells, actual cap cohorts and failures. OpenRouter, profile deepseek_openrouter, pinned Ionstream provider. The run used a bounded recovery policy (icl_bounded_recovery_v1): a failed stage could be retried within the same conversation, and every attempt is kept in the raw evidence and request_attempts.csv.gz.
 
-Five conversations are incomplete and excluded: four ended on provider errors, and one (stochastic, silent break, seed 13, task-only, OFF) exhausted both the 32K and the 64K allowance.
+The allowance-exhaustion failure is **retained history, stochastic redirect, seed 0, task_only, ON**, at B_readout. It exhausted both 32K and 64K. The stochastic silent-break seed-13 task_only OFF cell instead ended on a provider error. All incomplete cells remain unscored; [failures.json](failures.json) retains their exact identities and original usage.
 
-metrics.csv.gz and request_usage.csv.gz were exported from the 655 completed conversations with the export tool of the run's own checkout. icl_tables.md covers the 652 conversations of the main run. costs.csv holds the cost OpenRouter billed for the final attempt of each completed conversation (10.73 USD); the total including failed and retried attempts was 13.27 USD.
+The original main imports metrics.csv.gz, request_usage.csv.gz and costs.csv are preserved byte-for-byte. Their exporter quarantined the historical completions; [icl_tables.md](icl_tables.md) describes that narrower strict-score view with arm-specific denominators. The audited handoff's original scores, including those historical completions, remain in audited_metrics.csv.gz. See [reconciliation.json](reconciliation.json) for their agreement, without rescoring.
+
+costs.csv is a narrower completed-conversation reported-charge view, not an invoice or a full attempt ledger. The [generated accounting table](tables.md) separates provider-reported charges, unresolved reservations, earlier pilots outside the batch, total exposure and remaining authorization. Exposure is not reported spend; upstream cost details are not added twice.
 
 Answer format with reasoning off: 1,097 of 1,316 OFF task and readout answers are well-formed (all 1,304 ON answers are); 31 OFF answers start with prose before the JSON.
 

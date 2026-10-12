@@ -1,0 +1,32 @@
+{
+  "actual_cap_request_counts_current_cells": {
+    "16384": 18,
+    "32768": 3946,
+    "65536": 40
+  },
+  "audited_export_hash": "PASS",
+  "cells": 660,
+  "completed": 655,
+  "historical_completed": 3,
+  "incomplete": 5,
+  "metric_rows": 201090,
+  "new_completed": 652,
+  "per_arm": {
+    "graph_given": {
+      "completed": 219,
+      "failed_terminal": 1
+    },
+    "model_first": {
+      "completed": 217,
+      "historical_completed": 3
+    },
+    "task_only": {
+      "completed": 216,
+      "failed_terminal": 4
+    }
+  },
+  "raw_archive_access": "Owner-supplied link, access not independently verified",
+  "reported_cost_total_including_historical_pilots_usd": "12.22665085",
+  "requests": 4009,
+  "schema_unique_coverage": "PASS"
+}

@@ -1,0 +1,254 @@
+{
+  "all_preserved_attempts": {
+    "cached_tokens": {
+      "missing_n": 8,
+      "reported_n": 4001,
+      "reported_sum": 12102400
+    },
+    "completion_tokens": {
+      "missing_n": 8,
+      "reported_n": 4001,
+      "reported_sum": 12470442
+    },
+    "cost_reported_n": 4001,
+    "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+    "prompt_tokens": {
+      "missing_n": 8,
+      "reported_n": 4001,
+      "reported_sum": 15359465
+    },
+    "reasoning_tokens_reported": {
+      "missing_n": 8,
+      "reported_n": 4001,
+      "reported_sum": 11143031
+    },
+    "reported_cost_usd": "12.22665085",
+    "requests": 4009,
+    "total_tokens": {
+      "missing_n": 8,
+      "reported_n": 4001,
+      "reported_sum": 27829907
+    }
+  },
+  "by_actual_output_cap": {
+    "16384": {
+      "cached_tokens": {
+        "missing_n": 0,
+        "reported_n": 18,
+        "reported_sum": 17920
+      },
+      "completion_tokens": {
+        "missing_n": 0,
+        "reported_n": 18,
+        "reported_sum": 16054
+      },
+      "cost_reported_n": 18,
+      "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+      "prompt_tokens": {
+        "missing_n": 0,
+        "reported_n": 18,
+        "reported_sum": 64531
+      },
+      "reasoning_tokens_reported": {
+        "missing_n": 0,
+        "reported_n": 18,
+        "reported_sum": 9349
+      },
+      "reported_cost_usd": "0.02249970",
+      "requests": 18,
+      "total_tokens": {
+        "missing_n": 0,
+        "reported_n": 18,
+        "reported_sum": 80585
+      }
+    },
+    "32768": {
+      "cached_tokens": {
+        "missing_n": 8,
+        "reported_n": 3938,
+        "reported_sum": 11862528
+      },
+      "completion_tokens": {
+        "missing_n": 8,
+        "reported_n": 3938,
+        "reported_sum": 11134506
+      },
+      "cost_reported_n": 3938,
+      "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+      "prompt_tokens": {
+        "missing_n": 8,
+        "reported_n": 3938,
+        "reported_sum": 15055979
+      },
+      "reasoning_tokens_reported": {
+        "missing_n": 8,
+        "reported_n": 3938,
+        "reported_sum": 9830234
+      },
+      "reported_cost_usd": "10.97540998",
+      "requests": 3946,
+      "total_tokens": {
+        "missing_n": 8,
+        "reported_n": 3938,
+        "reported_sum": 26190485
+      }
+    },
+    "65536": {
+      "cached_tokens": {
+        "missing_n": 0,
+        "reported_n": 40,
+        "reported_sum": 216064
+      },
+      "completion_tokens": {
+        "missing_n": 0,
+        "reported_n": 40,
+        "reported_sum": 1269965
+      },
+      "cost_reported_n": 40,
+      "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+      "prompt_tokens": {
+        "missing_n": 0,
+        "reported_n": 40,
+        "reported_sum": 222167
+      },
+      "reasoning_tokens_reported": {
+        "missing_n": 0,
+        "reported_n": 40,
+        "reported_sum": 1255072
+      },
+      "reported_cost_usd": "1.17268359",
+      "requests": 40,
+      "total_tokens": {
+        "missing_n": 0,
+        "reported_n": 40,
+        "reported_sum": 1492132
+      }
+    }
+  },
+  "by_reasoning_mode": {
+    "off": {
+      "cached_tokens": {
+        "missing_n": 4,
+        "reported_n": 1980,
+        "reported_sum": 6252032
+      },
+      "completion_tokens": {
+        "missing_n": 4,
+        "reported_n": 1980,
+        "reported_sum": 697134
+      },
+      "cost_reported_n": 1980,
+      "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+      "prompt_tokens": {
+        "missing_n": 4,
+        "reported_n": 1980,
+        "reported_sum": 7614804
+      },
+      "reasoning_tokens_reported": {
+        "missing_n": 4,
+        "reported_n": 1980,
+        "reported_sum": 0
+      },
+      "reported_cost_usd": "0.85621437",
+      "requests": 1984,
+      "total_tokens": {
+        "missing_n": 4,
+        "reported_n": 1980,
+        "reported_sum": 8311938
+      }
+    },
+    "on": {
+      "cached_tokens": {
+        "missing_n": 4,
+        "reported_n": 2016,
+        "reported_sum": 5844480
+      },
+      "completion_tokens": {
+        "missing_n": 4,
+        "reported_n": 2016,
+        "reported_sum": 11723391
+      },
+      "cost_reported_n": 2016,
+      "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+      "prompt_tokens": {
+        "missing_n": 4,
+        "reported_n": 2016,
+        "reported_sum": 7727873
+      },
+      "reasoning_tokens_reported": {
+        "missing_n": 4,
+        "reported_n": 2016,
+        "reported_sum": 11094655
+      },
+      "reported_cost_usd": "11.31437890",
+      "requests": 2020,
+      "total_tokens": {
+        "missing_n": 4,
+        "reported_n": 2016,
+        "reported_sum": 19451264
+      }
+    }
+  },
+  "current_cell_attempts": {
+    "cached_tokens": {
+      "missing_n": 8,
+      "reported_n": 3996,
+      "reported_sum": 12096512
+    },
+    "completion_tokens": {
+      "missing_n": 8,
+      "reported_n": 3996,
+      "reported_sum": 12420525
+    },
+    "cost_reported_n": 3996,
+    "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+    "prompt_tokens": {
+      "missing_n": 8,
+      "reported_n": 3996,
+      "reported_sum": 15342677
+    },
+    "reasoning_tokens_reported": {
+      "missing_n": 8,
+      "reported_n": 3996,
+      "reported_sum": 11094655
+    },
+    "reported_cost_usd": "12.17059327",
+    "requests": 4004,
+    "total_tokens": {
+      "missing_n": 8,
+      "reported_n": 3996,
+      "reported_sum": 27763202
+    }
+  },
+  "superseded_historical_failure": {
+    "cached_tokens": {
+      "missing_n": 0,
+      "reported_n": 5,
+      "reported_sum": 5888
+    },
+    "completion_tokens": {
+      "missing_n": 0,
+      "reported_n": 5,
+      "reported_sum": 49917
+    },
+    "cost_reported_n": 5,
+    "note": "Reported subtotals, not zero-filled totals. Raw reasoning subcounts can exceed completion counts; no correction is applied.",
+    "prompt_tokens": {
+      "missing_n": 0,
+      "reported_n": 5,
+      "reported_sum": 16788
+    },
+    "reasoning_tokens_reported": {
+      "missing_n": 0,
+      "reported_n": 5,
+      "reported_sum": 48376
+    },
+    "reported_cost_usd": "0.05605758",
+    "requests": 5,
+    "total_tokens": {
+      "missing_n": 0,
+      "reported_n": 5,
+      "reported_sum": 66705
+    }
+  }
+}
