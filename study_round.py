@@ -256,6 +256,10 @@ class Round:
         if self.acting_dirs:
             self.log("bridge probes")
             subprocess.run(cmd, cwd=ROOT)
+        self.log("reference agent")                      # free: no API calls, the same seeds and cells
+        subprocess.run([sys.executable, "-B", "experiments/reference_agent_runs.py", "--round", self.rnd,
+                        "--out", str(self.out / "reference")] + (["--modes", "sto", "--scenarios", "silent_break"]
+                                                                 if self.a.dry else []), cwd=ROOT)
         self.log("analysis")
         cmd = [sys.executable, "-B", "experiments/study_analysis.py", "--round", self.rnd, "--out", str(self.out / "analysis")]
         for d in self.acting_dirs:
@@ -282,6 +286,9 @@ class Round:
         a = self.out / "analysis" / "report.md"
         if a.exists():
             lines += ["", a.read_text(encoding="utf-8")]
+        ref = self.out / "reference" / "summary.md"
+        if ref.exists():
+            lines += ["", ref.read_text(encoding="utf-8")]
         lines += ["", "Log:", "```", self.log_path.read_text(encoding="utf-8") if self.log_path.exists() else "", "```"]
         (self.out / "report.md").write_text("\n".join(lines), encoding="utf-8")
 
