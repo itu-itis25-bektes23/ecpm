@@ -31,7 +31,7 @@ def prepare(wrapper):
         if not isinstance(spec.get(key), str) or not spec[key].strip():
             raise ValueError('missing stage/system/context provenance')
     profile, mode = config['profile'], spec['reasoning_mode']
-    if profile not in ('sol', 'deepseek_openrouter'):
+    if profile not in ('sol', 'deepseek_openrouter', 'haiku_openrouter'):
         raise ValueError('this hosted preflight entry supports Sol and OpenRouter only')
     body = design.controls.deployment_preflight_request(config, profile, mode,
                                                         preflight_output_tokens=design.NEW_CAP)

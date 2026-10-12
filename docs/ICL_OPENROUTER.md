@@ -7,6 +7,8 @@ The v3 preparation policy, scientific prompts and scores are unchanged.
 
 ## Request profiles
 
+`haiku_openrouter` is the same OpenRouter profile pinned to `anthropic/claude-haiku-5.5` (template: `docs/openrouter_haiku.template.json`); everything below applies to it unchanged, with its own preflight, provider slug and pricing.
+
 `deepseek_openrouter` uses only `deepseek/deepseek-v4.1-flash` at
 `https://openrouter.ai/api/v1`. It reads `OPENROUTER_API_KEY` from the process
 environment, never from a result/configuration file. Do not put keys in commands,

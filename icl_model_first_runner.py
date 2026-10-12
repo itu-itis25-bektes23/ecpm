@@ -22,7 +22,7 @@ def settings(profile, seed, supported, allowance, reasoning_mode='off', config=N
     result = controls.intended_settings(profile, reasoning_mode, seed, supported,
                                         allowed_seeds=(0, 1, 2, 3, 4, 999))
     result['max_completion_tokens' if profile == 'sol' else 'max_tokens'] = allowance
-    if profile == 'deepseek_openrouter' and config is not None:
+    if profile in controls.OPENROUTER_PROFILES and config is not None:
         result['provider'] = controls.openrouter_routing(config)
     return result
 
@@ -90,7 +90,7 @@ def copied_fields(data, config, profile, dry=False, reasoning_mode='off'):
             'provider_reasoning': controls.provider_reasoning(data, profile),
             'actual_response_model': data.get('model'), 'system_fingerprint': data.get('system_fingerprint'),
             'truncated': choice.get('finish_reason') == 'length', 'control_check': check}
-    if profile == 'deepseek_openrouter':
+    if profile in controls.OPENROUTER_PROFILES:
         fields.update(actual_response_provider=data.get('provider'),
                       native_finish_reason=choice.get('native_finish_reason'),
                       provider_reasoning_details=copy.deepcopy(message.get('reasoning_details')))
@@ -138,7 +138,7 @@ def response_checks(turn, body, config, profile, allowance, dry=False, reasoning
                     and body == {'model':config['model'], 'messages':body['messages'], **expected}
                     and observed['request_condition_accepted'])
                 checks['copied_fields'] &= turn.get('reasoning_acceptance') == observed
-            if profile == 'deepseek_openrouter':
+            if profile in controls.OPENROUTER_PROFILES:
                 checks['controls'] &= copied['actual_response_provider'] == config['effective']['response_provider']
                 checks['transport'] &= (not data.get('error') and not data['choices'][0].get('error')
                     and copied['native_finish_reason'] not in ('length', 'max_tokens'))
@@ -209,9 +209,9 @@ def call_provider(body, config, timeout):
         # Do not even read either hosted credential on this path.
         key_name = 'ECPM_LOCAL_API_KEY'
     else:
-        key_name = {'gemma_31b_together': 'TOGETHER_API_KEY',
-                    'deepseek_openrouter': 'OPENROUTER_API_KEY'}.get(config['profile'], 'OPENAI_API_KEY')
-        if config['profile'] == 'deepseek_openrouter' and config['endpoint'].rstrip('/') != 'https://openrouter.ai/api/v1':
+        key_name = ('OPENROUTER_API_KEY' if config['profile'] in controls.OPENROUTER_PROFILES else
+                    {'gemma_31b_together': 'TOGETHER_API_KEY'}.get(config['profile'], 'OPENAI_API_KEY'))
+        if config['profile'] in controls.OPENROUTER_PROFILES and config['endpoint'].rstrip('/') != 'https://openrouter.ai/api/v1':
             raise ValueError('OpenRouter credential cannot leave its endpoint')
     key = os.environ.get(key_name)
     if not key and not local:

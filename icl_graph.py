@@ -25,8 +25,11 @@ MODELS = {"gemma_e4b": "sunil-pathak/gemma-4-e4b-it",
           "gemma_31b": "google/gemma-4-31B-it", "sol": "gpt-5.6-sol",
           "gemma_31b_together": "google/gemma-4-31B-it"}
 HOSTED_PROFILES = {"gemma_31b", "gemma_31b_together", "sol"}
-EXPANDED_MODELS = {**MODELS, "deepseek_openrouter": "deepseek/deepseek-v4.1-flash"}
-EXPANDED_HOSTED_PROFILES = HOSTED_PROFILES | {"deepseek_openrouter"}
+# OpenRouter profiles share one request shape and checks; each is pinned to one exact model.
+OPENROUTER_PROFILES = {"deepseek_openrouter": "deepseek/deepseek-v4.1-flash",
+                       "haiku_openrouter": "anthropic/claude-haiku-5.5"}
+EXPANDED_MODELS = {**MODELS, **OPENROUTER_PROFILES}
+EXPANDED_HOSTED_PROFILES = HOSTED_PROFILES | set(OPENROUTER_PROFILES)
 HOSTED_READINESS_POLICY = "hosted_readiness_v1"
 LOCAL_CONTEXT = "local_backend_tokenizer_v1"
 PREFLIGHT = ("Find the smallest positive integer n that is divisible by 7 and "
@@ -258,10 +261,13 @@ def reference_answer(view, earlier=None):
 def intended_settings(profile, mode, seed, seed_supported=False, allowed_seeds=(0, 1, 2, 999)):
     if profile not in EXPANDED_MODELS or mode not in ("off", "on") or type(seed) is not int or seed not in allowed_seeds:
         raise ValueError("unknown request profile, reasoning mode or seed")
-    if profile == "deepseek_openrouter":
+    if profile in OPENROUTER_PROFILES:
         if seed_supported:
             raise ValueError("OpenRouter profile omits unverified provider seeds")
-        return {"max_tokens": 8192, "reasoning": {"enabled": mode == "on", "exclude": False},
+        # Haiku ON asks for effort medium, like Sol ON and the agentic arm
+        reasoning = ({"effort": "medium", "exclude": False} if profile == "haiku_openrouter" and mode == "on"
+                     else {"enabled": mode == "on", "exclude": False})
+        return {"max_tokens": 8192, "reasoning": reasoning,
                 "provider": {"require_parameters": True, "allow_fallbacks": False},
                 "plugins": [{"id": "context-compression", "enabled": False}]}
     if profile == "sol":
@@ -345,8 +351,8 @@ def hosted_context_check(messages, config, *, output_tokens=8192, allow_system=F
     if not estimated_context(config):
         return context_bound(messages, config, output_tokens=output_tokens, allow_system=allow_system)
     c = config["context"]
-    if (config.get("profile") != "deepseek_openrouter"
-            or config.get("model") != EXPANDED_MODELS["deepseek_openrouter"]
+    if (config.get("profile") not in OPENROUTER_PROFILES
+            or config.get("model") != OPENROUTER_PROFILES[config.get("profile")]
             or config.get("endpoint") != "https://openrouter.ai/api/v1"
             or output_tokens not in (16384, 32768, 65536) or type(output_tokens) is not int
             or c.get("overhead_tokens_per_message") is not None
@@ -546,7 +552,7 @@ def provider_reasoning(data, profile=None):
     """Together can return either alias; never silently discard a conflicting one."""
     message = data.get("choices", [{}])[0].get("message", {})
     text = message.get("reasoning_content")
-    if profile in ("gemma_31b_together", "deepseek_openrouter"):
+    if profile == "gemma_31b_together" or profile in OPENROUTER_PROFILES:
         other = message.get("reasoning")
         if any(v is not None and not isinstance(v, str) for v in (text, other)):
             raise ValueError("unsupported Together reasoning channel type")
@@ -566,7 +572,8 @@ def hosted_semantics(config, mode):
             or evidence.get("endpoint") != config["endpoint"]
             or evidence.get("scope") != "exact_model"
             or evidence.get("request_fields") != fields
-            or evidence.get("effect") != ("disables_reasoning_computation" if mode == "off" else "enables_reasoning")
+            or evidence.get("effect") != ("disables_reasoning_computation" if mode == "off" else
+                                          HAIKU_REQUEST_DEFINED_ON if config["profile"] == "haiku_openrouter" else "enables_reasoning")
             or not isinstance(evidence.get("source"), str) or not evidence["source"].strip()):
         raise ValueError("exact-model hosted reasoning semantics/provenance required")
     try:
@@ -574,6 +581,11 @@ def hosted_semantics(config, mode):
     except (ValueError, TypeError, KeyError):
         raise ValueError("dated hosted reasoning source required") from None
     return evidence
+
+
+# Same rule as sol_request_defined_on_v1: ON is the supported request condition, not a claim that reasoning was
+# observed. Haiku 5.5 may answer an easy prompt without reasoning whatever the request asks for.
+HAIKU_REQUEST_DEFINED_ON = "haiku_request_defined_on_v1"
 
 
 def reasoning_check(data, mode, effective, profile=None, config=None):
@@ -602,7 +614,7 @@ def reasoning_check(data, mode, effective, profile=None, config=None):
             other = re.sub(r"^\s*<\|channel>thought\s*<channel\|>\s*$", "", other)
             positive |= bool(re.sub(r"</?think>|\[/?THINK\]", "", other).strip())
         contradictory = False
-        if profile == "deepseek_openrouter":
+        if profile in OPENROUTER_PROFILES:
             details = message.get("reasoning_details")
             if details is not None and not isinstance(details, list):
                 raise ValueError("unsupported OpenRouter reasoning details")
@@ -633,10 +645,12 @@ def reasoning_check(data, mode, effective, profile=None, config=None):
         count_source = evidence.get("reasoning_tokens_source")
         measured = (count_known and tokens == 0 and isinstance(count_source, str)
                     and bool(count_source.strip()))
+        request_defined = mode == "on" and evidence.get("effect") == HAIKU_REQUEST_DEFINED_ON
         accepted = bool(evidence) and not contradictory and not invalid_count and (
-            (not positive and (measured or tokens is None)) if mode == "off" else positive)
+            (not positive and (measured or tokens is None)) if mode == "off" else positive or request_defined)
         basis = (("measured_zero" if measured else "provider_documented_disable")
-                 if accepted and mode == "off" else "positive_reasoning" if accepted else None)
+                 if accepted and mode == "off" else "positive_reasoning" if accepted and positive
+                 else HAIKU_REQUEST_DEFINED_ON if accepted else None)
         return {"mode_verified": accepted, "reasoning_tokens": tokens,
                 "evidence": "true" if positive else "false" if measured else "unknown",
                 "control_violation": contradictory or (mode == "off" and positive),
@@ -693,10 +707,10 @@ def deployment_preflight_request(config, profile, mode, *, preflight_output_toke
             or url.path.rstrip("/") != "/v1" or config["model"] != MODELS[profile]
             or config["response_model"] != MODELS[profile]):
         raise ValueError("Together requires its documented endpoint and exact Gemma 31B model")
-    if profile == 'deepseek_openrouter' and (
+    if profile in OPENROUTER_PROFILES and (
             config['endpoint'].rstrip('/') != 'https://openrouter.ai/api/v1'
             or config['model'] != EXPANDED_MODELS[profile]):
-        raise ValueError('OpenRouter requires its exact endpoint and DeepSeek model')
+        raise ValueError('OpenRouter requires its exact endpoint and the profile model')
     if type(preflight_output_tokens) is not int or preflight_output_tokens not in (8192, 16384):
         raise ValueError('unsupported preflight allowance')
     if not all(config[k] and isinstance(config[k], str) for k in
@@ -761,7 +775,7 @@ def deployment_preflight_request(config, profile, mode, *, preflight_output_toke
     expected = {"model": config["model"], "messages": [{"role": "user", "content": PREFLIGHT}],
                 **intended_settings(profile, mode, 999, config["seed_supported"])}
     expected['max_completion_tokens' if profile == 'sol' else 'max_tokens'] = preflight_output_tokens
-    if profile == 'deepseek_openrouter':
+    if profile in OPENROUTER_PROFILES:
         expected['provider'] = openrouter_routing(config)
     return expected
 
@@ -786,7 +800,7 @@ def validate_deployment(config, profile, mode, *, preflight_output_tokens=8192, 
                 or response['choices'][0].get('error')
                 or response['choices'][0].get('native_finish_reason') in ('length', 'max_tokens')):
             raise ValueError('16K preflight provider failure or truncation')
-    if profile == 'deepseek_openrouter' and response.get('provider') != effective['response_provider']:
+    if profile in OPENROUTER_PROFILES and response.get('provider') != effective['response_provider']:
         raise ValueError('OpenRouter preflight backing provider mismatch')
     choice = response.get("choices", [{}])[0]
     accepted = reasoning_check(response, mode, effective, profile, config)["mode_verified"]

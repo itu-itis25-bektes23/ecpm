@@ -687,7 +687,7 @@ class Expanded16K(unittest.TestCase):
         c = w['deployment']
         c.update(profile=profile, model_id=x.controls.EXPANDED_MODELS[profile],
                  model=x.controls.EXPANDED_MODELS[profile], response_model=x.controls.EXPANDED_MODELS[profile])
-        if profile == 'deepseek_openrouter':
+        if profile in x.controls.OPENROUTER_PROFILES:
             c['endpoint'] = 'https://openrouter.ai/api/v1'
             c['effective'].update(provider_slug='mock-provider', response_provider='Mock Provider',
                 routing_source='SYNTHETIC TEST ONLY', sampling_source='SYNTHETIC omitted, not greedy')
@@ -697,6 +697,8 @@ class Expanded16K(unittest.TestCase):
         c['effective']['hosted_evidence'].update(model=c['model'], endpoint=c['endpoint'],
             request_fields={k:v for k,v in runner.settings(profile,0,False,16384,mode,c).items()
                             if k in ('reasoning', 'reasoning_effort')})
+        if (profile, mode) == ('haiku_openrouter', 'on'):
+            c['effective']['hosted_evidence']['effect'] = x.controls.HAIKU_REQUEST_DEFINED_ON
         c['preflight']['request'] = {'model':c['model'],
             'messages':[{'role':'user', 'content':x.controls.PREFLIGHT}],
             **runner.settings(profile,999,False,16384,mode,c)}
@@ -708,7 +710,7 @@ class Expanded16K(unittest.TestCase):
     def response(self, c, mode, content):
         data = envelope(content, 'sol', mode)
         data['model'] = c['response_model']
-        if c['profile'] == 'deepseek_openrouter':
+        if c['profile'] in x.controls.OPENROUTER_PROFILES:
             data['provider'] = c['effective']['response_provider']
             message = data['choices'][0]['message']
             message['reasoning'] = message.pop('reasoning_content')
@@ -718,12 +720,36 @@ class Expanded16K(unittest.TestCase):
         raw = json.dumps(c['preflight']['response'])
         c['preflight'].update(response_raw=raw, response_raw_sha256=old.digest(raw))
 
+    def test_haiku_on_is_request_defined(self):
+        """haiku_request_defined_on_v1: an ON answer without observed reasoning is accepted by its request and recorded."""
+        c = self.deployment('haiku_openrouter', 'on')['deployment']
+        plain = {'model': c['model'], 'provider': 'Mock Provider', 'choices': [{'message': {'content': '301'}, 'finish_reason': 'stop'}],
+                 'usage': {'completion_tokens_details': {'reasoning_tokens': 0}}}
+        r = x.controls.reasoning_check(plain, 'on', c['effective'], 'haiku_openrouter', c)
+        self.assertTrue(r['mode_verified']); self.assertEqual(r['verification_basis'], x.controls.HAIKU_REQUEST_DEFINED_ON)
+        self.assertEqual((r['reasoning_tokens'], r['control_violation']), (0, False))
+        thought = copy.deepcopy(plain); thought['usage']['completion_tokens_details']['reasoning_tokens'] = 120
+        self.assertEqual(x.controls.reasoning_check(thought, 'on', c['effective'], 'haiku_openrouter', c)['verification_basis'], 'positive_reasoning')
+        d = self.deployment('deepseek_openrouter', 'on')['deployment']   # other profiles still need observed reasoning
+        self.assertFalse(x.controls.reasoning_check(plain, 'on', d['effective'], 'deepseek_openrouter', d)['mode_verified'])
+        bad = copy.deepcopy(self.deployment('deepseek_openrouter', 'on')); bad['deployment']['effective']['hosted_evidence']['effect'] = x.controls.HAIKU_REQUEST_DEFINED_ON
+        with self.assertRaises(ValueError):   # the rule is Haiku-only
+            x.controls.hosted_semantics(bad['deployment'], 'on')
+
+    def test_haiku_profile_is_pinned_to_its_model(self):
+        self.assertEqual(x.controls.EXPANDED_MODELS['haiku_openrouter'], 'anthropic/claude-haiku-5.5')
+        w = self.deployment('haiku_openrouter', 'on'); bad = copy.deepcopy(w)
+        bad['deployment'].update(model='deepseek/deepseek-v4.1-flash', model_id='deepseek/deepseek-v4.1-flash')
+        with self.assertRaises(ValueError):
+            x.validate_config(bad, 'haiku_openrouter', 'on', old.HISTORY_POLICY, 16384)
+
     def test_requests_readiness_and_credential_isolation(self):
         from test_icl_graph import Reply
         from experiments.preflight_icl_expanded import prepare
-        for profile, mode in itertools.product(('sol','deepseek_openrouter'), ('off','on')):
+        for profile, mode in itertools.product(('sol','deepseek_openrouter','haiku_openrouter'), ('off','on')):
             w = self.deployment(profile, mode); c = w['deployment']
             body, count, cost = prepare(w)
+            self.assertEqual(body['model'], x.controls.EXPANDED_MODELS[profile])
             self.assertTrue(count['fits'])
             self.assertEqual(body, c['preflight']['request'])
             self.assertEqual(body.get('max_tokens', body.get('max_completion_tokens')), 16384)
@@ -734,8 +760,9 @@ class Expanded16K(unittest.TestCase):
             self.assertEqual(plan['maximum_completion_tokens'],6*16384)
             with self.assertRaisesRegex(ValueError,'allowance differs'):
                 runner.block_cost_plan(x.build_world(8,'det','silent_break'),'model_first',w,1,design_api=x,output_tokens=4096)
-            if profile == 'deepseek_openrouter':
-                self.assertEqual(body['reasoning'], {'enabled':mode=='on','exclude':False})
+            if profile in x.controls.OPENROUTER_PROFILES:
+                self.assertEqual(body['reasoning'], {'effort':'medium','exclude':False} if (profile, mode) == ('haiku_openrouter', 'on')
+                                 else {'enabled':mode=='on','exclude':False})
                 self.assertEqual(body['provider'], {'only':['mock-provider'], 'require_parameters':True,'allow_fallbacks':False})
                 self.assertEqual(body['plugins'], [{'id':'context-compression','enabled':False}])
                 with self.assertRaisesRegex(ValueError,'seeds'):
@@ -753,7 +780,7 @@ class Expanded16K(unittest.TestCase):
                 self.assertEqual(req.get_header('Authorization'),'Bearer fake-test-key')
                 self.assertEqual(opener.return_value.open.call_count,1)
                 self.assertEqual(status,200)
-            for field in ('routing_source','sampling_source','provider_slug') if profile=='deepseek_openrouter' else ('source',):
+            for field in ('routing_source','sampling_source','provider_slug') if profile in x.controls.OPENROUTER_PROFILES else ('source',):
                 bad=copy.deepcopy(w); bad['deployment']['effective'][field]=None
                 with self.assertRaises(ValueError): prepare(bad)
             bad=copy.deepcopy(w); bad['deployment']['effective']['max_output_tokens']=8192
