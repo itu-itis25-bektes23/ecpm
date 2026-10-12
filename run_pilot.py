@@ -1980,7 +1980,8 @@ def main():
                     help="model-first/expanded protocols: one workflow per block")
     ap.add_argument("--history-policy", choices=["retained_reports_v2", "separate_reports_post_task_v1"],
                     default=None, help="model-first/expanded: retain reports (default) or collect post-task copies")
-    ap.add_argument("--request-profile", choices=["gemma_e4b", "gemma_31b", "sol", "gemma_31b_together", "deepseek_openrouter", "haiku_openrouter"])
+    ap.add_argument("--request-profile", choices=["gemma_e4b", "gemma_31b", "sol", "gemma_31b_together", "deepseek_openrouter", "haiku_openrouter",
+                             "sol_openrouter"])
     ap.add_argument("--deployment-config",
                     help="reviewed non-secret endpoint/readiness JSON for the selected protocol")
     ap.add_argument("--off-reference",
@@ -2095,7 +2096,7 @@ def main():
     args = ap.parse_args()
     if args.max_tokens is None:
         args.max_tokens = 16384 if args.protocol == 'icl_expanded_v2' else 4096
-    if args.request_profile in ('deepseek_openrouter', 'haiku_openrouter') and args.protocol != 'icl_expanded_v2':
+    if args.request_profile in ('deepseek_openrouter', 'haiku_openrouter', 'sol_openrouter') and args.protocol != 'icl_expanded_v2':
         ap.error(args.request_profile + ' is an expanded ICL profile only')
 
     if (args.n_nodes is not None or args.extra_edges is not None) and \
@@ -2132,6 +2133,7 @@ def main():
     outdir = os.path.join(args.out, args.tag)
     if args.protocol == "icl_expanded_v2":
         import icl_expanded
+        import icl_study_seeds; icl_study_seeds.apply(icl_expanded)
         icl_expanded.run_suite(sc, args, outdir)
         return
     if args.protocol == "icl_model_first_v1":

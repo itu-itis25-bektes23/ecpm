@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import icl_expanded as design
+import icl_study_seeds; icl_study_seeds.apply(design)
 import icl_model_first as pilot
 import icl_model_first_runner as runner
 from experiments.preview_icl_model_first import compatible_identity, save

@@ -27,7 +27,11 @@ MODELS = {"gemma_e4b": "sunil-pathak/gemma-4-e4b-it",
 HOSTED_PROFILES = {"gemma_31b", "gemma_31b_together", "sol"}
 # OpenRouter profiles share one request shape and checks; each is pinned to one exact model.
 OPENROUTER_PROFILES = {"deepseek_openrouter": "deepseek/deepseek-v4.1-flash",
-                       "haiku_openrouter": "anthropic/claude-haiku-5.5"}
+                       "haiku_openrouter": "anthropic/claude-haiku-5.5",
+                       "sol_openrouter": "openai/gpt-5.6-sol"}
+# Profiles whose ON mode asks for effort medium and is request-defined (as sol_request_defined_on_v1):
+# ON is the supported request condition, not a claim that reasoning was observed.
+REQUEST_DEFINED_ON_PROFILES = ("haiku_openrouter", "sol_openrouter")
 EXPANDED_MODELS = {**MODELS, **OPENROUTER_PROFILES}
 EXPANDED_HOSTED_PROFILES = HOSTED_PROFILES | set(OPENROUTER_PROFILES)
 HOSTED_READINESS_POLICY = "hosted_readiness_v1"
@@ -265,7 +269,7 @@ def intended_settings(profile, mode, seed, seed_supported=False, allowed_seeds=(
         if seed_supported:
             raise ValueError("OpenRouter profile omits unverified provider seeds")
         # Haiku ON asks for effort medium, like Sol ON and the agentic arm
-        reasoning = ({"effort": "medium", "exclude": False} if profile == "haiku_openrouter" and mode == "on"
+        reasoning = ({"effort": "medium", "exclude": False} if profile in REQUEST_DEFINED_ON_PROFILES and mode == "on"
                      else {"enabled": mode == "on", "exclude": False})
         return {"max_tokens": 8192, "reasoning": reasoning,
                 "provider": {"require_parameters": True, "allow_fallbacks": False},
@@ -573,7 +577,7 @@ def hosted_semantics(config, mode):
             or evidence.get("scope") != "exact_model"
             or evidence.get("request_fields") != fields
             or evidence.get("effect") != ("disables_reasoning_computation" if mode == "off" else
-                                          HAIKU_REQUEST_DEFINED_ON if config["profile"] == "haiku_openrouter" else "enables_reasoning")
+                                          HAIKU_REQUEST_DEFINED_ON if config["profile"] in REQUEST_DEFINED_ON_PROFILES else "enables_reasoning")
             or not isinstance(evidence.get("source"), str) or not evidence["source"].strip()):
         raise ValueError("exact-model hosted reasoning semantics/provenance required")
     try:

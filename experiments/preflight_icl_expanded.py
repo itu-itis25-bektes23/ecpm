@@ -9,6 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import icl_expanded as design
+import icl_study_seeds; icl_study_seeds.apply(design)
 import icl_model_first_runner as runner
 from experiments.preview_icl_model_first import save
 
@@ -31,7 +32,7 @@ def prepare(wrapper):
         if not isinstance(spec.get(key), str) or not spec[key].strip():
             raise ValueError('missing stage/system/context provenance')
     profile, mode = config['profile'], spec['reasoning_mode']
-    if profile not in ('sol', 'deepseek_openrouter', 'haiku_openrouter'):
+    if profile not in ('sol', 'deepseek_openrouter', 'haiku_openrouter', 'sol_openrouter'):
         raise ValueError('this hosted preflight entry supports Sol and OpenRouter only')
     body = design.controls.deployment_preflight_request(config, profile, mode,
                                                         preflight_output_tokens=design.NEW_CAP)
