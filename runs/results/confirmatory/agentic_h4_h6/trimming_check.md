@@ -1,20 +1,36 @@
 # H4 trimming check
 
-**Question.** The agent's history is trimmed when the transcript exceeds an estimated 12,000 tokens. Could the six consecutive failures that qualify a run for H4 have been trimmed away before the agent chose the link again?
+Failure streaks carry across M0 and M1 and reset on target-link success. The threshold must be reached in M1, as in the saved scorer. The check rebuilds the first subsequent non-aborted decision at the changed source with the saved trimming settings. It checks the six qualifying failure reports, not every earlier target observation or every later decision. Original scores are not rewritten.
 
-**Method.** `experiments/h4_trimming_check.py` is applied to every task-only run of both confirmatory grids, in stochastic silent break and degradation, that reached six consecutive failures of the changed link in M1. At the first decision at the changed node after the sixth failure, it rebuilds the history the agent was sent, using `explore_agent.trim_history` with the run's own settings. It then checks whether the reports of all six failures were in it. The inputs are the confirmatory GRID zips of 11 October 2026, kept outside the repository in the team Drive.
+The k/n entries below are repeat-choice fractions: runs that chose the changed link again / qualifying runs in the indicated subset, not counts of retained reports. 0/0 means that subset contains no runs. Coverage counts are listed separately.
 
-**Result.** In every qualifying run, all six failures were in the agent's context at that decision. No run is affected, so H4 is unchanged.
-
-| Grid | Model | Chose again / qualifying | All six failures in context | Some trimmed away | Wilson lower bound, visible only |
+| Grid | Model | Chose again / all qualifying runs | Chose again / runs retaining all six reports | Chose again / runs missing at least one report | Wilson lower bound on repeat-choice rate, all six retained |
 |---|---|---|---|---|---|
-| GRID_anthropic-claude-haiku-5_5 (no preparation) | anthropic/claude-haiku-5.5 | 19/21 | 19/21 | 0/0 | 0.69 |
-| GRID_deepseek-deepseek-v4_1-flash (no preparation) | deepseek/deepseek-v4.1-flash | 17/20 | 17/20 | 0/0 | 0.62 |
-| GRID_openai-gpt-5_6-sol (no preparation) | openai/gpt-5.6-sol | 14/17 | 14/17 | 0/0 | 0.57 |
-| GRID_anthropic-claude-haiku-5_5 (matched preparation) | anthropic/claude-haiku-5.5 | 15/20 | 15/20 | 0/0 | 0.51 |
-| GRID_deepseek-deepseek-v4_1-flash (matched preparation) | deepseek/deepseek-v4.1-flash | 27/31 | 27/31 | 0/0 | 0.69 |
-| GRID_openai-gpt-5_6-sol (matched preparation) | openai/gpt-5.6-sol | 8/14 | 8/14 | 0/0 | 0.31 |
+| GRID_anthropic-claude-haiku-5.5_2026-10-11_130215 | anthropic/claude-haiku-5.5 | 19/21 | 19/21 | 0/0 | 0.69 |
+| GRID_anthropic-claude-haiku-5.5_2026-10-11_133243 | anthropic/claude-haiku-5.5 | 15/20 | 15/20 | 0/0 | 0.51 |
+| GRID_deepseek-deepseek-v4.1-flash_2026-10-11_130148 | deepseek/deepseek-v4.1-flash | 17/21 | 17/21 | 0/0 | 0.58 |
+| GRID_deepseek-deepseek-v4.1-flash_2026-10-11_133021 | deepseek/deepseek-v4.1-flash | 27/31 | 27/31 | 0/0 | 0.69 |
+| GRID_openai-gpt-5.6-sol_2026-10-11_130438 | openai/gpt-5.6-sol | 14/17 | 14/17 | 0/0 | 0.57 |
+| GRID_openai-gpt-5.6-sol_2026-10-11_134333 | openai/gpt-5.6-sol | 8/14 | 8/14 | 0/0 | 0.31 |
 
-**Why no run is affected.** Trimming drops the oldest turns first and always keeps the most recent turns. The six failures come immediately before the decision, so they are always among the turns kept.
+## Coverage
 
-**The DeepSeek count.** The no-preparation DeepSeek run reads 17/20 here against 17/21 in the H4 table. The one extra qualifying run ends before the agent returns to the changed node, so there is no decision to check. It did not choose the link again, so H4 is the same either way.
+| Grid | Inputs | Out of scope | Not qualifying | Checked | No later source decision | Errors | Status |
+|---|---|---|---|---|---|---|---|
+| GRID_anthropic-claude-haiku-5.5_2026-10-11_130215 | 306 | 204 | 81 | 21 | 0 | 0 | checked |
+| GRID_anthropic-claude-haiku-5.5_2026-10-11_133243 | 306 | 204 | 82 | 20 | 0 | 0 | checked |
+| GRID_deepseek-deepseek-v4.1-flash_2026-10-11_130148 | 306 | 204 | 81 | 21 | 0 | 0 | checked |
+| GRID_deepseek-deepseek-v4.1-flash_2026-10-11_133021 | 306 | 204 | 71 | 31 | 0 | 0 | checked |
+| GRID_openai-gpt-5.6-sol_2026-10-11_130438 | 306 | 204 | 85 | 17 | 0 | 0 | checked |
+| GRID_openai-gpt-5.6-sol_2026-10-11_134333 | 306 | 204 | 88 | 14 | 0 | 0 | checked |
+
+## Cross-phase qualifiers
+
+The previous M1-only checker could miss an M0-carried streak or locate its threshold too late. These records carry failures from M0; negative failure indices in the coverage file refer to M0.
+
+- GRID_deepseek-deepseek-v4.1-flash_2026-10-11_130148, seed 48, silent_break, repeat 0: 1 M0 failure(s); visible; chose again: False; first subsequent source decision: M1 step 22 (zero-based).
+- GRID_deepseek-deepseek-v4.1-flash_2026-10-11_133021, seed 48, silent_break, repeat 0: 1 M0 failure(s); visible; chose again: True; first subsequent source decision: M1 step 24 (zero-based).
+
+Visibility is an observed result of reconstructing these histories, not a guarantee from FIFO trimming. The six failures need not be adjacent in the transcript. A qualifier with no later source decision remains in the H4 denominator but has no visibility check. The existing Wilson calculation (z=2.128) is retained, not a new dependence-adjusted analysis.
+
+Reproduce with `python3 -B experiments/h4_trimming_check.py --grid GRID_DIRECTORY` (repeat `--grid` for each of the six named archives), `--out REPORT.md --coverage COVERAGE.csv`. The input archives remain outside Git.
