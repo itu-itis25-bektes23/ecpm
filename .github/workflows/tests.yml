@@ -69,6 +69,7 @@ jobs:
           python test_icl_model_first_contract.py
           python test_icl_model_first.py
           python test_icl_expanded.py
+          python test_icl_recovery.py
           python test_final_lock.py
           python experiments/test_publish_deepseek_icl.py
           python agentic_conditions.py test
