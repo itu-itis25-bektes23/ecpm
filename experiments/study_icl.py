@@ -28,7 +28,13 @@ MODELS = {
     'haiku': dict(model='anthropic/claude-haiku-5.5', profile='haiku_openrouter', template='openrouter_haiku.template.json',
                   maker='anthropic'),
     'deepseek': dict(model='deepseek/deepseek-v4.1-flash', profile='deepseek_openrouter',
-                     template='openrouter_deepseek.template.json', maker='deepseek'),
+                     template='openrouter_deepseek.template.json', maker='deepseek',
+                     # The earlier DeepSeek ICL runs were pinned to Ionstream (runs/results/icl/deepseek-deepseek-v4.1-flash/
+                     # README.md; every recorded answer reports Ionstream), and the maker's own endpoint is excluded by the
+                     # account's allowed-providers setting (preflight 12 October 2026: HTTP 404, nothing generated).
+                     pin='ionstream',
+                     pin_reason='the provider the earlier DeepSeek ICL runs were pinned to (results README), allowed by the '
+                                'account; the maker endpoint is excluded by the account\'s allowed-providers setting'),
 }
 HIST = {'separate': 'separate_reports_post_task_v1', 'kept': 'retained_reports_v2'}
 SCEN = {'det': ('no_change', 'irrelevant', 'silent_break', 'hard_removal', 'redirect'),
@@ -96,6 +102,12 @@ def pick_endpoint(key, data):
     eps = data['data']['endpoints']
     m = MODELS[key]
     tags = [str(e.get('tag', '')) for e in eps]
+    if m.get('pin'):
+        hit = [e for e in eps if str(e.get('tag', '')) == m['pin']] or \
+              [e for e in eps if str(e.get('tag', '')).split('/')[0] == m['pin']]
+        if len(hit) == 1:
+            return hit[0], f'pinned to "{hit[0]["tag"]}": {m["pin_reason"]}'
+        sys.exit(f'{m["model"]}: the pinned provider "{m["pin"]}" matches {len(hit)} endpoints ({tags}); stopping')
     exact = [e for e in eps if str(e.get('tag', '')) == m['maker']]
     if len(exact) == 1:
         tiers = [t for t in tags if t.split('/')[0] == m['maker'] and t != m['maker']]
@@ -291,8 +303,7 @@ def main():
     elif a.step == 'preflight': preflight(k, a.yes)
     elif a.step == 'ready':
         if not all(validated(k, h).exists() for h in HIST):
-            if not (priv(k) / f'{k}_{MODE}_candidate.json').exists():
-                config(k)
+            config(k)                                    # always fresh until validated: no stale candidate is reused
             preflight(k, a.yes)
         print(f'{k}: ready')
     elif a.step == 'jobs': jobs(k, a.round, a.dry)
@@ -302,8 +313,7 @@ def main():
     else:
         if not a.dry:
             if not all(validated(k, h).exists() for h in HIST):
-                if not (priv(k) / f'{k}_{MODE}_candidate.json').exists():
-                    config(k)
+                config(k)
                 preflight(k, a.yes)
         jobs(k, a.round, a.dry)
         run(k, a.round, a.workers, a.dry)
