@@ -1,0 +1,29 @@
+| Condition | Turns | Calls | Errors | Pure JSON | Strict parses | Routes optimal, strict | Routes optimal, content | Localization (B), content | Mean output tokens | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|
+| orig | ALL | 24 | 0 | 38% | 38% | 12% | 62% | 82% | – | $0.0000 |
+| orig | graph_given B_task | 6 | 0 | 0% | 0% | 0% | 83% | 100% | – | $0.0000 |
+| orig | model_first A_task | 6 | 0 | 100% | 100% | 42% | 42% | – | – | $0.0000 |
+| orig | task_only A_task | 6 | 0 | 17% | 17% | 0% | 75% | – | – | $0.0000 |
+| orig | task_only B_task | 6 | 0 | 33% | 33% | 8% | 50% | 60% | – | $0.0000 |
+| off | ALL | 24 | 0 | 33% | 33% | 11% | 61% | 83% | 521 | $0.0187 |
+| off | graph_given B_task | 6 | 0 | 0% | 0% | 0% | 83% | 100% | 632 | $0.0062 |
+| off | model_first A_task | 6 | 0 | 100% | 100% | 42% | 42% | – | 294 | $0.0028 |
+| off | task_only A_task | 6 | 0 | 0% | 0% | 0% | 75% | – | 612 | $0.0037 |
+| off | task_only B_task | 6 | 0 | 33% | 33% | 4% | 46% | 67% | 546 | $0.0061 |
+| silent_user | ALL | 24 | 0 | 83% | 83% | 28% | 41% | 75% | 312 | $0.0163 |
+| silent_user | graph_given B_task | 6 | 0 | 67% | 67% | 29% | 54% | 100% | 360 | $0.0054 |
+| silent_user | model_first A_task | 6 | 0 | 100% | 100% | 42% | 42% | – | 287 | $0.0027 |
+| silent_user | task_only A_task | 6 | 0 | 83% | 83% | 25% | 38% | – | 283 | $0.0027 |
+| silent_user | task_only B_task | 6 | 0 | 83% | 83% | 17% | 29% | 50% | 318 | $0.0055 |
+| json_object | ALL | 24 | 0 | 42% | 38% | 10% | 63% | 83% | 503 | $0.0185 |
+| json_object | graph_given B_task | 6 | 0 | 0% | 0% | 0% | 75% | 100% | 662 | $0.0063 |
+| json_object | model_first A_task | 6 | 0 | 100% | 83% | 33% | 40% | – | 287 | $0.0027 |
+| json_object | task_only A_task | 6 | 0 | 17% | 17% | 0% | 83% | – | 628 | $0.0037 |
+| json_object | task_only B_task | 6 | 0 | 50% | 50% | 8% | 50% | 67% | 436 | $0.0058 |
+| json_schema | ALL | 24 | 0 | 100% | 100% | 38% | 38% | 83% | 266 | $0.0169 |
+| json_schema | graph_given B_task | 6 | 0 | 100% | 100% | 46% | 46% | 100% | 292 | $0.0055 |
+| json_schema | model_first A_task | 6 | 0 | 100% | 100% | 42% | 42% | – | 276 | $0.0029 |
+| json_schema | task_only A_task | 6 | 0 | 100% | 100% | 38% | 38% | – | 243 | $0.0028 |
+| json_schema | task_only B_task | 6 | 0 | 100% | 100% | 25% | 25% | 67% | 254 | $0.0056 |
+
+Routes optimal is the share of the four route queries answered with a valid, zero-regret route. Strict counts an answer that is not pure JSON as 0. Content reads the last JSON object carrying the routes. Groups: arm and turn of the sampled turns (the original answers of task-only and graph-given were malformed, those of model-first well-formed).
