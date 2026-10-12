@@ -78,12 +78,22 @@ class Round:
             return None
 
     def worktree(self, name):
+        """A working copy at exactly this round's commit. A copy left from an earlier attempt is moved to it, so no
+        family ever runs older code than the round reports."""
         path = self.wt / name
+        commit = self.git("rev-parse", "HEAD").stdout.strip()
         if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
-            r = self.git("worktree", "add", "--detach", str(path), "HEAD")
+            r = self.git("worktree", "add", "--detach", str(path), commit)
             if r.returncode:
                 self.stop(f"git worktree add failed for {name}: {r.stderr.strip()}")
+        else:
+            r = self.git("checkout", "--force", "--detach", commit, cwd=path)
+            if r.returncode:
+                self.stop(f"could not move working copy {name} to {commit[:7]}: {r.stderr.strip()}")
+        here = self.git("rev-parse", "HEAD", cwd=path).stdout.strip()
+        if here != commit:
+            self.stop(f"working copy {name} is at {here[:7]}, not the round's commit {commit[:7]}")
         return path
 
     # ---------------------------------------------------------------- 1. checks
