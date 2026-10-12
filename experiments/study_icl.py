@@ -90,15 +90,24 @@ def fetch(url):
 
 
 def pick_endpoint(key, data):
+    """Pin one backing provider from evidence: the maker's standard endpoint (tag exactly the maker), else the
+    single maker endpoint, else the only endpoint listed; otherwise stop. Tags like "openai/flex" or "openai/fast"
+    are service tiers of the maker, so the standard tier is preferred over them."""
     eps = data['data']['endpoints']
     m = MODELS[key]
+    tags = [str(e.get('tag', '')) for e in eps]
+    exact = [e for e in eps if str(e.get('tag', '')) == m['maker']]
+    if len(exact) == 1:
+        tiers = [t for t in tags if t.split('/')[0] == m['maker'] and t != m['maker']]
+        why = f'the maker\'s standard endpoint ("{m["maker"]}")'
+        return exact[0], why + (f'; its service tiers {tiers} were not used' if tiers else '')
     maker = [e for e in eps if str(e.get('tag', '')).split('/')[0] == m['maker']]
     if len(maker) == 1:
-        return maker[0], f'the maker\'s own endpoint ("{m["maker"]}")'
+        return maker[0], f'the maker\'s only endpoint ("{maker[0]["tag"]}")'
     if len(eps) == 1:
         return eps[0], 'the only endpoint listed'
-    sys.exit(f'{m["model"]}: {len(eps)} endpoints and no single maker endpoint '
-             f'({[e.get("tag") for e in eps]}); choose one by evidence before running')
+    sys.exit(f'{m["model"]}: {len(eps)} endpoints and no standard maker endpoint ({tags}); choose one by evidence '
+             'before running')
 
 
 def config(key):

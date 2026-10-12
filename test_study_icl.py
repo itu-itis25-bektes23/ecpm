@@ -53,7 +53,10 @@ class StudyIcl(unittest.TestCase):
 
     def test_config_pins_the_maker_endpoint(self):
         for key, tags, want in (('sol', ['azure', 'openai'], 'openai'), ('haiku', ['anthropic', 'google-vertex'], 'anthropic'),
-                                ('deepseek', ['deepinfra'], 'deepinfra')):
+                                ('deepseek', ['deepinfra'], 'deepinfra'),
+                                # the endpoints OpenRouter listed for Sol on 12 October 2026
+                                ('sol', ['openai/flex', 'openai', 'openai/fast', 'azure', 'azure/us',
+                                         'amazon-bedrock/us-east-1', 'azure/eu'], 'openai')):
             self.endpoints(tags)
             self.m.config(key)
             w = json.load(open(self.m.priv(key) / f'{key}_off_candidate.json'))
@@ -61,6 +64,12 @@ class StudyIcl(unittest.TestCase):
             self.assertEqual(e['provider_slug'], want)
             self.assertEqual(e['hosted_evidence']['request_fields'], {'reasoning': {'enabled': False, 'exclude': False}})
             self.assertEqual(w['deployment']['model'], self.m.MODELS[key]['model'])
+
+    def test_single_tier_only(self):
+        self.endpoints(['openai/flex', 'azure'])
+        self.m.config('sol')
+        w = json.load(open(self.m.priv('sol') / 'sol_off_candidate.json'))
+        self.assertEqual(w['deployment']['effective']['provider_slug'], 'openai/flex')
 
     def test_ambiguous_endpoints_stop(self):
         self.endpoints(['deepinfra', 'novita'])
