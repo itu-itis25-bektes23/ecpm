@@ -26,7 +26,8 @@ def load(run_dir):
         rows.append({
             "run": os.path.basename(d), "seed": ins["graph_seed"], "mode": "det" if ins.get("deterministic") else "sto",
             "scenario": ins["condition"], "arm": meta.get("condition"), "history": meta.get("history", "none"),
-            "matched_prep": meta.get("matched_prep", False), "repeat": meta.get("repeat", 0),
+            "matched_prep": meta.get("matched_prep", False), "nudge": meta.get("nudge", False),
+            "repeat": meta.get("repeat", 0),
             "model": (a.get("model") or {}).get("model", "") if isinstance(a.get("model"), dict) else a.get("model", ""),
             "goal_success_m0": m.get("goal_success_rate_m0"), "goal_success_m1": m.get("goal_success_rate_m1"),
             "steps_m0": (m.get("steps_to_goal_m0") or {}).get("mean"), "steps_m1": (m.get("steps_to_goal_m1") or {}).get("mean"),

@@ -57,6 +57,10 @@ class LiveStep:
     retries: int              # format corrections before the final reply
     raw_text: str             # model's full reply for this step
     reasoning: str = ""      # model's reasoning for this step, kept separate from raw_text (empty for dry-run and for providers without a separate reasoning channel)
+    sent_messages: int = 0    # history messages sent with this call, after trimming
+    dropped_messages: int = 0 # history messages trimmed away before this call
+    call_utc: str = ""        # when the (first) call for this step started, UTC
+    latency_s: float = 0.0    # seconds spent in model calls for this step, retries included
 
 
 @dataclass
@@ -379,6 +383,10 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
             # Retry unreadable formats only. A clear illegal choice costs a step.
             trimmed = trim_history(messages, cfg.max_context_tokens_est,
                                    cfg.keep_last_n_turns_min)
+            sent, dropped = len(trimmed), len(messages) - len(trimmed)
+            import datetime as _dt, time as _time
+            call_utc = _dt.datetime.now(_dt.timezone.utc).isoformat().replace("+00:00", "Z")
+            t_start = _time.time()
             retries = 0
             # No pre-initialisation of parsed/raw/reasoning: the loop body
             # assigns all three before any use, and `while True` always runs
@@ -403,6 +411,7 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
                     abort_info.update(node=u, retries=retries,
                                       raw_text=raw, reasoning=reasoning)
                 raise PolicyAborted
+            latency = round(_time.time() - t_start, 3)
             action_label, status = parsed["action"], parsed["status"]
             if status == "ok":
                 v = inv[(u, action_label)]
@@ -415,7 +424,9 @@ def _build_recording_policy(mdp, labels, cfg, messages, step_meta, *,
         messages.append({"role": "assistant", "content": raw})   # log the model's reply
         step_meta.append({"action_label": action_label,
                           "parse_status": status, "retries": retries,
-                          "raw_text": raw, "reasoning": reasoning})
+                          "raw_text": raw, "reasoning": reasoning,
+                          "sent_messages": locals().get("sent", 0), "dropped_messages": locals().get("dropped", 0),
+                          "call_utc": locals().get("call_utc", ""), "latency_s": locals().get("latency", 0.0)})
         prev["label"], prev["target"] = action_label, v   # remember for next call's success check
         prev["illegal"] = status == "illegal_action"
         return v
@@ -486,7 +497,9 @@ def _zip_steps(attempts, step_meta, phase, episode_idx) -> list:
                      episode_idx=episode_idx,
                      action_label=m["action_label"],
                      parse_status=m["parse_status"], retries=m["retries"],
-                     raw_text=m["raw_text"], reasoning=m["reasoning"])
+                     raw_text=m["raw_text"], reasoning=m["reasoning"],
+                     sent_messages=m.get("sent_messages", 0), dropped_messages=m.get("dropped_messages", 0),
+                     call_utc=m.get("call_utc", ""), latency_s=m.get("latency_s", 0.0))
             for a, m in zip(attempts, step_meta)]
 
 

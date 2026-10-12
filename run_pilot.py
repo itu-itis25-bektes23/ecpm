@@ -1918,6 +1918,9 @@ def run_pilot_active(sc, deterministic, args):
             "metrics": metrics,
         },
         "probes": {},
+        # Snapshot of both worlds, so later analyses need not rebuild them from the seed and the code.
+        "world": {k: record.get(k) for k in ("nodes", "goal", "start", "legal_actions_pre",
+                                             "legal_actions_post", "world_pre", "world_post", "change")},
     }
 
     system_prompt = explore_agent.build_system_prompt(record["goal"])

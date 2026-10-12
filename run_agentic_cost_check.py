@@ -16,6 +16,7 @@ All options (combine freely):
   --condition NAME    no_change | irrelevant | silent_break | hard_removal | redirect | degradation (sto only)
   --history NAME      none | retained_reports_v2 | separate_reports_post_task_v1 (default none)
   --matched-prep      preparation turn for every arm, as in ICL
+  --nudge             add one sentence to the system prompt: when an action keeps failing, try untried actions
   --reasoning off|on  sends an explicit control: Azure reasoning_effort none/medium,
                       OpenRouter reasoning {enabled: false} / {effort: medium}
   --reasoning-control JSON   override that control, e.g. '{"reasoning_effort": "low"}'
@@ -69,7 +70,7 @@ if "--help" in sys.argv or "-h" in sys.argv:
     print(__doc__); sys.exit(0)
 VALUE_FLAGS = {"--seeds", "--mode", "--condition", "--history", "--reasoning", "--reasoning-control", "--max-tokens",
                "--openrouter", "--price-in", "--price-out", "--workers", "--since", "--commands", "--state", "--retries", "--cwd"}
-SWITCH_FLAGS = {"--dry", "--yes", "--matched-prep", "--help", "-h", "--grid"}
+SWITCH_FLAGS = {"--dry", "--yes", "--matched-prep", "--nudge", "--help", "-h", "--grid"}
 GRID = "--grid" in sys.argv
 _rest = sys.argv[1:]
 while _rest:   # a mistyped option would otherwise be ignored silently, e.g. a run without its reasoning control
@@ -100,12 +101,15 @@ REASONING = _arg("--reasoning", "")                 # off | on; empty = model de
 REASONING_CONTROL = _arg("--reasoning-control", "")  # JSON override of the default control
 if REASONING not in ("", "off", "on") and not GRID:   # --grid takes a list, checked in grid()
     sys.exit("--reasoning must be off or on")          # ablation: preparation turn for every arm, as in ICL
-SWITCHES = ["--mode-prompts", "--history", HISTORY] + (["--matched-prep"] if MATCHED_PREP else [])
+NUDGE = "--nudge" in sys.argv                       # study plan v1: one sentence on trying untried actions
+SWITCHES = ["--mode-prompts", "--history", HISTORY] + (["--matched-prep"] if MATCHED_PREP else []) \
+    + (["--nudge"] if NUDGE else [])
 def batch_name(mode, seeds, scenario, reasoning, date=None):
     """Batch folder name: every setting that defines the runs is in it."""
     return (("DRY_" if DRY else "") + (datetime.date.today().isoformat() if date is None else date)
             + f"_agentic_cost_check_{mode}_seeds{'-'.join(map(str, seeds))}"
             + ("" if HISTORY == "none" else f"_{HISTORY.split('_')[0]}") + ("_prep" if MATCHED_PREP else "")
+            + ("_nudge" if NUDGE else "")
             + ("" if scenario == "silent_break" else f"_{scenario}")
             + (f"_{OPENROUTER.replace('/', '-')}" if OPENROUTER else "")
             + (f"_reasoning-{reasoning}" if reasoning else ""))
