@@ -75,7 +75,10 @@ SEEDS_51 = [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 45, 46, 48, 49, 51, 52, 
 _ORIG = {"prompt": A.build_system_prompt, "policy": A._build_recording_policy, "run": A.run_explore_instance}
 _STATE = {"condition": "task_only", "episodes": 0, "mdp": None, "descriptions": [],
           "history": "none", "matched_prep": False, "reports": [],
-          "mode_prompts": False, "deterministic": False}
+          "mode_prompts": False, "deterministic": False, "nudge": False}
+# Opt-in with --nudge (study plan v1): one sentence added at the end of the system prompt.
+NUDGE_SENTENCE = ("When an action keeps failing, consider trying actions or routes you have not "
+                  "tried yet.")
 
 
 # Sentences in explore_agent's system prompt that say the network must be learned by trying.
@@ -113,6 +116,8 @@ def system_prompt(args, condition):
     if condition == "model_first":
         text += (" Between episodes you will also be asked to describe your "
                  "current model of the network; that reply needs no JSON object.")
+    if _STATE["nudge"]:
+        text = text.rstrip() + " " + NUDGE_SENTENCE
     _STATE["system_prompt"] = text
     return text
 
@@ -173,14 +178,15 @@ def _run(inst, cfg, act_fn=None, node_policy_fn=None):
     return res
 
 
-def activate(condition, mode_prompts=False, history="none", matched_prep=False):
+def activate(condition, mode_prompts=False, history="none", matched_prep=False, nudge=False):
     """Switch explore_agent to `condition`. With every switch off, task_only restores the originals."""
     if condition not in CONDITIONS:
         raise ValueError(f"unknown condition {condition!r}; expected one of {CONDITIONS}")
     if history not in HISTORY_POLICIES:
         raise ValueError(f"unknown history {history!r}; expected one of {HISTORY_POLICIES}")
-    _STATE.update(condition=condition, mode_prompts=mode_prompts, history=history, matched_prep=matched_prep)
-    if condition == "task_only" and not mode_prompts and history == "none" and not matched_prep:
+    _STATE.update(condition=condition, mode_prompts=mode_prompts, history=history, matched_prep=matched_prep,
+                  nudge=nudge)
+    if condition == "task_only" and not mode_prompts and history == "none" and not matched_prep and not nudge:
         A.build_system_prompt, A._build_recording_policy, A.run_explore_instance = \
             _ORIG["prompt"], _ORIG["policy"], _ORIG["run"]
     else:
@@ -274,8 +280,8 @@ def exposure_csv(runs_dir):
 
 
 # ---------------------------------------------------------------- run / batch
-def run(condition, pilot_args, repeat=0, mode_prompts=False, history="none", matched_prep=False):
-    activate(condition, mode_prompts, history, matched_prep)
+def run(condition, pilot_args, repeat=0, mode_prompts=False, history="none", matched_prep=False, nudge=False):
+    activate(condition, mode_prompts, history, matched_prep, nudge)
     import run_pilot
     calls = []
     orig_retry = run_pilot.with_retry
@@ -300,7 +306,7 @@ def run(condition, pilot_args, repeat=0, mode_prompts=False, history="none", mat
     tag = pilot_args[pilot_args.index("--tag") + 1] if "--tag" in pilot_args else None
     if tag:   # sidecar: the condition and exposure are not in run_pilot's artifact schema
         d = os.path.join(out, tag); os.makedirs(d, exist_ok=True)
-        meta = {"history": history, "matched_prep": matched_prep, "reports": list(_STATE["reports"]), "condition": condition, "repeat": repeat, "mode_prompts": mode_prompts,
+        meta = {"history": history, "matched_prep": matched_prep, "nudge": nudge, "reports": list(_STATE["reports"]), "condition": condition, "repeat": repeat, "mode_prompts": mode_prompts,
                 "system_prompt": _STATE.get("system_prompt", "(original explore_agent prompt)"),
                 "usage_totals": _usage_totals(calls)}
         json.dump({"calls": calls, "totals": _usage_totals(calls)}, open(os.path.join(d, "usage.json"), "w"), indent=1)
@@ -466,6 +472,20 @@ def test():
                 self.assertIn(want, captured[0]); self.assertNotIn(other, captured[0])
             activate("task_only")
             self.assertIs(A.build_system_prompt, _ORIG["prompt"])      # off by default
+        def test_nudge(self):
+            inst = make_pair(33, "silent_break", matched=True, deterministic=False)
+            cfg = A.ExploreConfig(max_episodes_m0=1, max_episodes_m1=1, max_steps_per_episode=3, seed=33)
+            for cond in CONDITIONS:
+                for nudge in (False, True):
+                    activate(cond, mode_prompts=True, nudge=nudge)
+                    captured = []
+                    def act(system, messages):
+                        captured.append(system); return '{"action": "a1"}', ""
+                    A.run_explore_instance(inst, cfg, act_fn=act)
+                    self.assertEqual(captured[0].endswith(NUDGE_SENTENCE), nudge, (cond, nudge))
+                    self.assertEqual(captured[0].count(NUDGE_SENTENCE), int(nudge))
+            activate("task_only")
+            self.assertIs(A.build_system_prompt, _ORIG["prompt"])      # off by default
         def test_history_and_prep_switches(self):
             for hist in ("retained_reports_v2", "separate_reports_post_task_v1"):
                 activate("task_only", history=hist, matched_prep=True)
@@ -502,7 +522,7 @@ if __name__ == "__main__":
     elif head[0] == "run": run(head[1], rest, int(head[head.index("--repeat") + 1]) if "--repeat" in head else 0,
                                "--mode-prompts" in head,
                                head[head.index("--history") + 1] if "--history" in head else "none",
-                               "--matched-prep" in head)
+                               "--matched-prep" in head, "--nudge" in head)
     elif head[0] == "batch": batch(head[1], head[2:] or list(CONDITIONS), rest)
     elif head[0] == "exposure": exposure_csv(head[1])
     else:
