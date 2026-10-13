@@ -72,6 +72,7 @@ jobs:
           python test_icl_recovery.py
           python test_final_lock.py
           python experiments/test_publish_deepseek_icl.py
+          python experiments/test_h4_trimming_check.py
           python agentic_conditions.py test
 
       # Dry-run providers make no API calls, so the pilots are runnable in CI.
