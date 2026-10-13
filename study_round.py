@@ -302,7 +302,9 @@ class Round:
         seeds = self.seeds if not self.a.dry else self.seeds[:1]
         names = []
         for wt_name, m, nudge, arms, modes, cells in self.jobs():
-            self.launch(wt_name, self.acting_cmd(m, seeds, modes, cells, nudge, self.a.acting_workers, arms),
+            # Sol gets its own, lower worker count: a new OpenRouter account answered Sol with HTTP 429 at 16 per grid.
+            workers = self.a.sol_workers if m == "sol" else self.a.acting_workers
+            self.launch(wt_name, self.acting_cmd(m, seeds, modes, cells, nudge, workers, arms),
                         self.worktree(wt_name))
             names.append(wt_name)
         rnames = []
@@ -382,6 +384,8 @@ def main():
     ap.add_argument("--budget", type=float, default=250.0, help="USD cap on OpenRouter spend during the round")
     ap.add_argument("--acting-workers", type=int, default=16)
     ap.add_argument("--reading-workers", type=int, default=12)
+    ap.add_argument("--sol-workers", type=int, default=6,
+                    help="parallel batches per Sol grid (lower: Sol is rate-limited per account, HTTP 429)")
     ap.add_argument("--max-run-cost", type=float, default=0.50, help="live gate: largest acceptable cost of one run")
     ap.add_argument("--max-gave-up", type=int, default=20, help="stop if more acting batches give up than this")
     ap.add_argument("--skip-reading", action="store_true")
