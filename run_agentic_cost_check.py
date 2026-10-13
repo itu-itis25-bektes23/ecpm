@@ -17,6 +17,7 @@ All options (combine freely):
   --history NAME      none | retained_reports_v2 | separate_reports_post_task_v1 (default none)
   --matched-prep      preparation turn for every arm, as in ICL
   --nudge             add one sentence to the system prompt: when an action keeps failing, try untried actions
+  --arms LIST         prompt conditions per batch (default task_only,model_first,graph_given)
   --reasoning off|on  sends an explicit control: Azure reasoning_effort none/medium,
                       OpenRouter reasoning {enabled: false} / {effort: medium}
   --reasoning-control JSON   override that control, e.g. '{"reasoning_effort": "low"}'
@@ -68,7 +69,7 @@ DRY = "--dry" in sys.argv
 YES = "--yes" in sys.argv          # skip the one confirmation after the first run (unattended batches)
 if "--help" in sys.argv or "-h" in sys.argv:
     print(__doc__); sys.exit(0)
-VALUE_FLAGS = {"--seeds", "--mode", "--condition", "--history", "--reasoning", "--reasoning-control", "--max-tokens",
+VALUE_FLAGS = {"--arms", "--seeds", "--mode", "--condition", "--history", "--reasoning", "--reasoning-control", "--max-tokens",
                "--openrouter", "--price-in", "--price-out", "--workers", "--since", "--commands", "--state", "--retries", "--cwd"}
 SWITCH_FLAGS = {"--dry", "--yes", "--matched-prep", "--nudge", "--help", "-h", "--grid"}
 GRID = "--grid" in sys.argv
@@ -102,6 +103,13 @@ REASONING_CONTROL = _arg("--reasoning-control", "")  # JSON override of the defa
 if REASONING not in ("", "off", "on") and not GRID:   # --grid takes a list, checked in grid()
     sys.exit("--reasoning must be off or on")          # ablation: preparation turn for every arm, as in ICL
 NUDGE = "--nudge" in sys.argv                       # study plan v1: one sentence on trying untried actions
+# Prompt conditions to run per batch (default all three). A subset, for example --arms task_only, is part of the batch
+# name, so its runs are never mixed with or counted as a full batch's.
+_ALL_ARMS = list(CONDITIONS)
+CONDITIONS = _arg("--arms", ",".join(CONDITIONS)).split(",")
+if not CONDITIONS or set(CONDITIONS) - set(_ALL_ARMS):
+    sys.exit("--arms takes names from: " + ", ".join(_ALL_ARMS))
+ARMS_TAG = "" if CONDITIONS == _ALL_ARMS else "_arms-" + "-".join(CONDITIONS)
 SWITCHES = ["--mode-prompts", "--history", HISTORY] + (["--matched-prep"] if MATCHED_PREP else []) \
     + (["--nudge"] if NUDGE else [])
 def batch_name(mode, seeds, scenario, reasoning, date=None):
@@ -109,7 +117,7 @@ def batch_name(mode, seeds, scenario, reasoning, date=None):
     return (("DRY_" if DRY else "") + (datetime.date.today().isoformat() if date is None else date)
             + f"_agentic_cost_check_{mode}_seeds{'-'.join(map(str, seeds))}"
             + ("" if HISTORY == "none" else f"_{HISTORY.split('_')[0]}") + ("_prep" if MATCHED_PREP else "")
-            + ("_nudge" if NUDGE else "")
+            + ("_nudge" if NUDGE else "") + ARMS_TAG
             + ("" if scenario == "silent_break" else f"_{scenario}")
             + (f"_{OPENROUTER.replace('/', '-')}" if OPENROUTER else "")
             + (f"_reasoning-{reasoning}" if reasoning else ""))
