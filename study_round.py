@@ -30,6 +30,7 @@ class Round:
     def __init__(self, a):
         self.a, self.rnd = a, a.round
         self.seeds = SEEDS[self.rnd]
+        self.models = [m for m in MODELS if m in (a.models.split(",") if a.models else MODELS)]
         # Dry runs write to their own tree, so their fake answers can never sit where a real round looks for work.
         self.base = ROOT.parent / "ecpm-study-runs" / ("_dry" if a.dry else "")
         self.out = self.base / self.rnd
@@ -170,12 +171,12 @@ class Round:
         if self.a.targeted:
             four = "silent_break,degradation,no_change,irrelevant"
             out = []
-            for m in MODELS:
+            for m in self.models:
                 out += [(f"acting_{m}_off_task_only", m, False, "task_only", "sto", four),
                         (f"acting_{m}_nudge_task_only", m, True, "task_only", "sto", four),
                         (f"acting_{m}_off_model_first", m, False, "model_first", "sto", "silent_break")]
             return out
-        return [(f"acting_{m}_{'nudge' if n else 'off'}", m, n, None, "det,sto", "all") for m in MODELS for n in (False, True)]
+        return [(f"acting_{m}_{'nudge' if n else 'off'}", m, n, None, "det,sto", "all") for m in self.models for n in (False, True)]
 
     def launch(self, name, cmd, cwd, env=None):
         logf = open(self.out / f"{name}.log", "a", encoding="utf-8")
@@ -251,7 +252,7 @@ class Round:
         if self.gave_up_baseline:
             self.log(f"{self.gave_up_baseline} batch failures from earlier attempts are in the logs; only new ones count")
         if not self.a.dry:
-            for m in MODELS:
+            for m in self.models:
                 status, msg = self.ping(m)
                 if status != 200:
                     self.stop(f"live request to {MODELS[m]} failed: HTTP {status}: {msg}")
@@ -289,7 +290,7 @@ class Round:
             self.stop("live gate: " + "; ".join(problems))
         self.log("live gate passed for acting")
         if not self.a.skip_reading and not self.a.targeted:
-            for m in MODELS:
+            for m in self.models:
                 wt = self.worktree(f"reading_{m}")
                 if not self.a.dry:
                     r = subprocess.run(self.reading_cmd(m, "ready"), cwd=wt, env=self.env)
@@ -301,15 +302,22 @@ class Round:
     def round(self):
         seeds = self.seeds if not self.a.dry else self.seeds[:1]
         names = []
-        for wt_name, m, nudge, arms, modes, cells in self.jobs():
+        jobs = self.jobs()
+        n_sol = sum(self.a.sol_workers for j in jobs if j[1] == "sol")
+        for wt_name, m, nudge, arms, modes, cells in jobs:
             # Sol gets its own, lower worker count: a new OpenRouter account answered Sol with HTTP 429 at 16 per grid.
             workers = self.a.sol_workers if m == "sol" else self.a.acting_workers
+            env = None
+            if m == "sol" and self.a.sol_rpm > 0 and n_sol:
+                # New OpenRouter accounts get 20 requests per minute for Sol. Pace every Sol process so that together
+                # they stay under --sol-rpm. Transport only.
+                env = dict(self.env, ECPM_MIN_CALL_INTERVAL_S=f"{60.0 * n_sol / self.a.sol_rpm:.2f}")
             self.launch(wt_name, self.acting_cmd(m, seeds, modes, cells, nudge, workers, arms),
-                        self.worktree(wt_name))
+                        self.worktree(wt_name), env)
             names.append(wt_name)
         rnames = []
         if not self.a.skip_reading and not self.a.targeted:
-            for m in MODELS:
+            for m in self.models:
                 n = f"reading_{m}"
                 env = dict(self.env)
                 if self.a.dry:
@@ -384,6 +392,9 @@ def main():
     ap.add_argument("--budget", type=float, default=250.0, help="USD cap on OpenRouter spend during the round")
     ap.add_argument("--acting-workers", type=int, default=16)
     ap.add_argument("--reading-workers", type=int, default=12)
+    ap.add_argument("--models", help="comma list of models to run (haiku,sol,deepseek); default all")
+    ap.add_argument("--sol-rpm", type=float, default=18,
+                    help="total Sol requests per minute across its processes (0 = no pacing); new accounts allow 20")
     ap.add_argument("--sol-workers", type=int, default=6,
                     help="parallel batches per Sol grid (lower: Sol is rate-limited per account, HTTP 429)")
     ap.add_argument("--max-run-cost", type=float, default=0.50, help="live gate: largest acceptable cost of one run")
