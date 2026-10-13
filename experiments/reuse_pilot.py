@@ -188,21 +188,34 @@ def build(point, cond):
 
 # ---------- API ----------
 def call(body, key, tries=4):
+    """POST one request. Ordinary transient errors are retried `tries` times. A 429 with OpenRouter's
+    X-RateLimit-Reset (a per-minute limit) waits for the reset, up to 30 times, without using up a try."""
     data = json.dumps(body).encode()
-    for attempt in range(tries):
+    attempt, waits = 0, 0
+    while True:
+        attempt += 1
         req = urllib.request.Request(URL, data=data, headers={"Authorization": "Bearer " + key,
                                                              "Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
-            if e.code in (429, 500, 502, 503, 504) and attempt < tries - 1:
-                time.sleep(5 * (attempt + 1))
+            reset = e.headers.get("X-RateLimit-Reset") if e.headers else None
+            if e.code == 429 and reset and waits < 30:
+                waits += 1
+                attempt -= 1
+                try:
+                    time.sleep(min(120.0, max(1.0, float(reset) / 1000.0 - time.time() + 1.0)))
+                except ValueError:
+                    time.sleep(30)
+                continue
+            if e.code in (429, 500, 502, 503, 504) and attempt < tries:
+                time.sleep(5 * attempt)
                 continue
             return {"error": f"HTTP {e.code}: {e.read()[:300].decode(errors='replace')}"}
         except Exception as e:
-            if attempt < tries - 1:
-                time.sleep(5 * (attempt + 1))
+            if attempt < tries:
+                time.sleep(5 * attempt)
                 continue
             return {"error": repr(e)}
 

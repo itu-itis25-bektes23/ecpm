@@ -719,6 +719,21 @@ def phase_line(idx, row, cum):
 # --------------------------------------------------------- provider retry
 
 
+_LAST_CALL_START = [0.0]
+
+
+def _pace():
+    """Optional pacing for rate-limited models: ECPM_MIN_CALL_INTERVAL_S (seconds) sets the shortest time between the
+    starts of two calls in this process. Unset or 0 means no pacing. Transport only: it changes when a call is sent,
+    never what is sent."""
+    gap = float(os.environ.get("ECPM_MIN_CALL_INTERVAL_S") or 0)
+    if gap > 0:
+        wait = _LAST_CALL_START[0] + gap - time.time()
+        if wait > 0:
+            time.sleep(wait)
+    _LAST_CALL_START[0] = time.time()
+
+
 def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
                **kwargs):
     """Call fn(*args, **kwargs), retrying transient failures with jittered
@@ -728,17 +743,35 @@ def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
     json.JSONDecodeError). Everything else (4xx auth/bad-request errors)
     raises immediately. Stdlib only -- reimplements the retry pattern seen
     in reference material, no third-party dependency added, matching this
-    repo's stdlib-only convention."""
+    repo's stdlib-only convention.
+
+    A 429 that carries OpenRouter's X-RateLimit-Reset (a per-minute limit, for example on new accounts) waits until
+    that reset and does not use up the ordinary attempts: up to ECPM_RATE_LIMIT_ATTEMPTS (default 30) such waits."""
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
     last_exc = None
-    for attempt in range(1, max_attempts + 1):
+    attempt, limit_waits = 0, 0
+    max_limit_waits = int(os.environ.get("ECPM_RATE_LIMIT_ATTEMPTS") or 30)
+    while True:
+        attempt += 1
+        _pace()
         try:
             return fn(*args, **kwargs)
         except urllib.error.HTTPError as ex:
             if ex.code not in (429, 500, 502, 503, 504):
                 raise
             last_exc = ex
+            reset = ex.headers.get("X-RateLimit-Reset") if ex.headers else None
+            if ex.code == 429 and reset and limit_waits < max_limit_waits:
+                limit_waits += 1
+                attempt -= 1                       # a rate-limit wait is not a failed attempt
+                try:
+                    delay = min(120.0, max(1.0, float(reset) / 1000.0 - time.time() + 1.0))
+                except ValueError:
+                    delay = 30.0
+                print(f"rate limited (wait {limit_waits}/{max_limit_waits}), waiting {delay:.0f}s for the reset")
+                time.sleep(delay)
+                continue
             retry_after = ex.headers.get("Retry-After") if ex.headers else None
             delay = (float(retry_after) if retry_after
                      else min(max_delay, base_delay * 2 ** (attempt - 1)))
@@ -746,7 +779,7 @@ def with_retry(fn, *args, max_attempts=6, base_delay=1.0, max_delay=30.0,
                 json.JSONDecodeError, KeyError, TransientLLMError) as ex:
             last_exc = ex
             delay = min(max_delay, base_delay * 2 ** (attempt - 1))
-        if attempt == max_attempts:
+        if attempt >= max_attempts:
             raise last_exc
         delay *= random.uniform(0.5, 1.5)
         print(f"retryable error (attempt {attempt}/{max_attempts}), "
