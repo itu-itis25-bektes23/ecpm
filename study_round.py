@@ -175,15 +175,23 @@ class Round:
         bad = [n for n in names if self.procs[n].returncode not in (0, None)]
         return bad
 
-    def failure_spike(self):
-        gave_up = 0
+    def gave_up_count(self):
+        n = 0
         for f in glob.glob(str(self.wt / "*" / "runs" / "_grid_logs" / "*.txt")):
             try:
-                gave_up += open(f, encoding="utf-8", errors="ignore").read().count("gave up on")
+                n += open(f, encoding="utf-8", errors="ignore").read().count("gave up on")
             except OSError:
                 pass
-        if gave_up > self.a.max_gave_up:
-            self.stop(f"{gave_up} acting batches gave up after five attempts (limit {self.a.max_gave_up})")
+        return n
+
+    def failure_spike(self):
+        """Stop when batches that gave up during THIS round pass the limit. Logs kept from an earlier attempt are not
+        counted: the count at the round's start is the baseline."""
+        if not hasattr(self, "gave_up_baseline"):
+            self.gave_up_baseline = 0
+        new = self.gave_up_count() - self.gave_up_baseline
+        if new > self.a.max_gave_up:
+            self.stop(f"{new} acting batches gave up after five attempts during this round (limit {self.a.max_gave_up})")
 
     def grid_zips(self, name):
         pattern = ("DRY_GRID_*" if self.a.dry else "GRID_*") + ".zip"
@@ -200,6 +208,9 @@ class Round:
     # ---------------------------------------------------------------- 2. live gate
     def gate(self):
         seed = SEEDS["exploratory"][0]
+        self.gave_up_baseline = self.gave_up_count()          # failures logged by earlier attempts do not count
+        if self.gave_up_baseline:
+            self.log(f"{self.gave_up_baseline} batch failures from earlier attempts are in the logs; only new ones count")
         self.log(f"live gate on exploratory seed {seed}")
         names, expect = [], {}
         for job in self.jobs():
