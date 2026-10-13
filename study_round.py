@@ -64,12 +64,15 @@ class Round:
     def git(self, *args, cwd=ROOT):
         return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
 
-    def usage(self):
-        """OpenRouter spend so far for this key, in USD."""
+    def key_data(self):
         key = os.environ.get("OPENROUTER_API_KEY", "")
         req = urllib.request.Request("https://openrouter.ai/api/v1/key", headers={"Authorization": "Bearer " + key})
         with urllib.request.urlopen(req, timeout=30) as r:
-            return float(json.loads(r.read())["data"]["usage"])
+            return json.loads(r.read())["data"]
+
+    def usage(self):
+        """OpenRouter spend so far for this key, in USD."""
+        return float(self.key_data()["usage"])
 
     def spent(self):
         try:
@@ -117,18 +120,38 @@ class Round:
             except Exception as e:
                 self.stop(f"cannot read OpenRouter usage for the budget cap: {e}")
             self.log(f"OpenRouter spend before the round: ${self.start_usage:.2f}; budget for this round ${self.a.budget:.0f}")
+            left = self.key_data().get("limit_remaining")
+            if left is not None and float(left) < self.a.budget:
+                self.stop(f"the key has ${float(left):.2f} of its limit left, less than this round's budget "
+                          f"${self.a.budget:.0f}; raise the key's limit or lower --budget")
         self.log(f"commit {self.commit}")
 
     # ---------------------------------------------------------------- acting
-    def acting_cmd(self, model, seeds, modes, conditions, nudge, workers):
+    def acting_cmd(self, model, seeds, modes, conditions, nudge, workers, arms=None):
         cmd = [sys.executable, "-B", "run_agentic_cost_check.py", "--grid", "--openrouter", MODELS[model],
                "--reasoning", "off", "--mode", modes, "--condition", conditions, "--seeds", ",".join(map(str, seeds)),
                "--workers", str(workers), "--max-tokens", MAX_TOKENS[model], "--since", self.since, "--yes"]
         if nudge:
             cmd.append("--nudge")
+        if arms:
+            cmd += ["--arms", arms]
         if self.a.dry:
             cmd.append("--dry")
         return cmd
+
+    def jobs(self):
+        """Acting grids: (name, model, nudge, arms, modes, cells). The targeted round runs only what the confirmatory
+        claims need (docs/STUDY_PLAN_v1.md, section 3): task-only with the nudge off and on in four stochastic cells
+        (C1, C2 and the nudge's cost), plus model-first in stochastic silent break with the nudge off (bridge, C3)."""
+        if self.a.targeted:
+            four = "silent_break,degradation,no_change,irrelevant"
+            out = []
+            for m in MODELS:
+                out += [(f"acting_{m}_off_task_only", m, False, "task_only", "sto", four),
+                        (f"acting_{m}_nudge_task_only", m, True, "task_only", "sto", four),
+                        (f"acting_{m}_off_model_first", m, False, "model_first", "sto", "silent_break")]
+            return out
+        return [(f"acting_{m}_{'nudge' if n else 'off'}", m, n, None, "det,sto", "all") for m in MODELS for n in (False, True)]
 
     def launch(self, name, cmd, cwd, env=None):
         logf = open(self.out / f"{name}.log", "a", encoding="utf-8")
@@ -178,27 +201,29 @@ class Round:
     def gate(self):
         seed = SEEDS["exploratory"][0]
         self.log(f"live gate on exploratory seed {seed}")
-        names = []
-        for m in MODELS:
-            for nudge in (False, True):
-                n = f"gate_{m}_{'nudge' if nudge else 'off'}"
-                wt = self.worktree(f"acting_{m}_{'nudge' if nudge else 'off'}")    # the gate's runs count for the round
-                self.launch(n, self.acting_cmd(m, [seed], "sto", "silent_break", nudge, 3), wt)
-                names.append(n)
+        names, expect = [], {}
+        for job in self.jobs():
+            wt_name, m, nudge, arms, _, _ = job
+            if self.a.targeted and arms != "task_only":
+                continue                                     # the gate checks each model and nudge setting once
+            n = "gate_" + wt_name[len("acting_"):]
+            self.launch(n, self.acting_cmd(m, [seed], "sto", "silent_break", nudge, 3, arms), self.worktree(wt_name))
+            names.append(n)
+            expect[n] = len(arms.split(",")) if arms else 3
         bad = self.wait(names, poll=20)
         if bad:
             self.stop(f"live gate: acting process failed: {bad}")
         problems = []
         for n in names:
-            zips = self.grid_zips(n.replace("gate_", "acting_"))
+            zips = self.grid_zips("acting_" + n[len("gate_"):])
             if not zips:
                 problems.append(f"{n}: no grid zip"); continue
             d = self.out / "gate" / n
             shutil.unpack_archive(zips[-1], d)
             import summarize_agentic_runs as S
             rows = S.load(str(d))
-            if len(rows) < 3:
-                problems.append(f"{n}: {len(rows)} of 3 runs")
+            if len(rows) < expect[n]:
+                problems.append(f"{n}: {len(rows)} of {expect[n]} runs")
             for r in rows:
                 if r.get("reasoning_violation"):
                     problems.append(f"{n}: reasoning used with reasoning off")
@@ -207,7 +232,7 @@ class Round:
         if problems:
             self.stop("live gate: " + "; ".join(problems))
         self.log("live gate passed for acting")
-        if not self.a.skip_reading:
+        if not self.a.skip_reading and not self.a.targeted:
             for m in MODELS:
                 wt = self.worktree(f"reading_{m}")
                 if not self.a.dry:
@@ -220,13 +245,12 @@ class Round:
     def round(self):
         seeds = self.seeds if not self.a.dry else self.seeds[:1]
         names = []
-        for m in MODELS:
-            for nudge in (False, True):
-                n = f"acting_{m}_{'nudge' if nudge else 'off'}"
-                self.launch(n, self.acting_cmd(m, seeds, "det,sto", "all", nudge, self.a.acting_workers), self.worktree(n))
-                names.append(n)
+        for wt_name, m, nudge, arms, modes, cells in self.jobs():
+            self.launch(wt_name, self.acting_cmd(m, seeds, modes, cells, nudge, self.a.acting_workers, arms),
+                        self.worktree(wt_name))
+            names.append(wt_name)
         rnames = []
-        if not self.a.skip_reading:
+        if not self.a.skip_reading and not self.a.targeted:
             for m in MODELS:
                 n = f"reading_{m}"
                 env = dict(self.env)
@@ -259,7 +283,10 @@ class Round:
         self.log("reference agent")                      # free: no API calls, the same seeds and cells
         subprocess.run([sys.executable, "-B", "experiments/reference_agent_runs.py", "--round", self.rnd,
                         "--out", str(self.out / "reference")] + (["--modes", "sto", "--scenarios", "silent_break"]
-                                                                 if self.a.dry else []), cwd=ROOT)
+                                                                 if self.a.dry else
+                                                                 ["--modes", "sto", "--scenarios",
+                                                                  "silent_break,degradation,no_change,irrelevant"]
+                                                                 if self.a.targeted else []), cwd=ROOT)
         self.log("analysis")
         cmd = [sys.executable, "-B", "experiments/study_analysis.py", "--round", self.rnd, "--out", str(self.out / "analysis")]
         for d in self.acting_dirs:
@@ -302,6 +329,9 @@ def main():
     ap.add_argument("--max-run-cost", type=float, default=0.50, help="live gate: largest acceptable cost of one run")
     ap.add_argument("--max-gave-up", type=int, default=20, help="stop if more acting batches give up than this")
     ap.add_argument("--skip-reading", action="store_true")
+    ap.add_argument("--targeted", action="store_true",
+                    help="only what the confirmatory claims need: task-only nudge off and on in four stochastic cells, "
+                         "model-first in stochastic silent break (no reading family)")
     ap.add_argument("--allow-branch", action="store_true", help="testing only")
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
