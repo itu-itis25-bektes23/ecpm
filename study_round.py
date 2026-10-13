@@ -64,12 +64,15 @@ class Round:
     def git(self, *args, cwd=ROOT):
         return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
 
-    def usage(self):
-        """OpenRouter spend so far for this key, in USD."""
+    def key_data(self):
         key = os.environ.get("OPENROUTER_API_KEY", "")
         req = urllib.request.Request("https://openrouter.ai/api/v1/key", headers={"Authorization": "Bearer " + key})
         with urllib.request.urlopen(req, timeout=30) as r:
-            return float(json.loads(r.read())["data"]["usage"])
+            return json.loads(r.read())["data"]
+
+    def usage(self):
+        """OpenRouter spend so far for this key, in USD."""
+        return float(self.key_data()["usage"])
 
     def spent(self):
         try:
@@ -117,6 +120,10 @@ class Round:
             except Exception as e:
                 self.stop(f"cannot read OpenRouter usage for the budget cap: {e}")
             self.log(f"OpenRouter spend before the round: ${self.start_usage:.2f}; budget for this round ${self.a.budget:.0f}")
+            left = self.key_data().get("limit_remaining")
+            if left is not None and float(left) < self.a.budget:
+                self.stop(f"the key has ${float(left):.2f} of its limit left, less than this round's budget "
+                          f"${self.a.budget:.0f}; raise the key's limit or lower --budget")
         self.log(f"commit {self.commit}")
 
     # ---------------------------------------------------------------- acting

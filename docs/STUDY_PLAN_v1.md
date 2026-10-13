@@ -20,6 +20,16 @@ Language models that act in a world that changes notice the change and can say s
 
 ## 3. Design
 
+**What the confirmatory round runs** (`study_round.py --round confirmatory --targeted`). Only what the confirmatory claims and the nudge's cost need. This keeps the round within the available budget (about $35 to $55):
+
+| Grid | Prompt | Cells (stochastic) | Nudge | Serves |
+|---|---|---|---|---|
+| A | task-only | silent break, degradation, no change, irrelevant | off | C1, C2, the nudge's cost |
+| B | task-only | the same four | on | C2, the nudge's cost |
+| C | model-first | silent break | off | bridge decisions for C3 |
+
+That is per model and 51 seeds: 204 + 204 + 51 runs, about 1,380 runs for three models, plus the bridge probes. The reading family and the remaining acting cells (deterministic mode, hard removal, redirect, graph-given, the nudge under model-first) come from the exploratory round and are reported as exploratory. The full design below describes that exploratory round.
+
 **Fixed throughout.**
 - **World:** the eight-node family.
 - **Models:** GPT-5.6 Sol, Claude Haiku 5.5 and DeepSeek V4.1 Flash, all through OpenRouter.
@@ -74,7 +84,11 @@ The power figures come from simulation, with rates taken from the earlier grids 
 
 ## 8. Size and cost
 
-**Exploratory round.**
+**Exploratory round, as run.** The reading family is complete. Acting is about 80 percent complete: every deterministic cell, with the remaining stochastic cells stopped when the OpenRouter key reached its limit. It is finished with a second key under the same allowed-providers setting, and the report records this.
+
+**Targeted confirmatory round.** About 1,380 acting runs plus the bridge, roughly $35 to $55, with the budget cap set accordingly.
+
+**Exploratory round, as planned.**
 - About 1,980 acting runs and 1,980 reading conversations.
 - About 1 to 1.5 hours with the parallel launcher, and roughly $150 to $250.
 - Budget cap: $250.
