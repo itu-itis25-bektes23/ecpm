@@ -38,7 +38,16 @@ class Round:
         self.log_path = self.out / "round_log.txt"
         self.procs = {}
         self.start_usage = None
-        self.since = datetime.date.today().isoformat()      # runs from the round's first day count as done
+        # The round's first day: runs dated from it on count as done. It is stored in the round's folder, so a restart on
+        # a later day continues the round instead of running it again. --since sets it for a round begun without the file.
+        since_file = self.out / "round_since.txt"
+        if a.since:
+            self.since = a.since
+        elif since_file.exists():
+            self.since = since_file.read_text(encoding="utf-8").strip()
+        else:
+            self.since = datetime.date.today().isoformat()
+        since_file.write_text(self.since + "\n", encoding="utf-8")
         self.env = dict(os.environ, STUDY_RUNS_DIR=str(self.base),
                         STUDY_PRIVATE_DIR=str(ROOT.parent / "ecpm-study-private"))
 
@@ -101,7 +110,7 @@ class Round:
 
     # ---------------------------------------------------------------- 1. checks
     def checks(self):
-        self.log(f"round {self.rnd}: {len(self.seeds)} seeds {self.seeds}")
+        self.log(f"round {self.rnd}: {len(self.seeds)} seeds {self.seeds}; runs dated from {self.since} count as done")
         if not self.a.dry:                                   # leftovers of an older dry run in the real folder
             for f in list((self.out / "icl").glob("*/icl_*.json"))[:200]:
                 if '"dry-run"' in f.read_text(encoding="utf-8", errors="ignore")[:20000]:
@@ -340,6 +349,7 @@ def main():
     ap.add_argument("--max-run-cost", type=float, default=0.50, help="live gate: largest acceptable cost of one run")
     ap.add_argument("--max-gave-up", type=int, default=20, help="stop if more acting batches give up than this")
     ap.add_argument("--skip-reading", action="store_true")
+    ap.add_argument("--since", help="the round's first day (YYYY-MM-DD), for a round begun before round_since.txt existed")
     ap.add_argument("--targeted", action="store_true",
                     help="only what the confirmatory claims need: task-only nudge off and on in four stochastic cells, "
                          "model-first in stochastic silent break (no reading family)")
