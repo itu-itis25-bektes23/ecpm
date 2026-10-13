@@ -13,7 +13,7 @@ Steps, each a gate: a failure stops everything and is written to the report.
   4. Bridge probes on the finished acting runs, then the analysis, then one zip with every raw run and the report.
 Working copies: ../ecpm-study-wt/<round>/<name>. Results: ../ecpm-study-runs/<round>/. Stdlib only.
 """
-import argparse, datetime, glob, json, os, shutil, subprocess, sys, time, urllib.request
+import argparse, datetime, glob, json, os, shutil, subprocess, sys, time, urllib.error, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -82,6 +82,21 @@ class Round:
     def usage(self):
         """OpenRouter spend so far for this key, in USD."""
         return float(self.key_data()["usage"])
+
+    def ping(self, model):
+        """One tiny live request per model through the same key, model and reasoning setting, so a provider or account
+        restriction shows up before the round, with the provider's own message. Returns (status, message)."""
+        body = json.dumps({"model": MODELS[model], "max_tokens": 16, "reasoning": {"enabled": False},
+                           "messages": [{"role": "user", "content": "Reply with the word OK."}]}).encode()
+        req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=body, headers={
+            "Authorization": "Bearer " + os.environ.get("OPENROUTER_API_KEY", ""), "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return r.status, "ok"
+        except urllib.error.HTTPError as e:
+            return e.code, e.read()[:400].decode(errors="replace")
+        except Exception as e:
+            return None, repr(e)[:400]
 
     def spent(self):
         try:
@@ -200,7 +215,22 @@ class Round:
             self.gave_up_baseline = 0
         new = self.gave_up_count() - self.gave_up_baseline
         if new > self.a.max_gave_up:
-            self.stop(f"{new} acting batches gave up after five attempts during this round (limit {self.a.max_gave_up})")
+            self.stop(f"{new} acting batches gave up after five attempts during this round (limit {self.a.max_gave_up}). "
+                      f"Last error: {self.last_error()}")
+
+    def last_error(self):
+        """The most recent error line in any batch log, to name the cause in the stop message."""
+        logs = [f for f in glob.glob(str(self.wt / "*" / "runs" / "_grid_logs" / "*.txt"))
+                if not f.endswith("grid_log.txt")]
+        for f in sorted(logs, key=os.path.getmtime, reverse=True)[:20]:
+            try:
+                lines = open(f, encoding="utf-8", errors="ignore").read().splitlines()
+            except OSError:
+                continue
+            hits = [l.strip() for l in lines if "Error" in l or "HTTP" in l]
+            if hits:
+                return f"{os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(f))))}: {hits[-1][:300]}"
+        return "none found in the batch logs"
 
     def grid_zips(self, name):
         pattern = ("DRY_GRID_*" if self.a.dry else "GRID_*") + ".zip"
@@ -220,6 +250,12 @@ class Round:
         self.gave_up_baseline = self.gave_up_count()          # failures logged by earlier attempts do not count
         if self.gave_up_baseline:
             self.log(f"{self.gave_up_baseline} batch failures from earlier attempts are in the logs; only new ones count")
+        if not self.a.dry:
+            for m in MODELS:
+                status, msg = self.ping(m)
+                if status != 200:
+                    self.stop(f"live request to {MODELS[m]} failed: HTTP {status}: {msg}")
+            self.log("one live request per model succeeded")
         self.log(f"live gate on exploratory seed {seed}")
         names, expect = [], {}
         for job in self.jobs():
@@ -266,7 +302,9 @@ class Round:
         seeds = self.seeds if not self.a.dry else self.seeds[:1]
         names = []
         for wt_name, m, nudge, arms, modes, cells in self.jobs():
-            self.launch(wt_name, self.acting_cmd(m, seeds, modes, cells, nudge, self.a.acting_workers, arms),
+            # Sol gets its own, lower worker count: a new OpenRouter account answered Sol with HTTP 429 at 16 per grid.
+            workers = self.a.sol_workers if m == "sol" else self.a.acting_workers
+            self.launch(wt_name, self.acting_cmd(m, seeds, modes, cells, nudge, workers, arms),
                         self.worktree(wt_name))
             names.append(wt_name)
         rnames = []
@@ -346,6 +384,8 @@ def main():
     ap.add_argument("--budget", type=float, default=250.0, help="USD cap on OpenRouter spend during the round")
     ap.add_argument("--acting-workers", type=int, default=16)
     ap.add_argument("--reading-workers", type=int, default=12)
+    ap.add_argument("--sol-workers", type=int, default=6,
+                    help="parallel batches per Sol grid (lower: Sol is rate-limited per account, HTTP 429)")
     ap.add_argument("--max-run-cost", type=float, default=0.50, help="live gate: largest acceptable cost of one run")
     ap.add_argument("--max-gave-up", type=int, default=20, help="stop if more acting batches give up than this")
     ap.add_argument("--skip-reading", action="store_true")
