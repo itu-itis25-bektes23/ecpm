@@ -1,9 +1,9 @@
 """H1 on expanded-ICL runs: among silent-break conversations whose period B report gives the changed link
 p_success <= 0.05 or unavailable, the share of period B routes (and of conversations) that still go through it.
 Usage: python experiments/h1_icl.py --sol DIR --haiku DIR --deepseek DIR [--manifest FILE.csv]
-Each DIR holds that model's raw expanded-ICL run folders (from the team Drive). Only conversations whose run id is in
-the published runs/results/icl/<model>/metrics.csv.gz are used, so the input set is exactly the published one; the
-manifest lists every file seen with its run id, sha256 and whether it was used."""
+Each DIR holds that model's raw expanded-ICL run folders (from the team Drive). Only completed conversations marked operational_status=valid in the published
+runs/results/icl/<model>/metrics.csv.gz are used. Each run ID is selected once; the manifest records every source
+file, its SHA-256 and membership. Missing or conflicting completed sources fail before analysis."""
 import argparse, csv, gzip, hashlib, json, glob, os, sys, collections
 from scipy.stats import beta
 lb = lambda k, n: 0.0 if k == 0 else beta.ppf(0.05, k, n - k + 1)
@@ -75,8 +75,47 @@ RESULTS = {'Sol': 'openai-gpt-5.6-sol', 'Haiku': 'anthropic-claude-haiku-5.5', '
 
 def published_ids(label):
     f = os.path.join(ROOT, 'runs', 'results', 'icl', RESULTS[label], 'metrics.csv.gz')
+    statuses = collections.defaultdict(set)
     with gzip.open(f, 'rt', encoding='utf-8') as fh:
-        return {r['run_id'] for r in csv.DictReader(fh)}
+        reader = csv.DictReader(fh)
+        if not {'run_id', 'operational_status'} <= set(reader.fieldnames or []):
+            raise ValueError(f'{label}: export requires run_id and operational_status')
+        for row in reader:
+            statuses[row['run_id']].add(row['operational_status'])
+    conflicts = [rid for rid, values in statuses.items() if len(values) != 1]
+    if conflicts:
+        raise ValueError(f'{label}: conflicting export statuses: {sorted(conflicts)}')
+    ids = {rid for rid, values in statuses.items() if values == {'valid'}}
+    if not ids:
+        raise ValueError(f'{label}: no operationally valid published IDs')
+    return ids
+
+
+def select_inputs(folder, ids, label):
+    """Select one complete, hash-consistent source per valid published run ID."""
+    files = sorted(glob.glob(os.path.join(folder, '**', 'icl_expanded*.json'), recursive=True))
+    rows, selected, selected_hashes = [], [], {}
+    for f in files:
+        rid = os.path.basename(f)[:-5]
+        with open(f, 'rb') as fh:
+            data = fh.read()
+        digest = hashlib.sha256(data).hexdigest()
+        artifact = json.loads(data)
+        if artifact.get('run_id') != rid:
+            raise ValueError(f'{label}: filename/artifact run ID mismatch: {rid}')
+        use = rid in ids and artifact.get('state') == 'completed'
+        if use and rid in selected_hashes:
+            if selected_hashes[rid] != digest:
+                raise ValueError(f'{label}: conflicting completed sources for {rid}')
+            use = False  # Identical copies are documented but never counted twice.
+        if use:
+            selected_hashes[rid] = digest
+            selected.append(f)
+        rows.append([label, os.path.relpath(f, folder), rid, digest, use])
+    missing = ids - selected_hashes.keys()
+    if missing:
+        raise ValueError(f'{label}: completed sources missing for valid IDs: {sorted(missing)}')
+    return rows, selected
 
 
 def main():
@@ -85,21 +124,15 @@ def main():
         ap.add_argument('--' + label.lower(), required=True, help=f'{label} raw run folder')
     ap.add_argument('--manifest', default=os.path.join(ROOT, 'runs', 'results', 'hypotheses', 'h1_inputs_manifest.csv'))
     a = ap.parse_args()
-    rows = []
+    rows, selected = [], {}
     for label in RESULTS:
-        folder = getattr(a, label.lower())
-        ids = published_ids(label)
-        files = sorted(glob.glob(os.path.join(folder, '**', 'icl_expanded*.json'), recursive=True))
-        used = []
-        for f in files:
-            rid = os.path.basename(f)[:-5]
-            ok = rid in ids
-            rows.append([label, os.path.relpath(f, folder), rid, hashlib.sha256(open(f, 'rb').read()).hexdigest(), ok])
-            if ok:
-                used.append(f)
-        missing = len(ids - {r[2] for r in rows if r[0] == label})
-        print(f'{label}: {len(files)} files, {len(used)} in the published results, {missing} published run ids not found')
-        run(used, label)
+        model_rows, selected[label] = select_inputs(
+            getattr(a, label.lower()), published_ids(label), label)
+        rows.extend(model_rows)
+    for label in RESULTS:
+        count = sum(row[0] == label for row in rows)
+        print(f'{label}: {count} files, {len(selected[label])} unique completed valid published runs, 0 missing')
+        run(selected[label], label)
     with open(a.manifest, 'w', newline='', encoding='utf-8') as fh:
         w = csv.writer(fh)
         w.writerow(['model', 'file', 'run_id', 'sha256', 'used'])

@@ -1,0 +1,7 @@
+selection,model,reasoning_mode,qualifying_conversations,conversations_through,routes,routes_through,lenient_conversations,route_lower_bound,conversation_lower_bound
+published_scored,Sol,off,59,3,236,3,0,0.003473516703561696,0.014000874503575206
+published_scored,Sol,on,58,3,232,6,0,0.011321541597725087,0.014244805884677601
+published_scored,Haiku,off,21,0,84,0,21,0.0,0.0
+published_scored,Haiku,on,32,1,128,2,1,0.002783292513040571,0.0016016314667719254
+published_scored,DeepSeek,off,38,10,152,15,6,0.061819129010798425,0.15028202347670996
+published_scored,DeepSeek,on,59,1,236,3,0,0.003473516703561696,0.0008690000715255871
